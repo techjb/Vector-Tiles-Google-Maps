@@ -74,7 +74,6 @@
       <DependentUpon>vector-tiles-google-maps.js</DependentUpon>
     </Content>
     <Content Include="examples\basic.html" />
-    <Content Include="examples\basic.js" />
     <Content Include="lib\jQuery\jQuery-2.1.1.min.js" />
     <Content Include="lib\jQuery\jquery-3.6.0.min.js" />
     <Content Include="lib\jsts\javascript.util.js" />
