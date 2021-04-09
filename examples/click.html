@@ -3,7 +3,7 @@
 <head>
     <title>Basic</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
     <style>
         #map {
             position: absolute;
@@ -29,10 +29,15 @@
                 zoom: 5
             });
 
-            var mvtSource = new MVTSource(map, {
+
+            var fillColor = 'rgba(149,139,255,0.4)';
+            var strokeColor = 'rgb(20,20,20)';
+
+            var options = {
                 url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
                 debug: true,
                 clickableLayers: ["GAUL0"],
+                visibleLayers: ["GAUL0"],
                 getIDForLayerFeature: function (feature) {
                     return feature.properties.id;
                 },
@@ -48,10 +53,11 @@
                  * @returns {boolean}
                  */
                 filter: function (feature, context) {
-                    if (feature.layer.name === 'GAUL0') {
-                        return true;
-                    }
-                    return false;
+                    //if (feature.layer.name === 'GAUL0') {
+                    //    return true;
+                    //}
+                    return true;
+                    //return false;
                 },
 
                 style: function (feature) {
@@ -91,12 +97,15 @@
                             break;
                     }
                     return style;
+                },
+                onClick: function (evt) {
+                    //console.log(evt.feature.layer.name);
+                    //console.log(evt.feature.properties);
                 }
-            });
+            }
+            var mvtSource = new MVTSource(map, options);
 
-            var fillColor = 'rgba(149,139,255,0.4)';
-            var strokeColor = 'rgb(20,20,20)';
-
+          
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
                 map.overlayMapTypes.insertAt(0, mvtSource);
             });

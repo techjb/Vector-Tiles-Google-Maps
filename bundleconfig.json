@@ -3,17 +3,17 @@
     "outputFileName": "dist/vector-tiles-google-maps.js",
     "inputFiles": [
       //"lib/jsts/javascript.util.js",
-      //"lib/jsts/jsts-src.js",
+      //"lib/jsts/jsts-src.js",      
       "lib/Protobuf/Protobuf.js",
-      "lib/vectortile.js",
-      "lib/vectortilefeature.js",
-      "lib/vectortilelayer.js",
+      "lib/VectorTile.js",
+      "lib/VectorTileFeature.js",
+      "lib/VectorTileLayer.js",
       "lib/Point.js",
       "src/MVTFeature.js",
       "src/MVTLayer.js",
       "src/MVTSource.js",
       "src/MVTUtil.js",
-      "src/StaticLabel/StaticLabel.js",
+      "src/StaticLabel/StaticLabel.js"
       //"src/DynamicLabel/PositionWorker.js",
       //"src/DynamicLabel/Feature.js"
       //"src/DynamicLabel/DynamicLabel.js"

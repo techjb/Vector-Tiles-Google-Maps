@@ -4,6 +4,7 @@
     <title>Basic</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../lib/Leaflet/leaflet-0.7.3/leaflet.css"/>
     <style>
         #map {
             position: absolute;
@@ -11,10 +12,9 @@
             bottom: 0;
             width: 100%;
         }
-
         html, body {
-            padding: 0;
-            margin: 0;
+            padding:0;
+            margin:0;
         }
     </style>
 </head>
@@ -22,38 +22,16 @@
     <div id="map"></div>
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
-        function InitMap() {
+        function InitMap() {            
 
             var map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: -5, lng: 27.4 },
+                center: { lat: 38.62, lng: -1.57 },
                 zoom: 5
             });
 
             var mvtSource = new MVTSource(map, {
-                url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
-                debug: true,
-                clickableLayers: ["GAUL0"],
-                getIDForLayerFeature: function (feature) {
-                    return feature.properties.id;
-                },
-
-                /**
-                 * The filter function gets called when iterating though each vector tile feature (vtf). You have access
-                 * to every property associated with a given feature (the feature, and the layer). You can also filter
-                 * based of the context (each tile that the feature is drawn onto).
-                 *
-                 * Returning false skips over the feature and it is not drawn.
-                 *
-                 * @param feature
-                 * @returns {boolean}
-                 */
-                filter: function (feature, context) {
-                    if (feature.layer.name === 'GAUL0') {
-                        return true;
-                    }
-                    return false;
-                },
-
+                url: "https://api.mapbox.com/v4/techjb.9o01nh3m/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=pk.eyJ1IjoidGVjaGpiIiwiYSI6ImNqZnAxdGprYTB3a2EzM3JxN3ozazE1a3kifQ.WTzyyZbmKbyehCBm9HNhbg",
+                debug: false,
                 style: function (feature) {
                     var style = {};
 
@@ -92,14 +70,15 @@
                     }
                     return style;
                 }
+
             });
-
-            var fillColor = 'rgba(149,139,255,0.4)';
-            var strokeColor = 'rgb(20,20,20)';
-
+           
+            var fillColor = 'rgba(149,139,255,0)';
+            var strokeColor = 'rgba(0, 0, 0, 0.7)';
+            
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
                 map.overlayMapTypes.insertAt(0, mvtSource);
-            });
+            });            
         }
 
     </script>

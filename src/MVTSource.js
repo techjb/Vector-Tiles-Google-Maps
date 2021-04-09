@@ -1,28 +1,75 @@
-//L.TileLayer.MVTSource = L.TileLayer.Canvas.extend({
-class MVTSource{
-    constructor(tileSize) {
+class MVTSource {
+    constructor(map, options) {
+        var self = this;
+        this.map = map;
         this.options = {
-            debug: false,
-            url: "", //URL TO Vector Tile Source,
+            debug: options.debug || false,
+            url: options.url || "", //URL TO Vector Tile Source,
             getIDForLayerFeature: function () { },
             tileSize: 256,
-            visibleLayers: [],
-            xhrHeaders: {}
+            visibleLayers: options.visibleLayers || [],
+            xhrHeaders: {},
+            clickableLayers: options.clickableLayers || false,
+            onClick: options.onClick || function () { },
+            filter : options.filter || false
         };
 
-        this.layers = { }, //Keep a list of the layers contained in the PBFs
-        this.processedTiles = { }, //Keep a list of tiles that have been processed already
-        this._eventHandlers = { },
-        this._triggerOnTilesLoadedEvent = true, //whether or not to fire the onTilesLoaded event when all of the tiles finish loading.
-        this._url  = "" //internal URL property
+        this.tileSize = new google.maps.Size(this.options.tileSize, this.options.tileSize);
+
+        this.layers = {}; //Keep a list of the layers contained in the PBFs
+        this.processedTiles = {}; //Keep a list of tiles that have been processed already
+        this._eventHandlers = {};
+        this._triggerOnTilesLoadedEvent = true; //whether or not to fire the onTilesLoaded event when all of the tiles finish loading.
+        this._url = this.options.url;
+
+
+        // tiles currently in the viewport
+        this.activeTiles = {};
+
+        // thats that have been loaded and drawn
+        this.loadedTiles = {};
+
+        /**
+         * For some reason, Leaflet has some code that resets the
+         * z index in the options object. I'm having trouble tracking
+         * down exactly what does this and why, so for now, we should
+         * just copy the value to this.zIndex so we can have the right
+         * number when we make the subsequent MVTLayers.
+         */
+        this.zIndex = this.options.zIndex;
+
+        if (typeof options.style === 'function') {
+            this.style = options.style;
+        }
+
+        if (typeof options.ajaxSource === 'function') {
+            this.ajaxSource = options.ajaxSource;
+        }
+
+        this.layerLink = options.layerLink;
+        this._eventHandlers = {};
+        //this._tilesToProcess = 0; //store the max number of tiles to be loaded.  Later, we can use this count to count down PBF loading.
+
+        this.map.addListener("click", function(e) {
+            self._onClick(e);
+        });
     }
 
     getTile(coord, zoom, ownerDocument) {
+        const canvas = ownerDocument.createElement("canvas");
+        canvas.width = this.tileSize.width;
+        canvas.height = this.tileSize.height;
+        var tilePoint = {
+            x: coord.x,
+            y: coord.y
+        }
+        this.drawTile(canvas, tilePoint, zoom);
+        return canvas;
     }
 
     releaseTile(tile) {
     }
-   
+
 
     style(feature) {
         var style = {};
@@ -64,80 +111,34 @@ class MVTSource{
     }
 
 
-    initialize(options) {
-        L.Util.setOptions(this, options);
+    //onAdd(map) {
+    //    console.log("onadd")
+    //    var self = this;
+    //    self.map = map;
+    //    L.TileLayer.Canvas.prototype.onAdd.call(this, map);
 
-        //a list of the layers contained in the PBFs
-        this.layers = {};
+    //    var mapOnClickCallback = function (e) {
+    //        self._onClick(e);
+    //    };
 
-        // tiles currently in the viewport
-        this.activeTiles = {};
+    //    map.on('click', mapOnClickCallback);
 
-        // thats that have been loaded and drawn
-        this.loadedTiles = {};
+    //    map.on("layerremove", function (e) {
+    //        // check to see if the layer removed is this one
+    //        // call a method to remove the child layers (the ones that actually have something drawn on them).
+    //        if (e.layer._leaflet_id === self._leaflet_id && e.layer.removeChildLayers) {
+    //            e.layer.removeChildLayers(map);
+    //            map.off('click', mapOnClickCallback);
+    //        }
+    //    });
 
-        this._url = this.options.url;
+    //    self.addChildLayers(map);
 
-        /**
-         * For some reason, Leaflet has some code that resets the
-         * z index in the options object. I'm having trouble tracking
-         * down exactly what does this and why, so for now, we should
-         * just copy the value to this.zIndex so we can have the right
-         * number when we make the subsequent MVTLayers.
-         */
-        this.zIndex = options.zIndex;
+    //    if (typeof DynamicLabel === 'function') {
+    //        this.dynamicLabel = new DynamicLabel(map, this, {});
+    //    }
 
-        if (typeof options.style === 'function') {
-            this.style = options.style;
-        }
-
-        if (typeof options.ajaxSource === 'function') {
-            this.ajaxSource = options.ajaxSource;
-        }
-
-        this.layerLink = options.layerLink;
-
-        this._eventHandlers = {};
-
-        this._tilesToProcess = 0; //store the max number of tiles to be loaded.  Later, we can use this count to count down PBF loading.
-    }
-
-    redraw(triggerOnTilesLoadedEvent) {
-        //Only set to false if it actually is passed in as 'false'
-        if (triggerOnTilesLoadedEvent === false) {
-            this._triggerOnTilesLoadedEvent = false;
-        }
-
-        L.TileLayer.Canvas.prototype.redraw.call(this);
-    }
-
-    onAdd(map) {
-        var self = this;
-        self.map = map;
-        L.TileLayer.Canvas.prototype.onAdd.call(this, map);
-
-        var mapOnClickCallback = function (e) {
-            self._onClick(e);
-        };
-
-        map.on('click', mapOnClickCallback);
-
-        map.on("layerremove", function (e) {
-            // check to see if the layer removed is this one
-            // call a method to remove the child layers (the ones that actually have something drawn on them).
-            if (e.layer._leaflet_id === self._leaflet_id && e.layer.removeChildLayers) {
-                e.layer.removeChildLayers(map);
-                map.off('click', mapOnClickCallback);
-            }
-        });
-
-        self.addChildLayers(map);
-
-        if (typeof DynamicLabel === 'function') {
-            this.dynamicLabel = new DynamicLabel(map, this, {});
-        }
-
-    }
+    //}
 
     drawTile(canvas, tilePoint, zoom) {
         var ctx = {
@@ -149,17 +150,21 @@ class MVTSource{
         };
 
         //Capture the max number of the tiles to load here. this._tilesToProcess is an internal number we use to know when we've finished requesting PBFs.
-        if (this._tilesToProcess < this._tilesToLoad) this._tilesToProcess = this._tilesToLoad;
+        //if (this._tilesToProcess < this._tilesToLoad) {
+        //    this._tilesToProcess = this._tilesToLoad;
+        //}
 
         var id = ctx.id = Util.getContextID(ctx);
         this.activeTiles[id] = ctx;
 
-        if (!this.processedTiles[ctx.zoom]) this.processedTiles[ctx.zoom] = {};
-
-        if (this.options.debug) {
-            this._drawDebugInfo(ctx);
+        if (!this.processedTiles[ctx.zoom]) {
+            this.processedTiles[ctx.zoom] = {};
         }
-        this._draw(ctx);
+
+        //if (this.options.debug) {
+        //    this._drawDebugInfo(ctx);
+        //}
+        this._draw(ctx);        
     }
 
     setOpacity(opacity) {
@@ -205,28 +210,35 @@ class MVTSource{
         //    }
 
         if (!this._url) return;
-        var src = this.getTileUrl({ x: ctx.tile.x, y: ctx.tile.y, z: ctx.zoom });
+        var src = this._url
+            .replace("{z}", ctx.zoom)
+            .replace("{x}", ctx.tile.x)
+            .replace("{y}", ctx.tile.y);
 
         var xhr = new XMLHttpRequest();
         xhr.onload = function () {
             if (xhr.status == "200") {
-
                 if (!xhr.response) return;
 
                 var arrayBuffer = new Uint8Array(xhr.response);
-                var buf = new Protobuf(arrayBuffer);
+                var buf = new Pbf(arrayBuffer);
                 var vt = new VectorTile(buf);
                 //Check the current map layer zoom.  If fast zooming is occurring, then short circuit tiles that are for a different zoom level than we're currently on.
-                if (self.map && self.map.getZoom() != ctx.zoom) {
-                    console.log("Fetched tile for zoom level " + ctx.zoom + ". Map is at zoom level " + self._map.getZoom());
+                if (self.map && self.map.getZoom() != ctx.zoom) {                    
                     return;
                 }
-                self.checkVectorTileLayers(parseVT(vt), ctx);
+
+                var vt = parseVT(vt);
+                self.checkVectorTileLayers(vt, ctx);
                 tileLoaded(self, ctx);
             }
-
+           
             //either way, reduce the count of tilesToProcess tiles here
-            self.reduceTilesToProcessCount();
+            //self.reduceTilesToProcessCount();
+
+            if (self.options.debug) {
+                self._drawDebugInfo(ctx);
+            }
         };
 
         xhr.onerror = function () {
@@ -242,19 +254,18 @@ class MVTSource{
         xhr.send();
     }
 
-    reduceTilesToProcessCount() {
-        this._tilesToProcess--;
-        if (!this._tilesToProcess) {
-            //Trigger event letting us know that all PBFs have been loaded and processed (or 404'd).
-            if (this._eventHandlers["PBFLoad"]) this._eventHandlers["PBFLoad"]();
-            this._pbfLoaded();
-        }
-    }
+    //reduceTilesToProcessCount() {
+    //    this._tilesToProcess--;        
+    //    if (!this._tilesToProcess) {
+    //        //Trigger event letting us know that all PBFs have been loaded and processed (or 404'd).
+    //        if (this._eventHandlers["PBFLoad"]) this._eventHandlers["PBFLoad"]();
+    //        this._pbfLoaded();
+    //    }
+    //}
 
     checkVectorTileLayers(vt, ctx, parsed) {
         var self = this;
-
-        //Check if there are specified visible layers
+        //Check if there are specified visible layers        
         if (self.options.visibleLayers && self.options.visibleLayers.length > 0) {
             //only let thru the layers listed in the visibleLayers array
             for (var i = 0; i < self.options.visibleLayers.length; i++) {
@@ -279,7 +290,6 @@ class MVTSource{
             //Create MVTLayer or MVTPointLayer for user
             self.layers[key] = self.createMVTLayer(key, lyr.parsedFeatures[0].type || null);
         }
-
         if (parsed) {
             //We've already parsed it.  Go get canvas and draw.
             self.layers[key].getCanvas(ctx, lyr);
@@ -306,14 +316,15 @@ class MVTSource{
             style: self.style,
             name: key,
             asynch: true
-        };
+        };        
 
         if (self.options.zIndex) {
             options.zIndex = self.zIndex;
         }
 
         //Take the layer and create a new MVTLayer or MVTPointLayer if one doesn't exist.
-        var layer = new MVTLayer(self, options).addTo(self.map);
+        //var layer = new MVTLayer(self, options).addTo(self.map);
+        var layer = new MVTLayer(self, options);
 
         return layer;
     }
@@ -324,7 +335,7 @@ class MVTSource{
 
     hideLayer(id) {
         if (this.layers[id]) {
-            this._map.removeLayer(this.layers[id]);
+            this.map.removeLayer(this.layers[id]);
             if (this.options.visibleLayers.indexOf("id") > -1) {
                 this.visibleLayers.splice(this.options.visibleLayers.indexOf("id"), 1);
             }
@@ -333,7 +344,7 @@ class MVTSource{
 
     showLayer(id) {
         if (this.layers[id]) {
-            this._map.addLayer(this.layers[id]);
+            this.map.addLayer(this.layers[id]);
             if (this.options.visibleLayers.indexOf("id") == -1) {
                 this.visibleLayers.push(id);
             }
@@ -367,7 +378,7 @@ class MVTSource{
             for (var key in this.layers) {
                 var layer = this.layers[key];
                 // layer is set to visible and is not already on map
-                if (!layer._map) {
+                if (!layer.map) {
                     map.addLayer(layer);
                 }
             }
@@ -384,16 +395,35 @@ class MVTSource{
         var onClick = self.options.onClick;
         var clickableLayers = self.options.clickableLayers;
         var layers = self.layers;
+        var zoom = this.map.getZoom();
 
-        evt.tileID = getTileURL(evt.latlng.lat, evt.latlng.lng, this.map.getZoom());
+        //evt.tileID = getTileURL(evt.latlng.lat, evt.latlng.lng, this.map.getZoom());
+        evt.tileID = getTileURL(evt.latLng, zoom, this.options.tileSize);
 
+        var x = evt.tileID.split(':')[1];
+        var y = evt.tileID.split(':')[2];
+
+        var bounds = MERCATOR.getTileBounds({
+            x: x,
+            y: y,
+            z: zoom
+        });
+
+        var sw = new google.maps.LatLng(bounds.sw);        
+        var ne = new google.maps.LatLng(bounds.ne);        
+        sw = fromLatLngToPoint(sw, this.map);
+        ne = fromLatLngToPoint(ne, this.map);                
+        
+        evt.canvas_x = sw.x;
+        evt.canvas_y = ne.y;
+        
         // We must have an array of clickable layers, otherwise, we just pass
         // the event to the public onClick callback in options.
 
         if (!clickableLayers) {
             clickableLayers = Object.keys(self.layers);
+            
         }
-
         if (clickableLayers && clickableLayers.length > 0) {
             for (var i = 0, len = clickableLayers.length; i < len; i++) {
                 var key = clickableLayers[i];
@@ -479,57 +509,154 @@ class MVTSource{
         }
     }
 
-    _pbfLoaded() {
-        //Fires when all tiles from this layer have been loaded and drawn (or 404'd).
+    //_pbfLoaded() {
+    //    //Fires when all tiles from this layer have been loaded and drawn (or 404'd).
 
-        //Make sure manager layer is always in front
-        this.bringToFront();
+    //    //Make sure manager layer is always in front
+    //    this.bringToFront();
 
-        //See if there is an event to execute
-        var self = this;
-        var onTilesLoaded = self.options.onTilesLoaded;
+    //    //See if there is an event to execute
+    //    var self = this;
+    //    var onTilesLoaded = self.options.onTilesLoaded;
 
-        if (onTilesLoaded && typeof onTilesLoaded === 'function' && this._triggerOnTilesLoadedEvent === true) {
-            onTilesLoaded(this);
-        }
-        self._triggerOnTilesLoadedEvent = true; //reset - if redraw() is called with the optinal 'false' parameter to temporarily disable the onTilesLoaded event from firing.  This resets it back to true after a single time of firing as 'false'.
+    //    if (onTilesLoaded && typeof onTilesLoaded === 'function' && this._triggerOnTilesLoadedEvent === true) {
+    //        onTilesLoaded(this);
+    //    }
+    //    self._triggerOnTilesLoadedEvent = true; //reset - if redraw() is called with the optinal 'false' parameter to temporarily disable the onTilesLoaded event from firing.  This resets it back to true after a single time of firing as 'false'.
+    //}
+}
+
+
+if (typeof (Number.prototype.toRad) === "undefined") {
+    Number.prototype.toRad = function () {
+        return this * Math.PI / 180;
     }
-
-    //});
 }
 
+//function getTileURL(lat, lon, zoom) {
+//    var xtile = parseInt(Math.floor((lon + 180) / 360 * (1 << zoom)));
+//    var ytile = parseInt(Math.floor((1 - Math.log(Math.tan(lat.toRad()) + 1 / Math.cos(lat.toRad())) / Math.PI) / 2 * (1 << zoom)));
+//    return "" + zoom + ":" + xtile + ":" + ytile;
+//}
 
-if (typeof(Number.prototype.toRad) === "undefined") {
-  Number.prototype.toRad = function() {
-    return this * Math.PI / 180;
-  }
+function getTileURL(latLng, zoom, tile_size) {
+    const worldCoordinate = project(latLng, tile_size);
+    const scale = 1 << zoom;
+    const tileCoordinate = new google.maps.Point(
+        Math.floor((worldCoordinate.x * scale) / tile_size),
+        Math.floor((worldCoordinate.y * scale) / tile_size)
+    );
+    return "" + zoom + ":" + tileCoordinate.x + ":" + tileCoordinate.y;
 }
 
-function getTileURL(lat, lon, zoom) {
-  var xtile = parseInt(Math.floor( (lon + 180) / 360 * (1<<zoom) ));
-  var ytile = parseInt(Math.floor( (1 - Math.log(Math.tan(lat.toRad()) + 1 / Math.cos(lat.toRad())) / Math.PI) / 2 * (1<<zoom) ));
-  return "" + zoom + ":" + xtile + ":" + ytile;
+function project(latLng, tile_size) {
+    let siny = Math.sin((latLng.lat() * Math.PI) / 180);
+    siny = Math.min(Math.max(siny, -0.9999), 0.9999);
+    return new google.maps.Point(
+        tile_size * (0.5 + latLng.lng() / 360),
+        tile_size * (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI))
+    );
+}
+
+function tileToLatLng(x , y ,z) {
+    var long = tile2long(x, z);
+    var lat = tile2long(y, z);
+    return {
+        lat: lat, long: long
+    }
+}
+
+function tile2long(x, z) {
+    return (x / Math.pow(2, z) * 360 - 180);
+}
+
+function tile2lat(y, z) {
+    var n = Math.PI - 2 * Math.PI * y / Math.pow(2, z);
+    return (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))));
 }
 
 function tileLoaded(pbfSource, ctx) {
-  pbfSource.loadedTiles[ctx.id] = ctx;
+    pbfSource.loadedTiles[ctx.id] = ctx;
 }
 
-function parseVT(vt){
-  for (var key in vt.layers) {
-    var lyr = vt.layers[key];
-    parseVTFeatures(lyr);
-  }
-  return vt;
+function parseVT(vt) {
+    for (var key in vt.layers) {
+        var lyr = vt.layers[key];
+        parseVTFeatures(lyr);
+    }
+    return vt;
 }
 
-function parseVTFeatures(vtl){
-  vtl.parsedFeatures = [];
-  var features = vtl._features;
-  for (var i = 0, len = features.length; i < len; i++) {
-    var vtf = vtl.feature(i);
-    vtf.coordinates = vtf.loadGeometry();
-    vtl.parsedFeatures.push(vtf);
-  }
-  return vtl;
+function parseVTFeatures(vtl) {
+    vtl.parsedFeatures = [];
+    var features = vtl._features;
+    for (var i = 0, len = features.length; i < len; i++) {
+        var vtf = vtl.feature(i);
+        vtf.coordinates = vtf.loadGeometry();
+        vtl.parsedFeatures.push(vtf);
+    }
+    return vtl;
+}
+
+MERCATOR = {
+
+    fromLatLngToPoint: function (latLng) {
+        var siny = Math.min(Math.max(Math.sin(latLng.lat * (Math.PI / 180)),
+            -.9999),
+            .9999);
+        return {
+            x: 128 + latLng.lng * (256 / 360),
+            y: 128 + 0.5 * Math.log((1 + siny) / (1 - siny)) * -(256 / (2 * Math.PI))
+        };
+    },
+
+    fromPointToLatLng: function (point) {
+
+        return {
+            lat: (2 * Math.atan(Math.exp((point.y - 128) / -(256 / (2 * Math.PI)))) -
+                Math.PI / 2) / (Math.PI / 180),
+            lng: (point.x - 128) / (256 / 360)
+        };
+
+    },
+
+    getTileAtLatLng: function (latLng, zoom) {
+        var t = Math.pow(2, zoom),
+            s = 256 / t,
+            p = this.fromLatLngToPoint(latLng);
+        return { x: Math.floor(p.x / s), y: Math.floor(p.y / s), z: zoom };
+    },
+
+    getTileBounds: function (tile) {
+        tile = this.normalizeTile(tile);
+        var t = Math.pow(2, tile.z),
+            s = 256 / t,
+            sw = {
+                x: tile.x * s,
+                y: (tile.y * s) + s
+            },
+            ne = {
+                x: tile.x * s + s,
+                y: (tile.y * s)
+            };
+        return {
+            sw: this.fromPointToLatLng(sw),
+            ne: this.fromPointToLatLng(ne)
+        }        
+    },
+   
+    normalizeTile: function (tile) {
+        var t = Math.pow(2, tile.z);
+        tile.x = ((tile.x % t) + t) % t;
+        tile.y = ((tile.y % t) + t) % t;
+        return tile;
+    }
+}
+
+function fromLatLngToPoint(latLng, map) {
+    var topRight = map.getProjection().fromLatLngToPoint(map.getBounds().getNorthEast());
+    var bottomLeft = map.getProjection().fromLatLngToPoint(map.getBounds().getSouthWest());
+    var scale = Math.pow(2, map.getZoom());
+    var worldPoint = map.getProjection().fromLatLngToPoint(latLng);
+    return new google.maps.Point((worldPoint.x - bottomLeft.x) * scale, (worldPoint.y - topRight.y) * scale);
 }
