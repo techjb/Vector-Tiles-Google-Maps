@@ -29,13 +29,15 @@ class MVTLayer {
 
     _isPointInPoly(pt, poly) {
         if (poly && poly.length) {
-            for (var c = false, i = -1, l = poly.length, j = l - 1; ++i < l; j = i)
+            for (var c = false, i = -1, l = poly.length, j = l - 1; ++i < l; j = i) {
                 ((poly[i].y <= pt.y && pt.y < poly[j].y) || (poly[j].y <= pt.y && pt.y < poly[i].y))
                     && (pt.x < (poly[j].x - poly[i].x) * (pt.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)
                     && (c = !c);
+            }                
             return c;
         }
     }
+    
 
     _getDistanceFromLine(pt, pts) {
         var min = Number.POSITIVE_INFINITY;
@@ -67,35 +69,36 @@ class MVTLayer {
         return { distance: p.distanceTo(a), point: a };
     }
 
-    onAdd(map) {
-        var self = this;
-        self.map = map;
-        L.TileLayer.Canvas.prototype.onAdd.call(this, map);
-        map.on('layerremove', function (e) {
-            // we only want to do stuff when the layerremove event is on this layer
-            if (e.layer._leaflet_id === self._leaflet_id) {
-                removeLabels(self);
-            }
-        });
-    }
+    //onAdd(map) {
+    //    var self = this;
+    //    self.map = map;
+    //    L.TileLayer.Canvas.prototype.onAdd.call(this, map);
+    //    map.on('layerremove', function (e) {
+    //        // we only want to do stuff when the layerremove event is on this layer
+    //        if (e.layer._leaflet_id === self._leaflet_id) {
+    //            removeLabels(self);
+    //        }
+    //    });
+    //}
 
-    drawTile(canvas, tilePoint, zoom) {
-        var ctx = {
-            canvas: canvas,
-            tile: tilePoint,
-            zoom: zoom,
-            tileSize: this.options.tileSize
-        };
+    //drawTile(canvas, tilePoint, zoom) {
 
-        ctx.id = Util.getContextID(ctx);
+    //    var ctx = {
+    //        canvas: canvas,
+    //        tile: tilePoint,
+    //        zoom: zoom,
+    //        tileSize: this.options.tileSize
+    //    };
 
-        if (!this._canvasIDToFeatures[ctx.id]) {
-            this._initializeFeaturesHash(ctx);
-        }
-        if (!this.features) {
-            this.features = {};
-        }
-    }
+    //    ctx.id = Util.getContextID(ctx);
+
+    //    if (!this._canvasIDToFeatures[ctx.id]) {
+    //        this._initializeFeaturesHash(ctx);
+    //    }
+    //    if (!this.features) {
+    //        this.features = {};
+    //    }
+    //}
 
     _initializeFeaturesHash(ctx) {
         this._canvasIDToFeatures[ctx.id] = {};
@@ -103,9 +106,9 @@ class MVTLayer {
         this._canvasIDToFeatures[ctx.id].canvas = ctx.canvas;
     }
 
-    _draw(ctx) {
-        //Draw is handled by the parent MVTSource object
-    }
+    //_draw(ctx) {
+    //    //Draw is handled by the parent MVTSource object
+    //}
 
     getCanvas(parentCtx) {
         //This gets called if a vector tile feature has already been parsed.
@@ -123,22 +126,26 @@ class MVTLayer {
 
         var self = this;
 
-        //This is a timer that will wait for a criterion to return true.
-        //If not true within the timeout duration, it will move on.
-        waitFor(function () {
-            ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
-            if (ctx) {
-                return true;
-            }
-        },
-            function () {
-                //When it finishes, do this.
-                ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
-                parentCtx.canvas = ctx;
-                self.redrawTile(parentCtx.id);
+        ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
+        parentCtx.canvas = ctx;
+        self.redrawTile(parentCtx.id);
 
-            }, //when done, go to next flow
-            2000); //The Timeout milliseconds.  After this, give up and move on
+        ////This is a timer that will wait for a criterion to return true.
+        ////If not true within the timeout duration, it will move on.
+        //waitFor(function () {
+        //    ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
+        //    if (ctx) {
+        //        return true;
+        //    }
+        //},
+        //    function () {
+        //        //When it finishes, do this.
+        //        ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
+        //        parentCtx.canvas = ctx;
+        //        self.redrawTile(parentCtx.id);
+
+        //    }, //when done, go to next flow
+        //    2000); //The Timeout milliseconds.  After this, give up and move on
 
     }
 
@@ -152,9 +159,8 @@ class MVTLayer {
         layerCtx.canvas = self._tiles[tilePoint.x + ":" + tilePoint.y];
         //layerCtx.canvas = ctx.canvas;
 
-
-
         //Initialize this tile's feature storage hash, if it hasn't already been created.  Used for when filters are updated, and features are cleared to prepare for a fresh redraw.
+       
         if (!this._canvasIDToFeatures[layerCtx.id]) {
             this._initializeFeaturesHash(layerCtx);
         } else {
@@ -166,6 +172,11 @@ class MVTLayer {
         for (var i = 0, len = features.length; i < len; i++) {
             var vtf = features[i]; //vector tile feature
             vtf.layer = vtl;
+
+            //if(vtf.properties.id != 135){
+            //    continue;
+            //}
+
 
             /**
             * Apply filter on feature if there is one. Defined in the options object
@@ -224,7 +235,7 @@ class MVTLayer {
             self._canvasIDToFeatures[layerCtx.id].features = self._canvasIDToFeatures[layerCtx.id].features.sort(function (a, b) {
                 return -(b.properties.zIndex - a.properties.zIndex)
             });
-        }        
+        }
         self.redrawTile(layerCtx.id);
     }
 
@@ -300,8 +311,9 @@ class MVTLayer {
         var x = evt.pixel.x - evt.canvas_x;
         var y = evt.pixel.y - evt.canvas_y;
 
-        var tilePoint = { x: x, y: y };       
-        
+        var tilePoint = { x: x, y: y };
+
+        //this._drawSmallDot(canvas, x, y);       
         
         var features = this._canvasIDToFeatures[evt.tileID].features;
 
@@ -364,12 +376,23 @@ class MVTLayer {
         if (nearest && nearest.toggleEnabled) {
             nearest.toggle();
         }
+        //else {
+        //    return;
+        //}
         
         evt.feature = nearest;
         cb(evt);
     }
 
-    clearTile(id) {
+    _drawSmallDot(canvas, x, y) {
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    clearTile(id, ctx) {
         //id is the entire zoom:x:y.  we just want x:y.
         var ca = id.split(":");
         var canvasId = ca[1] + ":" + ca[2];
@@ -380,7 +403,7 @@ class MVTLayer {
         var canvas = this._tiles[canvasId];
 
         var context = canvas.getContext('2d');
-        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.clearRect(0, 0, canvas.width, canvas.height);        
     }
 
     clearTileFeatureHash(canvasID) {
@@ -393,7 +416,8 @@ class MVTLayer {
 
     redrawTile(canvasID) {
         //First, clear the canvas
-        this.clearTile(canvasID);
+        //this.clearTile(canvasID);
+        
 
         // If the features are not in the tile, then there is nothing to redraw.
         // This may happen if you call redraw before features have loaded and initially
@@ -425,6 +449,20 @@ class MVTLayer {
             selFeat.draw(canvasID);
         }
     }
+
+    //redrawFeature(canvasID,  mvtFeature) {
+    //    var featfeats = this._canvasIDToFeatures[canvasID];
+    //    if (!featfeats) {
+    //        return;
+    //    }
+    //    var features = featfeats.features;
+    //    for (var i = 0; i < features.length; i++) {
+    //        var feature = features[i];
+    //        if (feature === mvtFeature) {
+    //            feature.draw(canvasID, true);
+    //        }
+    //    }
+    //}
 
     _resetCanvasIDToFeatures(canvasID, canvas) {
 

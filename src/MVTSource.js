@@ -5,19 +5,20 @@ class MVTSource {
         this.options = {
             debug: options.debug || false,
             url: options.url || "", //URL TO Vector Tile Source,
-            getIDForLayerFeature: function () { },
+            getIDForLayerFeature: options.getIDForLayerFeature || function () { },
             tileSize: 256,
             visibleLayers: options.visibleLayers || [],
             xhrHeaders: {},
             clickableLayers: options.clickableLayers || false,
             onClick: options.onClick || function () { },
-            filter : options.filter || false
+            filter: options.filter || false,
+            mutexToggle: options.mutexToggle || false
         };
 
         this.tileSize = new google.maps.Size(this.options.tileSize, this.options.tileSize);
 
         this.layers = {}; //Keep a list of the layers contained in the PBFs
-        this.processedTiles = {}; //Keep a list of tiles that have been processed already
+        //this.processedTiles = {}; //Keep a list of tiles that have been processed already
         this._eventHandlers = {};
         this._triggerOnTilesLoadedEvent = true; //whether or not to fire the onTilesLoaded event when all of the tiles finish loading.
         this._url = this.options.url;
@@ -157,13 +158,11 @@ class MVTSource {
         var id = ctx.id = Util.getContextID(ctx);
         this.activeTiles[id] = ctx;
 
-        if (!this.processedTiles[ctx.zoom]) {
-            this.processedTiles[ctx.zoom] = {};
-        }
-
-        //if (this.options.debug) {
-        //    this._drawDebugInfo(ctx);
+        //if (!this.processedTiles[ctx.zoom]) {
+        //    this.processedTiles[ctx.zoom] = {};
         //}
+
+        this.drawDebugInfo(ctx);
         this._draw(ctx);        
     }
 
@@ -181,6 +180,11 @@ class MVTSource {
         }
     }
 
+    drawDebugInfo(ctx) {
+        if (this.options.debug) {
+            this._drawDebugInfo(ctx);
+        }
+    }
     _drawDebugInfo(ctx) {
         var max = this.options.tileSize;
         var g = ctx.canvas.getContext('2d');
@@ -224,21 +228,17 @@ class MVTSource {
                 var buf = new Pbf(arrayBuffer);
                 var vt = new VectorTile(buf);
                 //Check the current map layer zoom.  If fast zooming is occurring, then short circuit tiles that are for a different zoom level than we're currently on.
-                if (self.map && self.map.getZoom() != ctx.zoom) {                    
+                if (self.map && self.map.getZoom() != ctx.zoom) {
                     return;
                 }
 
-                var vt = parseVT(vt);
+                var vt = parseVT(vt);   
                 self.checkVectorTileLayers(vt, ctx);
-                tileLoaded(self, ctx);
+                //tileLoaded(self, ctx);
             }
            
             //either way, reduce the count of tilesToProcess tiles here
             //self.reduceTilesToProcessCount();
-
-            if (self.options.debug) {
-                self._drawDebugInfo(ctx);
-            }
         };
 
         xhr.onerror = function () {
@@ -296,7 +296,6 @@ class MVTSource {
         } else {
             self.layers[key].parseVectorTileLayer(lyr, ctx);
         }
-
     }
 
     createMVTLayer(key, type) {
@@ -390,6 +389,13 @@ class MVTSource {
     }
 
     _onClick(evt) {
+
+        if (this.options.mutexToggle) {
+            if (this._selectedFeature) {
+                this._selectedFeature.deselect();
+            }            
+        }
+
         //Here, pass the event on to the child MVTLayer and have it do the hit test and handle the result.
         var self = this;
         var onClick = self.options.onClick;
@@ -441,7 +447,6 @@ class MVTSource {
                 onClick(evt);
             }
         }
-
     }
 
     setFilter(filterFunction, layerName) {
@@ -575,9 +580,9 @@ function tile2lat(y, z) {
     return (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))));
 }
 
-function tileLoaded(pbfSource, ctx) {
-    pbfSource.loadedTiles[ctx.id] = ctx;
-}
+//function tileLoaded(pbfSource, ctx) {
+//    pbfSource.loadedTiles[ctx.id] = ctx;
+//}
 
 function parseVT(vt) {
     for (var key in vt.layers) {

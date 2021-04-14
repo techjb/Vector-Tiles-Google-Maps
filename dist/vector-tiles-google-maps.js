@@ -422,9 +422,12 @@ function MVTFeature(mvtLayer, vtf, ctx, id, style) {
     //this.map.on('zoomend', function() {
     //  self.staticLabel = null;
     //});
-    this.map.addListener("zoom_changed", () => {
-        self.staticLabel = null;
-    });
+
+    //this.map.addListener("zoom_changed", () => {
+    //    self.staticLabel = null;
+    //});
+
+    //this.globalCompositeOperation = 'source-in';
 
     if (style && style.dynamicLabel && typeof style.dynamicLabel === 'function') {
         this.dynamicLabel = this.mvtSource.dynamicLabel.createFeature(this);
@@ -492,9 +495,9 @@ MVTFeature.prototype.setStyle = function (styleFn) {
     }
 };
 
-MVTFeature.prototype.draw = function (canvasID) {
+MVTFeature.prototype.draw = function (canvasID, redraw) {
     //Get the info from the tiles list
-    var tileInfo = this.tiles[canvasID];
+    var tileInfo = this.tiles[canvasID];    
 
     var vtf = tileInfo.vtf;
     var ctx = tileInfo.ctx;
@@ -514,7 +517,7 @@ MVTFeature.prototype.draw = function (canvasID) {
     }
     switch (vtf.type) {
         case 1: //Point
-            this._drawPoint(ctx, vtf.coordinates, style);
+            this._drawPoint(ctx, vtf.coordinates, style, redraw);
             if (!this.staticLabel && typeof this.style.staticLabel === 'function') {
                 if (this.style.ajaxSource && !this.ajaxData) {
                     break;
@@ -524,11 +527,11 @@ MVTFeature.prototype.draw = function (canvasID) {
             break;
 
         case 2: //LineString
-            this._drawLineString(ctx, vtf.coordinates, style);
+            this._drawLineString(ctx, vtf.coordinates, style, redraw);
             break;
 
         case 3: //Polygon
-            this._drawPolygon(ctx, vtf.coordinates, style);
+            this._drawPolygon(ctx, vtf.coordinates, style, redraw);
             break;
 
         default:
@@ -549,8 +552,9 @@ MVTFeature.prototype.addTileFeature = function (vtf, ctx) {
     //Also, if there are existing tiles in the list for other zoom levels, expunge them.
     var zoom = this.map.getZoom();
 
-    if (ctx.zoom != zoom) return;
-
+    if (ctx.zoom != zoom) {
+        return;
+    }
     this.clearTileFeatures(zoom); //TODO: This iterates thru all tiles every time a new tile is added.  Figure out a better way to do this.
 
     this.tiles[ctx.id] = {
@@ -570,7 +574,9 @@ MVTFeature.prototype.addTileFeature = function (vtf, ctx) {
 MVTFeature.prototype.clearTileFeatures = function (zoom) {
     //If stored tiles exist for other zoom levels, expunge them from the list.
     for (var key in this.tiles) {
-        if (key.split(":")[0] != zoom) delete this.tiles[key];
+        if (key.split(":")[0] != zoom) {            
+            delete this.tiles[key];
+        }
     }
 };
 
@@ -584,16 +590,30 @@ function redrawTiles(self) {
     //Redraw the whole tile, not just this vtf
     var tiles = self.tiles;
     var mvtLayer = self.mvtLayer;
-
+    var mapZoom = self.map.getZoom();
     for (var id in tiles) {
         var tileZoom = parseInt(id.split(':')[0]);
-        var mapZoom = self.map.getZoom();
         if (tileZoom === mapZoom) {
             //Redraw the tile
-            mvtLayer.redrawTile(id);
+            mvtLayer.clearTile(id);            
+            mvtLayer.redrawTile(id);            
         }
     }
 }
+
+//function redrawFeatureInAllTiles(self) {
+//    //Redraw the whole tile, not just this vtf
+//    var tiles = self.tiles;
+//    var mvtLayer = self.mvtLayer;
+//    var mapZoom = self.map.getZoom();
+//    for (var id in tiles) {
+//        var tileZoom = parseInt(id.split(':')[0]);
+//        if (tileZoom != mapZoom) {
+//            continue;
+//        }
+//        mvtLayer.redrawFeature(id, self);
+//    }
+//}
 
 MVTFeature.prototype.toggle = function () {
     if (this.selected) {
@@ -607,6 +627,7 @@ MVTFeature.prototype.select = function () {
     this.selected = true;
     this.mvtSource.featureSelected(this);
     redrawTiles(this);
+    //redrawFeatureInAllTiles(this);
     var linkedFeature = this.linkedFeature();
     if (linkedFeature && linkedFeature.staticLabel && !linkedFeature.staticLabel.selected) {
         linkedFeature.staticLabel.select();
@@ -617,6 +638,7 @@ MVTFeature.prototype.deselect = function () {
     this.selected = false;
     this.mvtSource.featureDeselected(this);
     redrawTiles(this);
+    //redrawFeatureInAllTiles(this);
     var linkedFeature = this.linkedFeature();
     if (linkedFeature && linkedFeature.staticLabel && linkedFeature.staticLabel.selected) {
         linkedFeature.staticLabel.deselect();
@@ -627,7 +649,7 @@ MVTFeature.prototype.on = function (eventType, callback) {
     this._eventHandlers[eventType] = callback;
 };
 
-MVTFeature.prototype._drawPoint = function (ctx, coordsArray, style) {
+MVTFeature.prototype._drawPoint = function (ctx, coordsArray, style, redraw) {
     if (!style) return;
     if (!ctx || !ctx.canvas) return;
 
@@ -653,6 +675,11 @@ MVTFeature.prototype._drawPoint = function (ctx, coordsArray, style) {
         return;
     }
 
+    if (redraw)
+    {
+        ctx2d.globalCompositeOperation = this.globalCompositeOperation;
+    } 
+    
     ctx2d.beginPath();
     ctx2d.fillStyle = style.color;
     ctx2d.arc(p.x, p.y, radius, 0, Math.PI * 2);
@@ -669,11 +696,14 @@ MVTFeature.prototype._drawPoint = function (ctx, coordsArray, style) {
     tile.paths.push([p]);
 };
 
-MVTFeature.prototype._drawLineString = function (ctx, coordsArray, style) {
+MVTFeature.prototype._drawLineString = function (ctx, coordsArray, style, redraw) {
     if (!style) return;
     if (!ctx || !ctx.canvas) return;
 
     var ctx2d = ctx.canvas.getContext('2d');
+    if (redraw) {
+        ctx2d.globalCompositeOperation = this.globalCompositeOperation;
+    }    
     ctx2d.strokeStyle = style.color;
     ctx2d.lineWidth = style.size;
     ctx2d.beginPath();
@@ -698,10 +728,14 @@ MVTFeature.prototype._drawLineString = function (ctx, coordsArray, style) {
     tile.paths.push(projCoords);
 };
 
-MVTFeature.prototype._drawPolygon = function (ctx, coordsArray, style) {
+MVTFeature.prototype._drawPolygon = function (ctx, coordsArray, style, redraw) {
     if (!style) return;
     if (!ctx || !ctx.canvas) return;
     var ctx2d = ctx.canvas.getContext('2d');
+
+    if (redraw) {
+        ctx2d.globalCompositeOperation = this.globalCompositeOperation;
+    }
     var outline = style.outline;
 
     // color may be defined via function to make choropleth work right
@@ -848,13 +882,15 @@ class MVTLayer {
 
     _isPointInPoly(pt, poly) {
         if (poly && poly.length) {
-            for (var c = false, i = -1, l = poly.length, j = l - 1; ++i < l; j = i)
+            for (var c = false, i = -1, l = poly.length, j = l - 1; ++i < l; j = i) {
                 ((poly[i].y <= pt.y && pt.y < poly[j].y) || (poly[j].y <= pt.y && pt.y < poly[i].y))
                     && (pt.x < (poly[j].x - poly[i].x) * (pt.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)
                     && (c = !c);
+            }                
             return c;
         }
     }
+    
 
     _getDistanceFromLine(pt, pts) {
         var min = Number.POSITIVE_INFINITY;
@@ -886,35 +922,36 @@ class MVTLayer {
         return { distance: p.distanceTo(a), point: a };
     }
 
-    onAdd(map) {
-        var self = this;
-        self.map = map;
-        L.TileLayer.Canvas.prototype.onAdd.call(this, map);
-        map.on('layerremove', function (e) {
-            // we only want to do stuff when the layerremove event is on this layer
-            if (e.layer._leaflet_id === self._leaflet_id) {
-                removeLabels(self);
-            }
-        });
-    }
+    //onAdd(map) {
+    //    var self = this;
+    //    self.map = map;
+    //    L.TileLayer.Canvas.prototype.onAdd.call(this, map);
+    //    map.on('layerremove', function (e) {
+    //        // we only want to do stuff when the layerremove event is on this layer
+    //        if (e.layer._leaflet_id === self._leaflet_id) {
+    //            removeLabels(self);
+    //        }
+    //    });
+    //}
 
-    drawTile(canvas, tilePoint, zoom) {
-        var ctx = {
-            canvas: canvas,
-            tile: tilePoint,
-            zoom: zoom,
-            tileSize: this.options.tileSize
-        };
+    //drawTile(canvas, tilePoint, zoom) {
 
-        ctx.id = Util.getContextID(ctx);
+    //    var ctx = {
+    //        canvas: canvas,
+    //        tile: tilePoint,
+    //        zoom: zoom,
+    //        tileSize: this.options.tileSize
+    //    };
 
-        if (!this._canvasIDToFeatures[ctx.id]) {
-            this._initializeFeaturesHash(ctx);
-        }
-        if (!this.features) {
-            this.features = {};
-        }
-    }
+    //    ctx.id = Util.getContextID(ctx);
+
+    //    if (!this._canvasIDToFeatures[ctx.id]) {
+    //        this._initializeFeaturesHash(ctx);
+    //    }
+    //    if (!this.features) {
+    //        this.features = {};
+    //    }
+    //}
 
     _initializeFeaturesHash(ctx) {
         this._canvasIDToFeatures[ctx.id] = {};
@@ -922,9 +959,9 @@ class MVTLayer {
         this._canvasIDToFeatures[ctx.id].canvas = ctx.canvas;
     }
 
-    _draw(ctx) {
-        //Draw is handled by the parent MVTSource object
-    }
+    //_draw(ctx) {
+    //    //Draw is handled by the parent MVTSource object
+    //}
 
     getCanvas(parentCtx) {
         //This gets called if a vector tile feature has already been parsed.
@@ -942,22 +979,26 @@ class MVTLayer {
 
         var self = this;
 
-        //This is a timer that will wait for a criterion to return true.
-        //If not true within the timeout duration, it will move on.
-        waitFor(function () {
-            ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
-            if (ctx) {
-                return true;
-            }
-        },
-            function () {
-                //When it finishes, do this.
-                ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
-                parentCtx.canvas = ctx;
-                self.redrawTile(parentCtx.id);
+        ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
+        parentCtx.canvas = ctx;
+        self.redrawTile(parentCtx.id);
 
-            }, //when done, go to next flow
-            2000); //The Timeout milliseconds.  After this, give up and move on
+        ////This is a timer that will wait for a criterion to return true.
+        ////If not true within the timeout duration, it will move on.
+        //waitFor(function () {
+        //    ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
+        //    if (ctx) {
+        //        return true;
+        //    }
+        //},
+        //    function () {
+        //        //When it finishes, do this.
+        //        ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
+        //        parentCtx.canvas = ctx;
+        //        self.redrawTile(parentCtx.id);
+
+        //    }, //when done, go to next flow
+        //    2000); //The Timeout milliseconds.  After this, give up and move on
 
     }
 
@@ -971,9 +1012,8 @@ class MVTLayer {
         layerCtx.canvas = self._tiles[tilePoint.x + ":" + tilePoint.y];
         //layerCtx.canvas = ctx.canvas;
 
-
-
         //Initialize this tile's feature storage hash, if it hasn't already been created.  Used for when filters are updated, and features are cleared to prepare for a fresh redraw.
+       
         if (!this._canvasIDToFeatures[layerCtx.id]) {
             this._initializeFeaturesHash(layerCtx);
         } else {
@@ -985,6 +1025,11 @@ class MVTLayer {
         for (var i = 0, len = features.length; i < len; i++) {
             var vtf = features[i]; //vector tile feature
             vtf.layer = vtl;
+
+            //if(vtf.properties.id != 135){
+            //    continue;
+            //}
+
 
             /**
             * Apply filter on feature if there is one. Defined in the options object
@@ -1043,7 +1088,7 @@ class MVTLayer {
             self._canvasIDToFeatures[layerCtx.id].features = self._canvasIDToFeatures[layerCtx.id].features.sort(function (a, b) {
                 return -(b.properties.zIndex - a.properties.zIndex)
             });
-        }        
+        }
         self.redrawTile(layerCtx.id);
     }
 
@@ -1119,8 +1164,9 @@ class MVTLayer {
         var x = evt.pixel.x - evt.canvas_x;
         var y = evt.pixel.y - evt.canvas_y;
 
-        var tilePoint = { x: x, y: y };       
-        
+        var tilePoint = { x: x, y: y };
+
+        //this._drawSmallDot(canvas, x, y);       
         
         var features = this._canvasIDToFeatures[evt.tileID].features;
 
@@ -1183,12 +1229,23 @@ class MVTLayer {
         if (nearest && nearest.toggleEnabled) {
             nearest.toggle();
         }
+        //else {
+        //    return;
+        //}
         
         evt.feature = nearest;
         cb(evt);
     }
 
-    clearTile(id) {
+    _drawSmallDot(canvas, x, y) {
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    clearTile(id, ctx) {
         //id is the entire zoom:x:y.  we just want x:y.
         var ca = id.split(":");
         var canvasId = ca[1] + ":" + ca[2];
@@ -1199,7 +1256,7 @@ class MVTLayer {
         var canvas = this._tiles[canvasId];
 
         var context = canvas.getContext('2d');
-        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.clearRect(0, 0, canvas.width, canvas.height);        
     }
 
     clearTileFeatureHash(canvasID) {
@@ -1212,7 +1269,8 @@ class MVTLayer {
 
     redrawTile(canvasID) {
         //First, clear the canvas
-        this.clearTile(canvasID);
+        //this.clearTile(canvasID);
+        
 
         // If the features are not in the tile, then there is nothing to redraw.
         // This may happen if you call redraw before features have loaded and initially
@@ -1244,6 +1302,20 @@ class MVTLayer {
             selFeat.draw(canvasID);
         }
     }
+
+    //redrawFeature(canvasID,  mvtFeature) {
+    //    var featfeats = this._canvasIDToFeatures[canvasID];
+    //    if (!featfeats) {
+    //        return;
+    //    }
+    //    var features = featfeats.features;
+    //    for (var i = 0; i < features.length; i++) {
+    //        var feature = features[i];
+    //        if (feature === mvtFeature) {
+    //            feature.draw(canvasID, true);
+    //        }
+    //    }
+    //}
 
     _resetCanvasIDToFeatures(canvasID, canvas) {
 
@@ -1326,19 +1398,20 @@ class MVTSource {
         this.options = {
             debug: options.debug || false,
             url: options.url || "", //URL TO Vector Tile Source,
-            getIDForLayerFeature: function () { },
+            getIDForLayerFeature: options.getIDForLayerFeature || function () { },
             tileSize: 256,
             visibleLayers: options.visibleLayers || [],
             xhrHeaders: {},
             clickableLayers: options.clickableLayers || false,
             onClick: options.onClick || function () { },
-            filter : options.filter || false
+            filter: options.filter || false,
+            mutexToggle: options.mutexToggle || false
         };
 
         this.tileSize = new google.maps.Size(this.options.tileSize, this.options.tileSize);
 
         this.layers = {}; //Keep a list of the layers contained in the PBFs
-        this.processedTiles = {}; //Keep a list of tiles that have been processed already
+        //this.processedTiles = {}; //Keep a list of tiles that have been processed already
         this._eventHandlers = {};
         this._triggerOnTilesLoadedEvent = true; //whether or not to fire the onTilesLoaded event when all of the tiles finish loading.
         this._url = this.options.url;
@@ -1478,13 +1551,11 @@ class MVTSource {
         var id = ctx.id = Util.getContextID(ctx);
         this.activeTiles[id] = ctx;
 
-        if (!this.processedTiles[ctx.zoom]) {
-            this.processedTiles[ctx.zoom] = {};
-        }
-
-        //if (this.options.debug) {
-        //    this._drawDebugInfo(ctx);
+        //if (!this.processedTiles[ctx.zoom]) {
+        //    this.processedTiles[ctx.zoom] = {};
         //}
+
+        this.drawDebugInfo(ctx);
         this._draw(ctx);        
     }
 
@@ -1502,6 +1573,11 @@ class MVTSource {
         }
     }
 
+    drawDebugInfo(ctx) {
+        if (this.options.debug) {
+            this._drawDebugInfo(ctx);
+        }
+    }
     _drawDebugInfo(ctx) {
         var max = this.options.tileSize;
         var g = ctx.canvas.getContext('2d');
@@ -1545,21 +1621,17 @@ class MVTSource {
                 var buf = new Pbf(arrayBuffer);
                 var vt = new VectorTile(buf);
                 //Check the current map layer zoom.  If fast zooming is occurring, then short circuit tiles that are for a different zoom level than we're currently on.
-                if (self.map && self.map.getZoom() != ctx.zoom) {                    
+                if (self.map && self.map.getZoom() != ctx.zoom) {
                     return;
                 }
 
-                var vt = parseVT(vt);
+                var vt = parseVT(vt);   
                 self.checkVectorTileLayers(vt, ctx);
-                tileLoaded(self, ctx);
+                //tileLoaded(self, ctx);
             }
            
             //either way, reduce the count of tilesToProcess tiles here
             //self.reduceTilesToProcessCount();
-
-            if (self.options.debug) {
-                self._drawDebugInfo(ctx);
-            }
         };
 
         xhr.onerror = function () {
@@ -1617,7 +1689,6 @@ class MVTSource {
         } else {
             self.layers[key].parseVectorTileLayer(lyr, ctx);
         }
-
     }
 
     createMVTLayer(key, type) {
@@ -1711,6 +1782,13 @@ class MVTSource {
     }
 
     _onClick(evt) {
+
+        if (this.options.mutexToggle) {
+            if (this._selectedFeature) {
+                this._selectedFeature.deselect();
+            }            
+        }
+
         //Here, pass the event on to the child MVTLayer and have it do the hit test and handle the result.
         var self = this;
         var onClick = self.options.onClick;
@@ -1762,7 +1840,6 @@ class MVTSource {
                 onClick(evt);
             }
         }
-
     }
 
     setFilter(filterFunction, layerName) {
@@ -1896,9 +1973,9 @@ function tile2lat(y, z) {
     return (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))));
 }
 
-function tileLoaded(pbfSource, ctx) {
-    pbfSource.loadedTiles[ctx.id] = ctx;
-}
+//function tileLoaded(pbfSource, ctx) {
+//    pbfSource.loadedTiles[ctx.id] = ctx;
+//}
 
 function parseVT(vt) {
     for (var key in vt.layers) {

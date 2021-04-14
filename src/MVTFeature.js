@@ -42,9 +42,12 @@ function MVTFeature(mvtLayer, vtf, ctx, id, style) {
     //this.map.on('zoomend', function() {
     //  self.staticLabel = null;
     //});
-    this.map.addListener("zoom_changed", () => {
-        self.staticLabel = null;
-    });
+
+    //this.map.addListener("zoom_changed", () => {
+    //    self.staticLabel = null;
+    //});
+
+    //this.globalCompositeOperation = 'source-in';
 
     if (style && style.dynamicLabel && typeof style.dynamicLabel === 'function') {
         this.dynamicLabel = this.mvtSource.dynamicLabel.createFeature(this);
@@ -112,9 +115,9 @@ MVTFeature.prototype.setStyle = function (styleFn) {
     }
 };
 
-MVTFeature.prototype.draw = function (canvasID) {
+MVTFeature.prototype.draw = function (canvasID, redraw) {
     //Get the info from the tiles list
-    var tileInfo = this.tiles[canvasID];
+    var tileInfo = this.tiles[canvasID];    
 
     var vtf = tileInfo.vtf;
     var ctx = tileInfo.ctx;
@@ -134,7 +137,7 @@ MVTFeature.prototype.draw = function (canvasID) {
     }
     switch (vtf.type) {
         case 1: //Point
-            this._drawPoint(ctx, vtf.coordinates, style);
+            this._drawPoint(ctx, vtf.coordinates, style, redraw);
             if (!this.staticLabel && typeof this.style.staticLabel === 'function') {
                 if (this.style.ajaxSource && !this.ajaxData) {
                     break;
@@ -144,11 +147,11 @@ MVTFeature.prototype.draw = function (canvasID) {
             break;
 
         case 2: //LineString
-            this._drawLineString(ctx, vtf.coordinates, style);
+            this._drawLineString(ctx, vtf.coordinates, style, redraw);
             break;
 
         case 3: //Polygon
-            this._drawPolygon(ctx, vtf.coordinates, style);
+            this._drawPolygon(ctx, vtf.coordinates, style, redraw);
             break;
 
         default:
@@ -169,8 +172,9 @@ MVTFeature.prototype.addTileFeature = function (vtf, ctx) {
     //Also, if there are existing tiles in the list for other zoom levels, expunge them.
     var zoom = this.map.getZoom();
 
-    if (ctx.zoom != zoom) return;
-
+    if (ctx.zoom != zoom) {
+        return;
+    }
     this.clearTileFeatures(zoom); //TODO: This iterates thru all tiles every time a new tile is added.  Figure out a better way to do this.
 
     this.tiles[ctx.id] = {
@@ -190,7 +194,9 @@ MVTFeature.prototype.addTileFeature = function (vtf, ctx) {
 MVTFeature.prototype.clearTileFeatures = function (zoom) {
     //If stored tiles exist for other zoom levels, expunge them from the list.
     for (var key in this.tiles) {
-        if (key.split(":")[0] != zoom) delete this.tiles[key];
+        if (key.split(":")[0] != zoom) {            
+            delete this.tiles[key];
+        }
     }
 };
 
@@ -204,16 +210,30 @@ function redrawTiles(self) {
     //Redraw the whole tile, not just this vtf
     var tiles = self.tiles;
     var mvtLayer = self.mvtLayer;
-
+    var mapZoom = self.map.getZoom();
     for (var id in tiles) {
         var tileZoom = parseInt(id.split(':')[0]);
-        var mapZoom = self.map.getZoom();
         if (tileZoom === mapZoom) {
             //Redraw the tile
-            mvtLayer.redrawTile(id);
+            mvtLayer.clearTile(id);            
+            mvtLayer.redrawTile(id);            
         }
     }
 }
+
+//function redrawFeatureInAllTiles(self) {
+//    //Redraw the whole tile, not just this vtf
+//    var tiles = self.tiles;
+//    var mvtLayer = self.mvtLayer;
+//    var mapZoom = self.map.getZoom();
+//    for (var id in tiles) {
+//        var tileZoom = parseInt(id.split(':')[0]);
+//        if (tileZoom != mapZoom) {
+//            continue;
+//        }
+//        mvtLayer.redrawFeature(id, self);
+//    }
+//}
 
 MVTFeature.prototype.toggle = function () {
     if (this.selected) {
@@ -227,6 +247,7 @@ MVTFeature.prototype.select = function () {
     this.selected = true;
     this.mvtSource.featureSelected(this);
     redrawTiles(this);
+    //redrawFeatureInAllTiles(this);
     var linkedFeature = this.linkedFeature();
     if (linkedFeature && linkedFeature.staticLabel && !linkedFeature.staticLabel.selected) {
         linkedFeature.staticLabel.select();
@@ -237,6 +258,7 @@ MVTFeature.prototype.deselect = function () {
     this.selected = false;
     this.mvtSource.featureDeselected(this);
     redrawTiles(this);
+    //redrawFeatureInAllTiles(this);
     var linkedFeature = this.linkedFeature();
     if (linkedFeature && linkedFeature.staticLabel && linkedFeature.staticLabel.selected) {
         linkedFeature.staticLabel.deselect();
@@ -247,7 +269,7 @@ MVTFeature.prototype.on = function (eventType, callback) {
     this._eventHandlers[eventType] = callback;
 };
 
-MVTFeature.prototype._drawPoint = function (ctx, coordsArray, style) {
+MVTFeature.prototype._drawPoint = function (ctx, coordsArray, style, redraw) {
     if (!style) return;
     if (!ctx || !ctx.canvas) return;
 
@@ -273,6 +295,11 @@ MVTFeature.prototype._drawPoint = function (ctx, coordsArray, style) {
         return;
     }
 
+    if (redraw)
+    {
+        ctx2d.globalCompositeOperation = this.globalCompositeOperation;
+    } 
+    
     ctx2d.beginPath();
     ctx2d.fillStyle = style.color;
     ctx2d.arc(p.x, p.y, radius, 0, Math.PI * 2);
@@ -289,11 +316,14 @@ MVTFeature.prototype._drawPoint = function (ctx, coordsArray, style) {
     tile.paths.push([p]);
 };
 
-MVTFeature.prototype._drawLineString = function (ctx, coordsArray, style) {
+MVTFeature.prototype._drawLineString = function (ctx, coordsArray, style, redraw) {
     if (!style) return;
     if (!ctx || !ctx.canvas) return;
 
     var ctx2d = ctx.canvas.getContext('2d');
+    if (redraw) {
+        ctx2d.globalCompositeOperation = this.globalCompositeOperation;
+    }    
     ctx2d.strokeStyle = style.color;
     ctx2d.lineWidth = style.size;
     ctx2d.beginPath();
@@ -318,10 +348,14 @@ MVTFeature.prototype._drawLineString = function (ctx, coordsArray, style) {
     tile.paths.push(projCoords);
 };
 
-MVTFeature.prototype._drawPolygon = function (ctx, coordsArray, style) {
+MVTFeature.prototype._drawPolygon = function (ctx, coordsArray, style, redraw) {
     if (!style) return;
     if (!ctx || !ctx.canvas) return;
     var ctx2d = ctx.canvas.getContext('2d');
+
+    if (redraw) {
+        ctx2d.globalCompositeOperation = this.globalCompositeOperation;
+    }
     var outline = style.outline;
 
     // color may be defined via function to make choropleth work right
