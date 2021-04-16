@@ -22,13 +22,19 @@
     <div id="map"></div>
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
-        function InitMap() {
+        var map;
 
-            var map = new google.maps.Map(document.getElementById("map"), {
+        function InitGoogleMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
                 center: { lat: -5, lng: 27.4 },
                 zoom: 5
             });
-
+            // if tiles have not been loaded, GetTile will trigger twice.
+            google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
+                InitVectorTiles();
+            });
+        }
+        function InitVectorTiles() {            
             var mvtSource = new MVTSource(map, {
                 url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
                 debug: true,
@@ -76,9 +82,9 @@
                             };
                             break;
                         case 3: //'Polygon'
-                            style.color = fillColor;
+                            style.color = 'rgba(149,139,255,0.4)';
                             style.outline = {
-                                color: strokeColor,
+                                color: 'rgb(20,20,20)',
                                 size: 1
                             };
                             style.selected = {
@@ -93,17 +99,11 @@
                     return style;
                 }
             });
-
-            var fillColor = 'rgba(149,139,255,0.4)';
-            var strokeColor = 'rgb(20,20,20)';
-
-            google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
-                map.overlayMapTypes.insertAt(0, mvtSource);
-            });
-        }
+            map.overlayMapTypes.insertAt(0, mvtSource);
+        }            
 
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDnkD94apUwQA0gIWMoMxRuHQarhbBNrf0&callback=InitMap&libraries=&v=weekly"
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDnkD94apUwQA0gIWMoMxRuHQarhbBNrf0&callback=InitGoogleMap&libraries=&v=weekly"
             defer></script>
 
 </body>

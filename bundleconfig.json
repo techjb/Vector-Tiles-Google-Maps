@@ -13,7 +13,15 @@
       "src/MVTLayer.js",
       "src/MVTSource.js",
       "src/MVTUtil.js",
-      "src/StaticLabel/StaticLabel.js"
+      "src/Mercator.js"
+      //"src/PointInPolygon/CFG.js"
+      //"src/PointInPolygon/robust-pnp.js",
+      //"src/PointInPolygon/orientation.js",
+      //"src/PointInPolygon/robust-sum.js",
+      //"src/PointInPolygon/two-product.js"
+      //"src/PointInPolygon/PointInPolygon.js"
+      //"src/StaticLabel/StaticLabel.js"
+
       //"src/DynamicLabel/PositionWorker.js",
       //"src/DynamicLabel/Feature.js"
       //"src/DynamicLabel/DynamicLabel.js"

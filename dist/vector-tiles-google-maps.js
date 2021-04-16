@@ -880,6 +880,7 @@ class MVTLayer {
         this._tiles = [];
     }
 
+    // todo: sometimes it does not work properly
     _isPointInPoly(pt, poly) {
         if (poly && poly.length) {
             for (var c = false, i = -1, l = poly.length, j = l - 1; ++i < l; j = i) {
@@ -890,7 +891,6 @@ class MVTLayer {
             return c;
         }
     }
-    
 
     _getDistanceFromLine(pt, pts) {
         var min = Number.POSITIVE_INFINITY;
@@ -1161,13 +1161,7 @@ class MVTLayer {
             return;
         }
 
-        var x = evt.pixel.x - evt.canvas_x;
-        var y = evt.pixel.y - evt.canvas_y;
-
-        var tilePoint = { x: x, y: y };
-
-        //this._drawSmallDot(canvas, x, y);       
-        
+        var tilePoint = evt.tilePoint;        
         var features = this._canvasIDToFeatures[evt.tileID].features;
 
         var minDistance = Number.POSITIVE_INFINITY;
@@ -1399,17 +1393,15 @@ class MVTSource {
             debug: options.debug || false,
             url: options.url || "", //URL TO Vector Tile Source,
             getIDForLayerFeature: options.getIDForLayerFeature || function () { },
-            tileSize: 256,
+            tileSize: options.tileSize || 256,
             visibleLayers: options.visibleLayers || [],
             xhrHeaders: {},
-            clickableLayers: options.clickableLayers || false,
-            onClick: options.onClick || function () { },
+            clickableLayers: options.clickableLayers || false,            
             filter: options.filter || false,
             mutexToggle: options.mutexToggle || false
         };
-
+        
         this.tileSize = new google.maps.Size(this.options.tileSize, this.options.tileSize);
-
         this.layers = {}; //Keep a list of the layers contained in the PBFs
         //this.processedTiles = {}; //Keep a list of tiles that have been processed already
         this._eventHandlers = {};
@@ -1444,9 +1436,9 @@ class MVTSource {
         this._eventHandlers = {};
         //this._tilesToProcess = 0; //store the max number of tiles to be loaded.  Later, we can use this count to count down PBF loading.
 
-        this.map.addListener("click", function(e) {
-            self._onClick(e);
-        });
+        //this.map.addListener("click", function(e) {
+        //    self._onClick(e);
+        //});
     }
 
     getTile(coord, zoom, ownerDocument) {
@@ -1781,40 +1773,16 @@ class MVTSource {
         this._eventHandlers[eventType] = callback;
     }
 
-    _onClick(evt) {
-
-        if (this.options.mutexToggle) {
-            if (this._selectedFeature) {
-                this._selectedFeature.deselect();
-            }            
-        }
-
+    onClick(evt, callbackFunction) {
         //Here, pass the event on to the child MVTLayer and have it do the hit test and handle the result.
         var self = this;
-        var onClick = self.options.onClick;
+        
         var clickableLayers = self.options.clickableLayers;
         var layers = self.layers;
         var zoom = this.map.getZoom();
 
-        //evt.tileID = getTileURL(evt.latlng.lat, evt.latlng.lng, this.map.getZoom());
         evt.tileID = getTileURL(evt.latLng, zoom, this.options.tileSize);
-
-        var x = evt.tileID.split(':')[1];
-        var y = evt.tileID.split(':')[2];
-
-        var bounds = MERCATOR.getTileBounds({
-            x: x,
-            y: y,
-            z: zoom
-        });
-
-        var sw = new google.maps.LatLng(bounds.sw);        
-        var ne = new google.maps.LatLng(bounds.ne);        
-        sw = fromLatLngToPoint(sw, this.map);
-        ne = fromLatLngToPoint(ne, this.map);                
-        
-        evt.canvas_x = sw.x;
-        evt.canvas_y = ne.y;
+        evt.tilePoint = MERCATOR.fromLatLngToTilePoint(map, evt, zoom);
         
         // We must have an array of clickable layers, otherwise, we just pass
         // the event to the public onClick callback in options.
@@ -1829,15 +1797,15 @@ class MVTSource {
                 var layer = layers[key];
                 if (layer) {
                     layer.handleClickEvent(evt, function (evt) {
-                        if (typeof onClick === 'function') {
-                            onClick(evt);
+                        if (typeof callbackFunction === 'function') {
+                            callbackFunction(evt);
                         }
                     });
                 }
             }
         } else {
-            if (typeof onClick === 'function') {
-                onClick(evt);
+            if (typeof callbackFunction === 'function') {
+                callbackFunction(evt);
             }
         }
     }
@@ -1884,6 +1852,13 @@ class MVTSource {
                 layer.setStyle(styleFn);
             }
         }
+    }
+
+    deselectFeature() {
+        if (this._selectedFeature) {
+            this._selectedFeature.deselect();
+            this._selectedFeature = false;
+        }        
     }
 
     featureSelected(mvtFeature) {
@@ -1995,69 +1970,6 @@ function parseVTFeatures(vtl) {
     }
     return vtl;
 }
-
-MERCATOR = {
-
-    fromLatLngToPoint: function (latLng) {
-        var siny = Math.min(Math.max(Math.sin(latLng.lat * (Math.PI / 180)),
-            -.9999),
-            .9999);
-        return {
-            x: 128 + latLng.lng * (256 / 360),
-            y: 128 + 0.5 * Math.log((1 + siny) / (1 - siny)) * -(256 / (2 * Math.PI))
-        };
-    },
-
-    fromPointToLatLng: function (point) {
-
-        return {
-            lat: (2 * Math.atan(Math.exp((point.y - 128) / -(256 / (2 * Math.PI)))) -
-                Math.PI / 2) / (Math.PI / 180),
-            lng: (point.x - 128) / (256 / 360)
-        };
-
-    },
-
-    getTileAtLatLng: function (latLng, zoom) {
-        var t = Math.pow(2, zoom),
-            s = 256 / t,
-            p = this.fromLatLngToPoint(latLng);
-        return { x: Math.floor(p.x / s), y: Math.floor(p.y / s), z: zoom };
-    },
-
-    getTileBounds: function (tile) {
-        tile = this.normalizeTile(tile);
-        var t = Math.pow(2, tile.z),
-            s = 256 / t,
-            sw = {
-                x: tile.x * s,
-                y: (tile.y * s) + s
-            },
-            ne = {
-                x: tile.x * s + s,
-                y: (tile.y * s)
-            };
-        return {
-            sw: this.fromPointToLatLng(sw),
-            ne: this.fromPointToLatLng(ne)
-        }        
-    },
-   
-    normalizeTile: function (tile) {
-        var t = Math.pow(2, tile.z);
-        tile.x = ((tile.x % t) + t) % t;
-        tile.y = ((tile.y % t) + t) % t;
-        return tile;
-    }
-}
-
-function fromLatLngToPoint(latLng, map) {
-    var topRight = map.getProjection().fromLatLngToPoint(map.getBounds().getNorthEast());
-    var bottomLeft = map.getProjection().fromLatLngToPoint(map.getBounds().getSouthWest());
-    var scale = Math.pow(2, map.getZoom());
-    var worldPoint = map.getProjection().fromLatLngToPoint(latLng);
-    return new google.maps.Point((worldPoint.x - bottomLeft.x) * scale, (worldPoint.y - topRight.y) * scale);
-}
 /**
  * Created by Nicholas Hallahan <nhallahan@spatialdev.com>
  *       on 8/15/14.
@@ -2099,81 +2011,83 @@ Util.getJSON = function(url, callback) {
   xmlhttp.send();
 };
 
-/**
- * Created by Nicholas Hallahan <nhallahan@spatialdev.com>
- *       on 7/31/14.
- */
+MERCATOR = {
+    fromLatLngToPoint: function (latLng) {
+        var siny = Math.min(Math.max(Math.sin(latLng.lat() * (Math.PI / 180)),
+            -.9999),
+            .9999);
+        return {
+            x: 128 + latLng.lng() * (256 / 360),
+            y: 128 + 0.5 * Math.log((1 + siny) / (1 - siny)) * -(256 / (2 * Math.PI))
+        };
+    },
 
+    fromPointToLatLng: function (point) {
+        return {
+            lat: (2 * Math.atan(Math.exp((point.y - 128) / -(256 / (2 * Math.PI)))) -
+                Math.PI / 2) / (Math.PI / 180),
+            lng: (point.x - 128) / (256 / 360)
+        };
 
-function StaticLabel(mvtFeature, ctx, latLng, style) {
-  var self = this;
-  this.mvtFeature = mvtFeature;
-  this.map = mvtFeature.map;
-  this.zoom = ctx.zoom;
-  this.latLng = latLng;
-  this.selected = false;
+    },
 
-  if (mvtFeature.linkedFeature) {
-    var linkedFeature = mvtFeature.linkedFeature();
-    if (linkedFeature && linkedFeature.selected) {
-      self.selected = true;
+    getTileAtLatLng: function (latLng, zoom) {
+        var t = Math.pow(2, zoom),
+            s = 256 / t,
+            p = this.fromLatLngToPoint(latLng);        
+        return {
+            x: Math.floor(p.x / s),
+            y: Math.floor(p.y / s),
+            z: zoom
+        };
+    },
+
+    getTileBounds: function (tile) {
+        tile = this.normalizeTile(tile);
+        var t = Math.pow(2, tile.z),
+            s = 256 / t,
+            sw = {
+                x: tile.x * s,
+                y: (tile.y * s) + s
+            },
+            ne = {
+                x: tile.x * s + s,
+                y: (tile.y * s)
+            };
+        return {
+            sw: this.fromPointToLatLng(sw),
+            ne: this.fromPointToLatLng(ne)
+        }
+    },
+
+    normalizeTile: function (tile) {
+        var t = Math.pow(2, tile.z);
+        tile.x = ((tile.x % t) + t) % t;
+        tile.y = ((tile.y % t) + t) % t;
+        return tile;
+    },
+
+    fromLatLngToPixels: function (map, latLng) {
+        var bounds = map.getBounds();
+        var ne = bounds.getNorthEast();
+        var sw = bounds.getSouthWest();
+        var topRight = map.getProjection().fromLatLngToPoint(ne);
+        var bottomLeft = map.getProjection().fromLatLngToPoint(sw);
+        var scale = Math.pow(2, map.getZoom());
+        var worldPoint = map.getProjection().fromLatLngToPoint(latLng);
+        return new google.maps.Point((worldPoint.x - bottomLeft.x) * scale, (worldPoint.y - topRight.y) * scale);
+    },
+
+    fromLatLngToTilePoint: function (map, evt, zoom) {
+        var tile = this.getTileAtLatLng(evt.latLng, zoom);
+        var tileBounds = this.getTileBounds(tile);
+        var tileSwLatLng = new google.maps.LatLng(tileBounds.sw);
+        var tileNeLatLng = new google.maps.LatLng(tileBounds.ne);
+        var tileSwPixels = this.fromLatLngToPixels(map, tileSwLatLng);        
+        var tileNePixels = this.fromLatLngToPixels(map, tileNeLatLng);         
+        return {
+            x: evt.pixel.x - tileSwPixels.x,
+            y: evt.pixel.y - tileNePixels.y
+        }
     }
-  }
-
-  init(self, mvtFeature, ctx, latLng, style)
 }
-
-function init(self, mvtFeature, ctx, latLng, style) {
-  var ajaxData = mvtFeature.ajaxData;
-  var sty = self.style = style.staticLabel(mvtFeature, ajaxData);
-  var icon = self.icon = L.divIcon({
-    className: sty.cssClass || 'label-icon-text',
-    html: sty.html,
-    iconSize: sty.iconSize || [50,50]
-  });
-
-  self.marker = L.marker(latLng, {icon: icon}).addTo(self.map);
-
-  if (self.selected) {
-    self.marker._icon.classList.add(self.style.cssSelectedClass || 'label-icon-text-selected');
-  }
-
-  self.marker.on('click', function(e) {
-    self.toggle();
-  });
-
-  self.map.on('zoomend', function(e) {
-    var newZoom = e.target.getZoom();
-    if (self.zoom !== newZoom) {
-      self.map.removeLayer(self.marker);
-    }
-  });
-}
-
-
-StaticLabel.prototype.toggle = function() {
-  if (this.selected) {
-    this.deselect();
-  } else {
-    this.select();
-  }
-};
-
-StaticLabel.prototype.select = function() {
-  this.selected = true;
-  this.marker._icon.classList.add(this.style.cssSelectedClass || 'label-icon-text-selected');
-  var linkedFeature = this.mvtFeature.linkedFeature();
-  if (!linkedFeature.selected) linkedFeature.select();
-};
-
-StaticLabel.prototype.deselect = function() {
-  this.selected = false;
-  this.marker._icon.classList.remove(this.style.cssSelectedClass || 'label-icon-text-selected');
-  var linkedFeature = this.mvtFeature.linkedFeature();
-  if (linkedFeature.selected) linkedFeature.deselect();
-};
-
-StaticLabel.prototype.remove = function() {
-  if (!this.map || !this.marker) return;
-  this.map.removeLayer(this.marker);
-};

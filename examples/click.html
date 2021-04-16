@@ -23,24 +23,19 @@
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
         var map;
-        function InitMap() {
 
+        function InitGoogleMap() {
             map = new google.maps.Map(document.getElementById("map"), {
                 center: { lat: -5, lng: 27.4 },
                 zoom: 5
             });
-
+            // if tiles have not been loaded, GetTile will trigger twice.
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
-                InitVectorTiles();                
+                InitVectorTiles();
             });
         }
-
         function InitVectorTiles() {
-            var fillColor = 'rgba(149,139,255,0.4)';
-            var strokeColor = 'rgb(20,20,20)';
-            const infoWindow = new google.maps.InfoWindow();
-
-            var options = {
+            var mvtSource = new MVTSource(map, {
                 url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
                 debug: true,
                 clickableLayers: ["GAUL0"],
@@ -61,11 +56,10 @@
                  * @returns {boolean}
                  */
                 filter: function (feature, context) {
-                    //if (feature.layer.name === 'GAUL0') {
-                    //    return true;
-                    //}
-                    return true;
-                    //return false;
+                    if (feature.layer.name === 'GAUL0') {
+                        return true;
+                    }
+                    return false;
                 },
 
                 style: function (feature) {
@@ -90,9 +84,9 @@
                             };
                             break;
                         case 3: //'Polygon'
-                            style.color = fillColor;
+                            style.color = 'rgba(149,139,255,0.4)';
                             style.outline = {
-                                color: strokeColor,
+                                color: 'rgb(20,20,20)',
                                 size: 1
                             };
                             style.selected = {
@@ -105,24 +99,29 @@
                             break;
                     }
                     return style;
-                },
-                onClick: function (evt) {
-                    infoWindow.close();                    
-                    if (evt.feature === null) {
+                }
+            });
+
+            map.overlayMapTypes.insertAt(0, mvtSource);
+
+            const infoWindow = new google.maps.InfoWindow();
+            map.addListener("click", function (e) {
+                mvtSource.  (e, function (evt) {
+                    infoWindow.close();
+                    if (!evt.feature) {
+                        mvtSource.deselectFeature();
                         return;
                     }
                     var text = JSON.stringify(evt.feature.properties);
                     infoWindow.setContent(text)
-                    infoWindow.setPosition(evt.latLng);                    
+                    infoWindow.setPosition(evt.latLng);
                     infoWindow.open(map);
-                }
-            }
-            var mvtSource = new MVTSource(map, options);
-            map.overlayMapTypes.insertAt(0, mvtSource);
+                });
+            });
         }
 
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDnkD94apUwQA0gIWMoMxRuHQarhbBNrf0&callback=InitMap&libraries=&v=weekly"
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDnkD94apUwQA0gIWMoMxRuHQarhbBNrf0&callback=InitGoogleMap&libraries=&v=weekly"
             defer></script>
 
 </body>

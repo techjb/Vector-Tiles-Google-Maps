@@ -27,6 +27,7 @@ class MVTLayer {
         this._tiles = [];
     }
 
+    // todo: sometimes it does not work properly
     _isPointInPoly(pt, poly) {
         if (poly && poly.length) {
             for (var c = false, i = -1, l = poly.length, j = l - 1; ++i < l; j = i) {
@@ -37,7 +38,6 @@ class MVTLayer {
             return c;
         }
     }
-    
 
     _getDistanceFromLine(pt, pts) {
         var min = Number.POSITIVE_INFINITY;
@@ -308,13 +308,7 @@ class MVTLayer {
             return;
         }
 
-        var x = evt.pixel.x - evt.canvas_x;
-        var y = evt.pixel.y - evt.canvas_y;
-
-        var tilePoint = { x: x, y: y };
-
-        //this._drawSmallDot(canvas, x, y);       
-        
+        var tilePoint = evt.tilePoint;        
         var features = this._canvasIDToFeatures[evt.tileID].features;
 
         var minDistance = Number.POSITIVE_INFINITY;

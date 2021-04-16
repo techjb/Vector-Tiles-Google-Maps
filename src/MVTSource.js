@@ -6,17 +6,15 @@ class MVTSource {
             debug: options.debug || false,
             url: options.url || "", //URL TO Vector Tile Source,
             getIDForLayerFeature: options.getIDForLayerFeature || function () { },
-            tileSize: 256,
+            tileSize: options.tileSize || 256,
             visibleLayers: options.visibleLayers || [],
             xhrHeaders: {},
-            clickableLayers: options.clickableLayers || false,
-            onClick: options.onClick || function () { },
+            clickableLayers: options.clickableLayers || false,            
             filter: options.filter || false,
             mutexToggle: options.mutexToggle || false
         };
-
+        
         this.tileSize = new google.maps.Size(this.options.tileSize, this.options.tileSize);
-
         this.layers = {}; //Keep a list of the layers contained in the PBFs
         //this.processedTiles = {}; //Keep a list of tiles that have been processed already
         this._eventHandlers = {};
@@ -51,9 +49,9 @@ class MVTSource {
         this._eventHandlers = {};
         //this._tilesToProcess = 0; //store the max number of tiles to be loaded.  Later, we can use this count to count down PBF loading.
 
-        this.map.addListener("click", function(e) {
-            self._onClick(e);
-        });
+        //this.map.addListener("click", function(e) {
+        //    self._onClick(e);
+        //});
     }
 
     getTile(coord, zoom, ownerDocument) {
@@ -388,40 +386,16 @@ class MVTSource {
         this._eventHandlers[eventType] = callback;
     }
 
-    _onClick(evt) {
-
-        if (this.options.mutexToggle) {
-            if (this._selectedFeature) {
-                this._selectedFeature.deselect();
-            }            
-        }
-
+    onClick(evt, callbackFunction) {
         //Here, pass the event on to the child MVTLayer and have it do the hit test and handle the result.
         var self = this;
-        var onClick = self.options.onClick;
+        
         var clickableLayers = self.options.clickableLayers;
         var layers = self.layers;
         var zoom = this.map.getZoom();
 
-        //evt.tileID = getTileURL(evt.latlng.lat, evt.latlng.lng, this.map.getZoom());
         evt.tileID = getTileURL(evt.latLng, zoom, this.options.tileSize);
-
-        var x = evt.tileID.split(':')[1];
-        var y = evt.tileID.split(':')[2];
-
-        var bounds = MERCATOR.getTileBounds({
-            x: x,
-            y: y,
-            z: zoom
-        });
-
-        var sw = new google.maps.LatLng(bounds.sw);        
-        var ne = new google.maps.LatLng(bounds.ne);        
-        sw = fromLatLngToPoint(sw, this.map);
-        ne = fromLatLngToPoint(ne, this.map);                
-        
-        evt.canvas_x = sw.x;
-        evt.canvas_y = ne.y;
+        evt.tilePoint = MERCATOR.fromLatLngToTilePoint(map, evt, zoom);
         
         // We must have an array of clickable layers, otherwise, we just pass
         // the event to the public onClick callback in options.
@@ -436,15 +410,15 @@ class MVTSource {
                 var layer = layers[key];
                 if (layer) {
                     layer.handleClickEvent(evt, function (evt) {
-                        if (typeof onClick === 'function') {
-                            onClick(evt);
+                        if (typeof callbackFunction === 'function') {
+                            callbackFunction(evt);
                         }
                     });
                 }
             }
         } else {
-            if (typeof onClick === 'function') {
-                onClick(evt);
+            if (typeof callbackFunction === 'function') {
+                callbackFunction(evt);
             }
         }
     }
@@ -491,6 +465,13 @@ class MVTSource {
                 layer.setStyle(styleFn);
             }
         }
+    }
+
+    deselectFeature() {
+        if (this._selectedFeature) {
+            this._selectedFeature.deselect();
+            this._selectedFeature = false;
+        }        
     }
 
     featureSelected(mvtFeature) {
@@ -601,67 +582,4 @@ function parseVTFeatures(vtl) {
         vtl.parsedFeatures.push(vtf);
     }
     return vtl;
-}
-
-MERCATOR = {
-
-    fromLatLngToPoint: function (latLng) {
-        var siny = Math.min(Math.max(Math.sin(latLng.lat * (Math.PI / 180)),
-            -.9999),
-            .9999);
-        return {
-            x: 128 + latLng.lng * (256 / 360),
-            y: 128 + 0.5 * Math.log((1 + siny) / (1 - siny)) * -(256 / (2 * Math.PI))
-        };
-    },
-
-    fromPointToLatLng: function (point) {
-
-        return {
-            lat: (2 * Math.atan(Math.exp((point.y - 128) / -(256 / (2 * Math.PI)))) -
-                Math.PI / 2) / (Math.PI / 180),
-            lng: (point.x - 128) / (256 / 360)
-        };
-
-    },
-
-    getTileAtLatLng: function (latLng, zoom) {
-        var t = Math.pow(2, zoom),
-            s = 256 / t,
-            p = this.fromLatLngToPoint(latLng);
-        return { x: Math.floor(p.x / s), y: Math.floor(p.y / s), z: zoom };
-    },
-
-    getTileBounds: function (tile) {
-        tile = this.normalizeTile(tile);
-        var t = Math.pow(2, tile.z),
-            s = 256 / t,
-            sw = {
-                x: tile.x * s,
-                y: (tile.y * s) + s
-            },
-            ne = {
-                x: tile.x * s + s,
-                y: (tile.y * s)
-            };
-        return {
-            sw: this.fromPointToLatLng(sw),
-            ne: this.fromPointToLatLng(ne)
-        }        
-    },
-   
-    normalizeTile: function (tile) {
-        var t = Math.pow(2, tile.z);
-        tile.x = ((tile.x % t) + t) % t;
-        tile.y = ((tile.y % t) + t) % t;
-        return tile;
-    }
-}
-
-function fromLatLngToPoint(latLng, map) {
-    var topRight = map.getProjection().fromLatLngToPoint(map.getBounds().getNorthEast());
-    var bottomLeft = map.getProjection().fromLatLngToPoint(map.getBounds().getSouthWest());
-    var scale = Math.pow(2, map.getZoom());
-    var worldPoint = map.getProjection().fromLatLngToPoint(latLng);
-    return new google.maps.Point((worldPoint.x - bottomLeft.x) * scale, (worldPoint.y - topRight.y) * scale);
 }

@@ -79,9 +79,16 @@
     <Content Include="lib\jsts\javascript.util.js" />
     <Content Include="lib\jsts\jsts-src.js" />
     <Content Include="lib\jsts\jsts.js" />
+    <Content Include="src\Mercator.js" />
     <Content Include="src\Point.js" />
+    <Content Include="src\PointInPolygon\CFG.js" />
+    <Content Include="src\PointInPolygon\orientation.js" />
+    <Content Include="src\PointInPolygon\PointInPolygon.js" />
+    <Content Include="src\PointInPolygon\robust-sum.js" />
+    <Content Include="src\PointInPolygon\two-product.js" />
     <Content Include="src\Protobuf.js" />
     <Content Include="src\Protobuf.old.js" />
+    <Content Include="src\PointInPolygon\robust-pnp.js" />
     <Content Include="src\VectorTile.js" />
     <Content Include="src\VectorTileFeature.js" />
     <Content Include="src\VectorTileLayer.js" />
