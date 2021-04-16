@@ -74,6 +74,7 @@
       <DependentUpon>vector-tiles-google-maps.js</DependentUpon>
     </Content>
     <Content Include="examples\click.html" />
+    <Content Include="examples\catalunya.html" />
     <Content Include="examples\spanish-parcels.html" />
     <Content Include="examples\basic.html" />
     <Content Include="lib\jsts\javascript.util.js" />

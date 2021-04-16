@@ -24,16 +24,16 @@
         function InitMap() {            
 
             var map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 38.62, lng: -1.57 },
-                zoom: 5
+                center: { lat: 41.39, lng: 2.14 },
+                zoom: 12
             });
 
+            // Links obtained from https://www.icgc.cat/es/Innovacion/Recursos-para-desarrolladores/Teselas-vectoriales-y-estilos-para-hacer-mapas-ligeros-y-apps
+
             var mvtSource = new MVTSource(map, {
-                url: "https://api.mapbox.com/v4/techjb.9o01nh3m/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=pk.eyJ1IjoidGVjaGpiIiwiYSI6ImNqZnAxdGprYTB3a2EzM3JxN3ozazE1a3kifQ.WTzyyZbmKbyehCBm9HNhbg",
-                debug: false,
+                url: "https://betaserver.icgc.cat/tileserver3/tileserver.php/bt5m_stpropi/{z}/{x}/{y}.pbf",
                 style: function (feature) {
                     var style = {};
-
                     var type = feature.type;
                     switch (type) {
                         case 1: //'Point'
@@ -53,9 +53,9 @@
                             };
                             break;
                         case 3: //'Polygon'
-                            style.color = 'rgba(149,139,255,0)';
+                            style.color = 'red';
                             style.outline = {
-                                color: 'rgba(0, 0, 0, 0.7)',
+                                color: 'blue',
                                 size: 1
                             };
                             style.selected = {
@@ -70,7 +70,7 @@
                     return style;
                 }
 
-            });           
+            });         
             
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
                 map.overlayMapTypes.insertAt(0, mvtSource);
