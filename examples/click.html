@@ -106,7 +106,7 @@
 
             const infoWindow = new google.maps.InfoWindow();
             map.addListener("click", function (e) {
-                mvtSource.  (e, function (evt) {
+                mvtSource.onClick(e, function (evt) {
                     infoWindow.close();
                     if (!evt.feature) {
                         mvtSource.deselectFeature();
