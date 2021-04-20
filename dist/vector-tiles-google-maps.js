@@ -497,7 +497,7 @@ MVTFeature.prototype.setStyle = function (styleFn) {
 
 MVTFeature.prototype.draw = function (canvasID, redraw) {
     //Get the info from the tiles list
-    var tileInfo = this.tiles[canvasID];    
+    var tileInfo = this.tiles[canvasID];
 
     var vtf = tileInfo.vtf;
     var ctx = tileInfo.ctx;
@@ -574,7 +574,7 @@ MVTFeature.prototype.addTileFeature = function (vtf, ctx) {
 MVTFeature.prototype.clearTileFeatures = function (zoom) {
     //If stored tiles exist for other zoom levels, expunge them from the list.
     for (var key in this.tiles) {
-        if (key.split(":")[0] != zoom) {            
+        if (key.split(":")[0] != zoom) {
             delete this.tiles[key];
         }
     }
@@ -595,8 +595,8 @@ function redrawTiles(self) {
         var tileZoom = parseInt(id.split(':')[0]);
         if (tileZoom === mapZoom) {
             //Redraw the tile
-            mvtLayer.clearTile(id);            
-            mvtLayer.redrawTile(id);            
+            mvtLayer.clearTile(id);
+            mvtLayer.redrawTile(id);
         }
     }
 }
@@ -675,11 +675,10 @@ MVTFeature.prototype._drawPoint = function (ctx, coordsArray, style, redraw) {
         return;
     }
 
-    if (redraw)
-    {
+    if (redraw) {
         ctx2d.globalCompositeOperation = this.globalCompositeOperation;
-    } 
-    
+    }
+
     ctx2d.beginPath();
     ctx2d.fillStyle = style.color;
     ctx2d.arc(p.x, p.y, radius, 0, Math.PI * 2);
@@ -703,7 +702,7 @@ MVTFeature.prototype._drawLineString = function (ctx, coordsArray, style, redraw
     var ctx2d = ctx.canvas.getContext('2d');
     if (redraw) {
         ctx2d.globalCompositeOperation = this.globalCompositeOperation;
-    }    
+    }
     ctx2d.strokeStyle = style.color;
     ctx2d.lineWidth = style.size;
     ctx2d.beginPath();
@@ -748,7 +747,7 @@ MVTFeature.prototype._drawPolygon = function (ctx, coordsArray, style, redraw) {
     if (outline) {
         ctx2d.strokeStyle = outline.color;
         ctx2d.lineWidth = outline.size;
-    }    
+    }
     ctx2d.beginPath();
 
     var projCoords = [];
@@ -887,7 +886,7 @@ class MVTLayer {
                 ((poly[i].y <= pt.y && pt.y < poly[j].y) || (poly[j].y <= pt.y && pt.y < poly[i].y))
                     && (pt.x < (poly[j].x - poly[i].x) * (pt.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)
                     && (c = !c);
-            }                
+            }
             return c;
         }
     }
@@ -1013,7 +1012,7 @@ class MVTLayer {
         //layerCtx.canvas = ctx.canvas;
 
         //Initialize this tile's feature storage hash, if it hasn't already been created.  Used for when filters are updated, and features are cleared to prepare for a fresh redraw.
-       
+
         if (!this._canvasIDToFeatures[layerCtx.id]) {
             this._initializeFeaturesHash(layerCtx);
         } else {
@@ -1038,7 +1037,7 @@ class MVTLayer {
             var filter = self.options.filter;
             if (typeof filter === 'function') {
                 if (filter(vtf, layerCtx) === false) continue;
-            }            
+            }
 
             var getIDForLayerFeature;
             if (typeof self.options.getIDForLayerFeature === 'function') {
@@ -1046,7 +1045,7 @@ class MVTLayer {
             } else {
                 getIDForLayerFeature = Util.getIDForLayerFeature;
             }
-            var uniqueID = self.options.getIDForLayerFeature(vtf) || i;            
+            var uniqueID = self.options.getIDForLayerFeature(vtf) || i;
             var mvtFeature = self.features[uniqueID];
 
             /**
@@ -1161,7 +1160,7 @@ class MVTLayer {
             return;
         }
 
-        var tilePoint = evt.tilePoint;        
+        var tilePoint = evt.tilePoint;
         var features = this._canvasIDToFeatures[evt.tileID].features;
 
         var minDistance = Number.POSITIVE_INFINITY;
@@ -1226,7 +1225,7 @@ class MVTLayer {
         //else {
         //    return;
         //}
-        
+
         evt.feature = nearest;
         cb(evt);
     }
@@ -1250,7 +1249,7 @@ class MVTLayer {
         var canvas = this._tiles[canvasId];
 
         var context = canvas.getContext('2d');
-        context.clearRect(0, 0, canvas.width, canvas.height);        
+        context.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     clearTileFeatureHash(canvasID) {
@@ -1264,13 +1263,13 @@ class MVTLayer {
     redrawTile(canvasID) {
         //First, clear the canvas
         //this.clearTile(canvasID);
-        
+
 
         // If the features are not in the tile, then there is nothing to redraw.
         // This may happen if you call redraw before features have loaded and initially
         // drawn the tile.
         var featfeats = this._canvasIDToFeatures[canvasID];
-        if (!featfeats) {            
+        if (!featfeats) {
             return;
         }
 
@@ -1362,29 +1361,29 @@ function in_circle(center_x, center_y, radius, x, y) {
  * as a callback function.
  * @param timeOutMillis the max amount of time to wait. If not specified, 3 sec is used.
  */
-function waitFor(testFx, onReady, timeOutMillis) {
-    var maxtimeOutMillis = timeOutMillis ? timeOutMillis : 3000, //< Default Max Timout is 3s
-        start = new Date().getTime(),
-        condition = (typeof (testFx) === "string" ? eval(testFx) : testFx()), //< defensive code
-        interval = setInterval(function () {
-            if ((new Date().getTime() - start < maxtimeOutMillis) && !condition) {
-                // If not time-out yet and condition not yet fulfilled
-                condition = (typeof (testFx) === "string" ? eval(testFx) : testFx()); //< defensive code
-            } else {
-                if (!condition) {
-                    // If condition still not fulfilled (timeout but condition is 'false')
-                    console.log("'waitFor()' timeout");
-                    clearInterval(interval); //< Stop this interval
-                    typeof (onReady) === "string" ? eval(onReady) : onReady('timeout'); //< Do what it's supposed to do once the condition is fulfilled
-                } else {
-                    // Condition fulfilled (timeout and/or condition is 'true')
-                    console.log("'waitFor()' finished in " + (new Date().getTime() - start) + "ms.");
-                    clearInterval(interval); //< Stop this interval
-                    typeof (onReady) === "string" ? eval(onReady) : onReady('success'); //< Do what it's supposed to do once the condition is fulfilled
-                }
-            }
-        }, 50); //< repeat check every 50ms
-};
+//function waitFor(testFx, onReady, timeOutMillis) {
+//    var maxtimeOutMillis = timeOutMillis ? timeOutMillis : 3000, //< Default Max Timout is 3s
+//        start = new Date().getTime(),
+//        condition = (typeof (testFx) === "string" ? eval(testFx) : testFx()), //< defensive code
+//        interval = setInterval(function () {
+//            if ((new Date().getTime() - start < maxtimeOutMillis) && !condition) {
+//                // If not time-out yet and condition not yet fulfilled
+//                condition = (typeof (testFx) === "string" ? eval(testFx) : testFx()); //< defensive code
+//            } else {
+//                if (!condition) {
+//                    // If condition still not fulfilled (timeout but condition is 'false')
+//                    console.log("'waitFor()' timeout");
+//                    clearInterval(interval); //< Stop this interval
+//                    typeof (onReady) === "string" ? eval(onReady) : onReady('timeout'); //< Do what it's supposed to do once the condition is fulfilled
+//                } else {
+//                    // Condition fulfilled (timeout and/or condition is 'true')
+//                    console.log("'waitFor()' finished in " + (new Date().getTime() - start) + "ms.");
+//                    clearInterval(interval); //< Stop this interval
+//                    typeof (onReady) === "string" ? eval(onReady) : onReady('success'); //< Do what it's supposed to do once the condition is fulfilled
+//                }
+//            }
+//        }, 50); //< repeat check every 50ms
+//};
 class MVTSource {
     constructor(map, options) {
         var self = this;
@@ -1392,18 +1391,21 @@ class MVTSource {
         this.options = {
             debug: options.debug || false,
             url: options.url || "", //URL TO Vector Tile Source,
-            getIDForLayerFeature: options.getIDForLayerFeature || function () { },
+            getIDForLayerFeature: options.getIDForLayerFeature || function (feature) {
+                return feature.properties.id;
+            },
             tileSize: options.tileSize || 256,
             visibleLayers: options.visibleLayers || [],
             xhrHeaders: {},
-            clickableLayers: options.clickableLayers || false,            
+            clickableLayers: options.clickableLayers || false,
             filter: options.filter || false,
-            mutexToggle: options.mutexToggle || false
+            mutexToggle: options.mutexToggle || false,
+            cache: options.cache || false
         };
-        
+
         this.tileSize = new google.maps.Size(this.options.tileSize, this.options.tileSize);
         this.layers = {}; //Keep a list of the layers contained in the PBFs
-        //this.processedTiles = {}; //Keep a list of tiles that have been processed already
+        this.processedTiles = {}; //Keep a list of tiles that have been processed already
         this._eventHandlers = {};
         this._triggerOnTilesLoadedEvent = true; //whether or not to fire the onTilesLoaded event when all of the tiles finish loading.
         this._url = this.options.url;
@@ -1479,7 +1481,7 @@ class MVTSource {
                 };
                 break;
             case 3: //'Polygon'
-                style.color = 'rgba(49,79,79,1)';
+                style.color = 'rgba(49,79,79, 0.4)';
                 style.outline = {
                     color: 'rgba(161,217,155,0.8)',
                     size: 1
@@ -1540,15 +1542,19 @@ class MVTSource {
         //    this._tilesToProcess = this._tilesToLoad;
         //}
 
-        var id = ctx.id = Util.getContextID(ctx);
+        var id = ctx.id = this._getContextID(ctx);
         this.activeTiles[id] = ctx;
 
-        //if (!this.processedTiles[ctx.zoom]) {
-        //    this.processedTiles[ctx.zoom] = {};
-        //}
+        if (!this.processedTiles[ctx.zoom]) {
+            this.processedTiles[ctx.zoom] = {};
+        }
 
         this.drawDebugInfo(ctx);
-        this._draw(ctx);        
+        this._draw(ctx);
+    }
+
+    _getContextID = function (ctx) {
+        return [ctx.zoom, ctx.tile.x, ctx.tile.y].join(":");
     }
 
     setOpacity(opacity) {
@@ -1588,15 +1594,14 @@ class MVTSource {
     _draw(ctx) {
         var self = this;
 
-        //    //This works to skip fetching and processing tiles if they've already been processed.
-        //    var vectorTile = this.processedTiles[ctx.zoom][ctx.id];
-        //    //if we've already parsed it, don't get it again.
-        //    if(vectorTile){
-        //      console.log("Skipping fetching " + ctx.id);
-        //      self.checkVectorTileLayers(parseVT(vectorTile), ctx, true);
-        //      self.reduceTilesToProcessCount();
-        //      return;
-        //    }
+        //This works to skip fetching and processing tiles if they've already been processed.
+        var vectorTile = this.processedTiles[ctx.zoom][ctx.id];
+        //if we've already parsed it, don't get it again.
+        if (vectorTile) {
+            self.checkVectorTileLayers(vectorTile, ctx, false);
+            //self.reduceTilesToProcessCount();
+            return;
+        }
 
         if (!this._url) return;
         var src = this._url
@@ -1616,12 +1621,14 @@ class MVTSource {
                 if (self.map && self.map.getZoom() != ctx.zoom) {
                     return;
                 }
-
-                var vt = parseVT(vt);   
+                var vt = parseVT(vt);
                 self.checkVectorTileLayers(vt, ctx);
+                if (self.options.cache) {
+                    self.processedTiles[ctx.zoom][ctx.id] = vt;
+                }
                 //tileLoaded(self, ctx);
             }
-           
+
             //either way, reduce the count of tilesToProcess tiles here
             //self.reduceTilesToProcessCount();
         };
@@ -1686,21 +1693,22 @@ class MVTSource {
     createMVTLayer(key, type) {
         var self = this;
 
-        var getIDForLayerFeature;
-        if (typeof self.options.getIDForLayerFeature === 'function') {
-            getIDForLayerFeature = self.options.getIDForLayerFeature;
-        } else {
-            getIDForLayerFeature = Util.getIDForLayerFeature;
-        }
+        //var getIDForLayerFeature;
+        //if (typeof self.options.getIDForLayerFeature === 'function') {
+        //    getIDForLayerFeature = self.options.getIDForLayerFeature;
+        //} else {
+        //    getIDForLayerFeature = Util.getIDForLayerFeature;
+        //}
+
 
         var options = {
-            getIDForLayerFeature: getIDForLayerFeature,
+            getIDForLayerFeature: self.options.getIDForLayerFeature,
             filter: self.options.filter,
             layerOrdering: self.options.layerOrdering,
             style: self.style,
             name: key,
             asynch: true
-        };        
+        };
 
         if (self.options.zIndex) {
             options.zIndex = self.zIndex;
@@ -1776,20 +1784,20 @@ class MVTSource {
     onClick(evt, callbackFunction) {
         //Here, pass the event on to the child MVTLayer and have it do the hit test and handle the result.
         var self = this;
-        
+
         var clickableLayers = self.options.clickableLayers;
         var layers = self.layers;
         var zoom = this.map.getZoom();
 
         evt.tileID = getTileURL(evt.latLng, zoom, this.options.tileSize);
         evt.tilePoint = MERCATOR.fromLatLngToTilePoint(map, evt, zoom);
-        
+
         // We must have an array of clickable layers, otherwise, we just pass
         // the event to the public onClick callback in options.
 
         if (!clickableLayers) {
             clickableLayers = Object.keys(self.layers);
-            
+
         }
         if (clickableLayers && clickableLayers.length > 0) {
             for (var i = 0, len = clickableLayers.length; i < len; i++) {
@@ -1858,7 +1866,7 @@ class MVTSource {
         if (this._selectedFeature) {
             this._selectedFeature.deselect();
             this._selectedFeature = false;
-        }        
+        }
     }
 
     featureSelected(mvtFeature) {
@@ -1931,7 +1939,7 @@ function project(latLng, tile_size) {
     );
 }
 
-function tileToLatLng(x , y ,z) {
+function tileToLatLng(x, y, z) {
     var long = tile2long(x, z);
     var lat = tile2long(y, z);
     return {
@@ -1970,47 +1978,6 @@ function parseVTFeatures(vtl) {
     }
     return vtl;
 }
-/**
- * Created by Nicholas Hallahan <nhallahan@spatialdev.com>
- *       on 8/15/14.
- */
-
-
-function Util() {
-
-}
-
-Util.getContextID = function(ctx) {
-  return [ctx.zoom, ctx.tile.x, ctx.tile.y].join(":");
-};
-
-/**
- * Default function that gets the id for a layer feature.
- * Sometimes this needs to be done in a different way and
- * can be specified by the user in the options for L.TileLayer.MVTSource.
- *
- * @param feature
- * @returns {ctx.id|*|id|string|jsts.index.chain.MonotoneChain.id|number}
- */
-Util.getIDForLayerFeature = function(feature) {
-  return feature.properties.id;
-};
-
-Util.getJSON = function(url, callback) {
-  var xmlhttp = typeof XMLHttpRequest !== 'undefined' ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
-  xmlhttp.onreadystatechange = function() {
-    var status = xmlhttp.status;
-    if (xmlhttp.readyState === 4 && status >= 200 && status < 300) {
-      var json = JSON.parse(xmlhttp.responseText);
-      callback(null, json);
-    } else {
-      callback( { error: true, status: status } );
-    }
-  };
-  xmlhttp.open("GET", url, true);
-  xmlhttp.send();
-};
-
 MERCATOR = {
     fromLatLngToPoint: function (latLng) {
         var siny = Math.min(Math.max(Math.sin(latLng.lat() * (Math.PI / 180)),

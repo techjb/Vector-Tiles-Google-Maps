@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Click</title>
+    <title>Cache</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -39,31 +39,10 @@
             var options = {
                 url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
                 debug: true,
-                mutexToggle: true,
-                clickableLayers: ["GAUL0"],
-                visibleLayers: ["GAUL0"],
-                getIDForLayerFeature: function (feature) {
-                    return feature.properties.id;
-                }
-            }
-
+                cache: true
+            };
             var mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
-
-            const infoWindow = new google.maps.InfoWindow();
-            map.addListener("click", function (e) {
-                mvtSource.onClick(e, function (evt) {
-                    infoWindow.close();
-                    if (!evt.feature) {
-                        mvtSource.deselectFeature();
-                        return;
-                    }
-                    var text = JSON.stringify(evt.feature.properties);
-                    infoWindow.setContent(text)
-                    infoWindow.setPosition(evt.latLng);
-                    infoWindow.open(map);
-                });
-            });
         }
 
     </script>

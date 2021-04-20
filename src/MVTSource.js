@@ -5,18 +5,21 @@ class MVTSource {
         this.options = {
             debug: options.debug || false,
             url: options.url || "", //URL TO Vector Tile Source,
-            getIDForLayerFeature: options.getIDForLayerFeature || function () { },
+            getIDForLayerFeature: options.getIDForLayerFeature || function (feature) {
+                return feature.properties.id;
+            },
             tileSize: options.tileSize || 256,
             visibleLayers: options.visibleLayers || [],
             xhrHeaders: {},
-            clickableLayers: options.clickableLayers || false,            
+            clickableLayers: options.clickableLayers || false,
             filter: options.filter || false,
-            mutexToggle: options.mutexToggle || false
+            mutexToggle: options.mutexToggle || false,
+            cache: options.cache || false
         };
-        
+
         this.tileSize = new google.maps.Size(this.options.tileSize, this.options.tileSize);
         this.layers = {}; //Keep a list of the layers contained in the PBFs
-        //this.processedTiles = {}; //Keep a list of tiles that have been processed already
+        this.processedTiles = {}; //Keep a list of tiles that have been processed already
         this._eventHandlers = {};
         this._triggerOnTilesLoadedEvent = true; //whether or not to fire the onTilesLoaded event when all of the tiles finish loading.
         this._url = this.options.url;
@@ -92,7 +95,7 @@ class MVTSource {
                 };
                 break;
             case 3: //'Polygon'
-                style.color = 'rgba(49,79,79,1)';
+                style.color = 'rgba(49,79,79, 0.4)';
                 style.outline = {
                     color: 'rgba(161,217,155,0.8)',
                     size: 1
@@ -153,15 +156,19 @@ class MVTSource {
         //    this._tilesToProcess = this._tilesToLoad;
         //}
 
-        var id = ctx.id = Util.getContextID(ctx);
+        var id = ctx.id = this._getContextID(ctx);
         this.activeTiles[id] = ctx;
 
-        //if (!this.processedTiles[ctx.zoom]) {
-        //    this.processedTiles[ctx.zoom] = {};
-        //}
+        if (!this.processedTiles[ctx.zoom]) {
+            this.processedTiles[ctx.zoom] = {};
+        }
 
         this.drawDebugInfo(ctx);
-        this._draw(ctx);        
+        this._draw(ctx);
+    }
+
+    _getContextID = function (ctx) {
+        return [ctx.zoom, ctx.tile.x, ctx.tile.y].join(":");
     }
 
     setOpacity(opacity) {
@@ -201,15 +208,14 @@ class MVTSource {
     _draw(ctx) {
         var self = this;
 
-        //    //This works to skip fetching and processing tiles if they've already been processed.
-        //    var vectorTile = this.processedTiles[ctx.zoom][ctx.id];
-        //    //if we've already parsed it, don't get it again.
-        //    if(vectorTile){
-        //      console.log("Skipping fetching " + ctx.id);
-        //      self.checkVectorTileLayers(parseVT(vectorTile), ctx, true);
-        //      self.reduceTilesToProcessCount();
-        //      return;
-        //    }
+        //This works to skip fetching and processing tiles if they've already been processed.
+        var vectorTile = this.processedTiles[ctx.zoom][ctx.id];
+        //if we've already parsed it, don't get it again.
+        if (vectorTile) {
+            self.checkVectorTileLayers(vectorTile, ctx, false);
+            //self.reduceTilesToProcessCount();
+            return;
+        }
 
         if (!this._url) return;
         var src = this._url
@@ -229,12 +235,14 @@ class MVTSource {
                 if (self.map && self.map.getZoom() != ctx.zoom) {
                     return;
                 }
-
-                var vt = parseVT(vt);   
+                var vt = parseVT(vt);
                 self.checkVectorTileLayers(vt, ctx);
+                if (self.options.cache) {
+                    self.processedTiles[ctx.zoom][ctx.id] = vt;
+                }
                 //tileLoaded(self, ctx);
             }
-           
+
             //either way, reduce the count of tilesToProcess tiles here
             //self.reduceTilesToProcessCount();
         };
@@ -299,21 +307,22 @@ class MVTSource {
     createMVTLayer(key, type) {
         var self = this;
 
-        var getIDForLayerFeature;
-        if (typeof self.options.getIDForLayerFeature === 'function') {
-            getIDForLayerFeature = self.options.getIDForLayerFeature;
-        } else {
-            getIDForLayerFeature = Util.getIDForLayerFeature;
-        }
+        //var getIDForLayerFeature;
+        //if (typeof self.options.getIDForLayerFeature === 'function') {
+        //    getIDForLayerFeature = self.options.getIDForLayerFeature;
+        //} else {
+        //    getIDForLayerFeature = Util.getIDForLayerFeature;
+        //}
+
 
         var options = {
-            getIDForLayerFeature: getIDForLayerFeature,
+            getIDForLayerFeature: self.options.getIDForLayerFeature,
             filter: self.options.filter,
             layerOrdering: self.options.layerOrdering,
             style: self.style,
             name: key,
             asynch: true
-        };        
+        };
 
         if (self.options.zIndex) {
             options.zIndex = self.zIndex;
@@ -389,20 +398,20 @@ class MVTSource {
     onClick(evt, callbackFunction) {
         //Here, pass the event on to the child MVTLayer and have it do the hit test and handle the result.
         var self = this;
-        
+
         var clickableLayers = self.options.clickableLayers;
         var layers = self.layers;
         var zoom = this.map.getZoom();
 
         evt.tileID = getTileURL(evt.latLng, zoom, this.options.tileSize);
         evt.tilePoint = MERCATOR.fromLatLngToTilePoint(map, evt, zoom);
-        
+
         // We must have an array of clickable layers, otherwise, we just pass
         // the event to the public onClick callback in options.
 
         if (!clickableLayers) {
             clickableLayers = Object.keys(self.layers);
-            
+
         }
         if (clickableLayers && clickableLayers.length > 0) {
             for (var i = 0, len = clickableLayers.length; i < len; i++) {
@@ -471,7 +480,7 @@ class MVTSource {
         if (this._selectedFeature) {
             this._selectedFeature.deselect();
             this._selectedFeature = false;
-        }        
+        }
     }
 
     featureSelected(mvtFeature) {
@@ -544,7 +553,7 @@ function project(latLng, tile_size) {
     );
 }
 
-function tileToLatLng(x , y ,z) {
+function tileToLatLng(x, y, z) {
     var long = tile2long(x, z);
     var lat = tile2long(y, z);
     return {

@@ -34,7 +34,7 @@ class MVTLayer {
                 ((poly[i].y <= pt.y && pt.y < poly[j].y) || (poly[j].y <= pt.y && pt.y < poly[i].y))
                     && (pt.x < (poly[j].x - poly[i].x) * (pt.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)
                     && (c = !c);
-            }                
+            }
             return c;
         }
     }
@@ -160,7 +160,7 @@ class MVTLayer {
         //layerCtx.canvas = ctx.canvas;
 
         //Initialize this tile's feature storage hash, if it hasn't already been created.  Used for when filters are updated, and features are cleared to prepare for a fresh redraw.
-       
+
         if (!this._canvasIDToFeatures[layerCtx.id]) {
             this._initializeFeaturesHash(layerCtx);
         } else {
@@ -185,7 +185,7 @@ class MVTLayer {
             var filter = self.options.filter;
             if (typeof filter === 'function') {
                 if (filter(vtf, layerCtx) === false) continue;
-            }            
+            }
 
             var getIDForLayerFeature;
             if (typeof self.options.getIDForLayerFeature === 'function') {
@@ -193,7 +193,7 @@ class MVTLayer {
             } else {
                 getIDForLayerFeature = Util.getIDForLayerFeature;
             }
-            var uniqueID = self.options.getIDForLayerFeature(vtf) || i;            
+            var uniqueID = self.options.getIDForLayerFeature(vtf) || i;
             var mvtFeature = self.features[uniqueID];
 
             /**
@@ -308,7 +308,7 @@ class MVTLayer {
             return;
         }
 
-        var tilePoint = evt.tilePoint;        
+        var tilePoint = evt.tilePoint;
         var features = this._canvasIDToFeatures[evt.tileID].features;
 
         var minDistance = Number.POSITIVE_INFINITY;
@@ -373,7 +373,7 @@ class MVTLayer {
         //else {
         //    return;
         //}
-        
+
         evt.feature = nearest;
         cb(evt);
     }
@@ -397,7 +397,7 @@ class MVTLayer {
         var canvas = this._tiles[canvasId];
 
         var context = canvas.getContext('2d');
-        context.clearRect(0, 0, canvas.width, canvas.height);        
+        context.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     clearTileFeatureHash(canvasID) {
@@ -411,13 +411,13 @@ class MVTLayer {
     redrawTile(canvasID) {
         //First, clear the canvas
         //this.clearTile(canvasID);
-        
+
 
         // If the features are not in the tile, then there is nothing to redraw.
         // This may happen if you call redraw before features have loaded and initially
         // drawn the tile.
         var featfeats = this._canvasIDToFeatures[canvasID];
-        if (!featfeats) {            
+        if (!featfeats) {
             return;
         }
 
@@ -509,26 +509,26 @@ function in_circle(center_x, center_y, radius, x, y) {
  * as a callback function.
  * @param timeOutMillis the max amount of time to wait. If not specified, 3 sec is used.
  */
-function waitFor(testFx, onReady, timeOutMillis) {
-    var maxtimeOutMillis = timeOutMillis ? timeOutMillis : 3000, //< Default Max Timout is 3s
-        start = new Date().getTime(),
-        condition = (typeof (testFx) === "string" ? eval(testFx) : testFx()), //< defensive code
-        interval = setInterval(function () {
-            if ((new Date().getTime() - start < maxtimeOutMillis) && !condition) {
-                // If not time-out yet and condition not yet fulfilled
-                condition = (typeof (testFx) === "string" ? eval(testFx) : testFx()); //< defensive code
-            } else {
-                if (!condition) {
-                    // If condition still not fulfilled (timeout but condition is 'false')
-                    console.log("'waitFor()' timeout");
-                    clearInterval(interval); //< Stop this interval
-                    typeof (onReady) === "string" ? eval(onReady) : onReady('timeout'); //< Do what it's supposed to do once the condition is fulfilled
-                } else {
-                    // Condition fulfilled (timeout and/or condition is 'true')
-                    console.log("'waitFor()' finished in " + (new Date().getTime() - start) + "ms.");
-                    clearInterval(interval); //< Stop this interval
-                    typeof (onReady) === "string" ? eval(onReady) : onReady('success'); //< Do what it's supposed to do once the condition is fulfilled
-                }
-            }
-        }, 50); //< repeat check every 50ms
-};
+//function waitFor(testFx, onReady, timeOutMillis) {
+//    var maxtimeOutMillis = timeOutMillis ? timeOutMillis : 3000, //< Default Max Timout is 3s
+//        start = new Date().getTime(),
+//        condition = (typeof (testFx) === "string" ? eval(testFx) : testFx()), //< defensive code
+//        interval = setInterval(function () {
+//            if ((new Date().getTime() - start < maxtimeOutMillis) && !condition) {
+//                // If not time-out yet and condition not yet fulfilled
+//                condition = (typeof (testFx) === "string" ? eval(testFx) : testFx()); //< defensive code
+//            } else {
+//                if (!condition) {
+//                    // If condition still not fulfilled (timeout but condition is 'false')
+//                    console.log("'waitFor()' timeout");
+//                    clearInterval(interval); //< Stop this interval
+//                    typeof (onReady) === "string" ? eval(onReady) : onReady('timeout'); //< Do what it's supposed to do once the condition is fulfilled
+//                } else {
+//                    // Condition fulfilled (timeout and/or condition is 'true')
+//                    console.log("'waitFor()' finished in " + (new Date().getTime() - start) + "ms.");
+//                    clearInterval(interval); //< Stop this interval
+//                    typeof (onReady) === "string" ? eval(onReady) : onReady('success'); //< Do what it's supposed to do once the condition is fulfilled
+//                }
+//            }
+//        }, 50); //< repeat check every 50ms
+//};

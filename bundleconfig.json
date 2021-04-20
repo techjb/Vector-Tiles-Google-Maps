@@ -12,7 +12,7 @@
       "src/MVTFeature.js",
       "src/MVTLayer.js",
       "src/MVTSource.js",
-      "src/MVTUtil.js",
+      //"src/MVTUtil.js",
       "src/Mercator.js"
       //"src/PointInPolygon/CFG.js"
       //"src/PointInPolygon/robust-pnp.js",

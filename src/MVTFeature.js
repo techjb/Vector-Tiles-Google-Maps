@@ -117,7 +117,7 @@ MVTFeature.prototype.setStyle = function (styleFn) {
 
 MVTFeature.prototype.draw = function (canvasID, redraw) {
     //Get the info from the tiles list
-    var tileInfo = this.tiles[canvasID];    
+    var tileInfo = this.tiles[canvasID];
 
     var vtf = tileInfo.vtf;
     var ctx = tileInfo.ctx;
@@ -194,7 +194,7 @@ MVTFeature.prototype.addTileFeature = function (vtf, ctx) {
 MVTFeature.prototype.clearTileFeatures = function (zoom) {
     //If stored tiles exist for other zoom levels, expunge them from the list.
     for (var key in this.tiles) {
-        if (key.split(":")[0] != zoom) {            
+        if (key.split(":")[0] != zoom) {
             delete this.tiles[key];
         }
     }
@@ -215,8 +215,8 @@ function redrawTiles(self) {
         var tileZoom = parseInt(id.split(':')[0]);
         if (tileZoom === mapZoom) {
             //Redraw the tile
-            mvtLayer.clearTile(id);            
-            mvtLayer.redrawTile(id);            
+            mvtLayer.clearTile(id);
+            mvtLayer.redrawTile(id);
         }
     }
 }
@@ -295,11 +295,10 @@ MVTFeature.prototype._drawPoint = function (ctx, coordsArray, style, redraw) {
         return;
     }
 
-    if (redraw)
-    {
+    if (redraw) {
         ctx2d.globalCompositeOperation = this.globalCompositeOperation;
-    } 
-    
+    }
+
     ctx2d.beginPath();
     ctx2d.fillStyle = style.color;
     ctx2d.arc(p.x, p.y, radius, 0, Math.PI * 2);
@@ -323,7 +322,7 @@ MVTFeature.prototype._drawLineString = function (ctx, coordsArray, style, redraw
     var ctx2d = ctx.canvas.getContext('2d');
     if (redraw) {
         ctx2d.globalCompositeOperation = this.globalCompositeOperation;
-    }    
+    }
     ctx2d.strokeStyle = style.color;
     ctx2d.lineWidth = style.size;
     ctx2d.beginPath();
@@ -368,7 +367,7 @@ MVTFeature.prototype._drawPolygon = function (ctx, coordsArray, style, redraw) {
     if (outline) {
         ctx2d.strokeStyle = outline.color;
         ctx2d.lineWidth = outline.size;
-    }    
+    }
     ctx2d.beginPath();
 
     var projCoords = [];
