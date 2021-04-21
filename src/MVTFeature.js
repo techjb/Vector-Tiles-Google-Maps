@@ -21,7 +21,7 @@ function MVTFeature(mvtLayer, vtf, ctx, id, style) {
 
     this.id = id;
 
-    this.layerLink = this.mvtSource.layerLink;
+    //this.layerLink = this.mvtSource.layerLink;
     this.toggleEnabled = true;
     this.selected = false;
 
@@ -248,10 +248,10 @@ MVTFeature.prototype.select = function () {
     this.mvtSource.featureSelected(this);
     redrawTiles(this);
     //redrawFeatureInAllTiles(this);
-    var linkedFeature = this.linkedFeature();
-    if (linkedFeature && linkedFeature.staticLabel && !linkedFeature.staticLabel.selected) {
-        linkedFeature.staticLabel.select();
-    }
+    //var linkedFeature = this.linkedFeature();
+    //if (linkedFeature && linkedFeature.staticLabel && !linkedFeature.staticLabel.selected) {
+    //    linkedFeature.staticLabel.select();
+    //}
 };
 
 MVTFeature.prototype.deselect = function () {
@@ -259,10 +259,10 @@ MVTFeature.prototype.deselect = function () {
     this.mvtSource.featureDeselected(this);
     redrawTiles(this);
     //redrawFeatureInAllTiles(this);
-    var linkedFeature = this.linkedFeature();
-    if (linkedFeature && linkedFeature.staticLabel && linkedFeature.staticLabel.selected) {
-        linkedFeature.staticLabel.deselect();
-    }
+    //var linkedFeature = this.linkedFeature();
+    //if (linkedFeature && linkedFeature.staticLabel && linkedFeature.staticLabel.selected) {
+    //    linkedFeature.staticLabel.deselect();
+    //}
 };
 
 MVTFeature.prototype.on = function (eventType, callback) {
@@ -459,13 +459,13 @@ MVTFeature.prototype._tilePoint = function (coords) {
     };
 };
 
-MVTFeature.prototype.linkedFeature = function () {
-    var linkedLayer = this.mvtLayer.linkedLayer();
-    if (linkedLayer) {
-        var linkedFeature = linkedLayer.features[this.id];
-        return linkedFeature;
-    } else {
-        return null;
-    }
-};
+//MVTFeature.prototype.linkedFeature = function () {
+//    var linkedLayer = this.mvtLayer.linkedLayer();
+//    if (linkedLayer) {
+//        var linkedFeature = linkedLayer.features[this.id];
+//        return linkedFeature;
+//    } else {
+//        return null;
+//    }
+//};
 

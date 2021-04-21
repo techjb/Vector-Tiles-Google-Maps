@@ -5,17 +5,16 @@
 class MVTLayer {
     constructor(mvtSource, options) {
         this.map = mvtSource.map;
-        this.options = {
-            debug: false,
-            isHiddenLayer: false,
-            getIDForLayerFeature: function () { },
-            tileSize: 256,
-            lineClickTolerance: 2,
-            getIDForLayerFeature: options.getIDForLayerFeature || false,
-            filter: options.filter || false,
-            layerOrdering: options.layerOrdering || false,
-            asynch: options.asynch || true
-        };
+        //this.options = {
+            
+            
+            //tileSize: 256,
+        this.lineClickTolerance = 2;
+        this.getIDForLayerFeature = options.getIDForLayerFeature || false;
+        this.filter = options.filter || false;
+        this.layerOrdering = options.layerOrdering || false;
+        this.asynch = options.asynch || true;
+        //};
         this._featureIsClicked = {};
         this.mvtSource = mvtSource;
         this.style = options.style;
@@ -118,17 +117,20 @@ class MVTLayer {
         var tilePoint = parentCtx.tile;
         var ctx = this._tiles[tilePoint.x + ":" + tilePoint.y];
 
+        
+        
         if (ctx) {
             parentCtx.canvas = ctx;
             this.redrawTile(parentCtx.id);
-            return;
+        }
+        else {
+            ctx = this._tiles[tilePoint.x + ":" + tilePoint.y];
+            parentCtx.canvas = ctx;
+            this.redrawTile(parentCtx.id);
         }
 
-        var self = this;
-
-        ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
-        parentCtx.canvas = ctx;
-        self.redrawTile(parentCtx.id);
+        //var self = this;
+       
 
         ////This is a timer that will wait for a criterion to return true.
         ////If not true within the timeout duration, it will move on.
@@ -149,10 +151,16 @@ class MVTLayer {
 
     }
 
-    parseVectorTileLayer(vtl, ctx) {
+    parseVectorTileLayer(vtl, ctx) {        
         var self = this;
         var tilePoint = ctx.tile;
-        var layerCtx = { canvas: null, id: ctx.id, tile: ctx.tile, zoom: ctx.zoom, tileSize: ctx.tileSize };
+        var layerCtx = {
+            canvas: null,
+            id: ctx.id,
+            tile: ctx.tile,
+            zoom: ctx.zoom,
+            tileSize: ctx.tileSize
+        };
 
         //See if we can pluck the child tile from this PBF tile layer based on the master layer's tile id.
         self._tiles[tilePoint.x + ":" + tilePoint.y] = ctx.canvas;
@@ -182,25 +190,25 @@ class MVTLayer {
             * Apply filter on feature if there is one. Defined in the options object
             * of TileLayer.MVTSource.js
             */
-            var filter = self.options.filter;
+            var filter = self.filter;
             if (typeof filter === 'function') {
                 if (filter(vtf, layerCtx) === false) continue;
             }
 
             var getIDForLayerFeature;
-            if (typeof self.options.getIDForLayerFeature === 'function') {
-                getIDForLayerFeature = self.options.getIDForLayerFeature;
+            if (typeof self.getIDForLayerFeature === 'function') {
+                getIDForLayerFeature = self.getIDForLayerFeature;
             } else {
                 getIDForLayerFeature = Util.getIDForLayerFeature;
             }
-            var uniqueID = self.options.getIDForLayerFeature(vtf) || i;
+            var uniqueID = self.getIDForLayerFeature(vtf) || i;
             var mvtFeature = self.features[uniqueID];
 
             /**
             * Use layerOrdering function to apply a zIndex property to each vtf.  This is defined in
             * TileLayer.MVTSource.js.  Used below to sort features.npm
             */
-            var layerOrdering = self.options.layerOrdering;
+            var layerOrdering = self.layerOrdering;
             if (typeof layerOrdering === 'function') {
                 layerOrdering(vtf, layerCtx); //Applies a custom property to the feature, which is used after we're thru iterating to sort
             }
@@ -229,7 +237,7 @@ class MVTLayer {
             * Apply sorting (zIndex) on feature if there is a function defined in the options object
             * of TileLayer.MVTSource.js
             */
-        var layerOrdering = self.options.layerOrdering;
+        var layerOrdering = self.layerOrdering;
         if (layerOrdering) {
             //We've assigned the custom zIndex property when iterating above.  Now just sort.
             self._canvasIDToFeatures[layerCtx.id].features = self._canvasIDToFeatures[layerCtx.id].features.sort(function (a, b) {
@@ -301,7 +309,7 @@ class MVTLayer {
         //Click happened on the GroupLayer (Manager) and passed it here
         var tileID = evt.tileID.split(":").slice(1, 3).join(":");
         var zoom = evt.tileID.split(":")[0];
-        var canvas = this._tiles[tileID];
+        var canvas = this._tiles[tileID];        
         if (!canvas) {
             //break out
             cb(evt);
@@ -346,7 +354,7 @@ class MVTLayer {
                         if (feature.style) {
                             var distance = this._getDistanceFromLine(tilePoint, paths[j]);
                             var thickness = (feature.selected && feature.style.selected ? feature.style.selected.size : feature.style.size);
-                            if (distance < thickness / 2 + this.options.lineClickTolerance && distance < minDistance) {
+                            if (distance < thickness / 2 + this.lineClickTolerance && distance < minDistance) {
                                 nearest = feature;
                                 minDistance = distance;
                             }
@@ -409,9 +417,11 @@ class MVTLayer {
     }
 
     redrawTile(canvasID) {
+        
         //First, clear the canvas
-        //this.clearTile(canvasID);
-
+        //if (clearTile) {
+        this.clearTile(canvasID);
+        //}
 
         // If the features are not in the tile, then there is nothing to redraw.
         // This may happen if you call redraw before features have loaded and initially

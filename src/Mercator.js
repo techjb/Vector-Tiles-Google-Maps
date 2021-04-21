@@ -76,5 +76,16 @@
             x: evt.pixel.x - tileSwPixels.x,
             y: evt.pixel.y - tileNePixels.y
         }
+    },
+
+
+    project(latLng, tile_size) {
+        let siny = Math.sin((latLng.lat() * Math.PI) / 180);
+        siny = Math.min(Math.max(siny, -0.9999), 0.9999);
+        return new google.maps.Point(
+            tile_size * (0.5 + latLng.lng() / 360),
+            tile_size * (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI))
+        );
     }
+
 }

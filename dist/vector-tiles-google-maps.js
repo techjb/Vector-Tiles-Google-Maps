@@ -1,10 +1,7 @@
 !function (t) { if ("object" == typeof exports && "undefined" != typeof module) module.exports = t(); else if ("function" == typeof define && define.amd) define([], t); else { var i; i = "undefined" != typeof window ? window : "undefined" != typeof global ? global : "undefined" != typeof self ? self : this, i.Pbf = t() } }(function () { return function t(i, e, r) { function s(o, h) { if (!e[o]) { if (!i[o]) { var a = "function" == typeof require && require; if (!h && a) return a(o, !0); if (n) return n(o, !0); var u = new Error("Cannot find module '" + o + "'"); throw u.code = "MODULE_NOT_FOUND", u } var f = e[o] = { exports: {} }; i[o][0].call(f.exports, function (t) { var e = i[o][1][t]; return s(e ? e : t) }, f, f.exports, t, i, e, r) } return e[o].exports } for (var n = "function" == typeof require && require, o = 0; o < r.length; o++)s(r[o]); return s }({ 1: [function (t, i, e) { "use strict"; function r(t) { this.buf = ArrayBuffer.isView && ArrayBuffer.isView(t) ? t : new Uint8Array(t || 0), this.pos = 0, this.type = 0, this.length = this.buf.length } function s(t, i, e) { var r, s, n = e.buf; if (s = n[e.pos++], r = (112 & s) >> 4, s < 128) return o(t, r, i); if (s = n[e.pos++], r |= (127 & s) << 3, s < 128) return o(t, r, i); if (s = n[e.pos++], r |= (127 & s) << 10, s < 128) return o(t, r, i); if (s = n[e.pos++], r |= (127 & s) << 17, s < 128) return o(t, r, i); if (s = n[e.pos++], r |= (127 & s) << 24, s < 128) return o(t, r, i); if (s = n[e.pos++], r |= (1 & s) << 31, s < 128) return o(t, r, i); throw new Error("Expected varint not more than 10 bytes") } function n(t) { return t.type === r.Bytes ? t.readVarint() + t.pos : t.pos + 1 } function o(t, i, e) { return e ? 4294967296 * i + (t >>> 0) : 4294967296 * (i >>> 0) + (t >>> 0) } function h(t, i) { var e, r; if (t >= 0 ? (e = t % 4294967296 | 0, r = t / 4294967296 | 0) : (e = ~(-t % 4294967296), r = ~(-t / 4294967296), 4294967295 ^ e ? e = e + 1 | 0 : (e = 0, r = r + 1 | 0)), t >= 0x10000000000000000 || t < -0x10000000000000000) throw new Error("Given varint doesn't fit into 10 bytes"); i.realloc(10), a(e, r, i), u(r, i) } function a(t, i, e) { e.buf[e.pos++] = 127 & t | 128, t >>>= 7, e.buf[e.pos++] = 127 & t | 128, t >>>= 7, e.buf[e.pos++] = 127 & t | 128, t >>>= 7, e.buf[e.pos++] = 127 & t | 128, t >>>= 7, e.buf[e.pos] = 127 & t } function u(t, i) { var e = (7 & t) << 4; i.buf[i.pos++] |= e | ((t >>>= 3) ? 128 : 0), t && (i.buf[i.pos++] = 127 & t | ((t >>>= 7) ? 128 : 0), t && (i.buf[i.pos++] = 127 & t | ((t >>>= 7) ? 128 : 0), t && (i.buf[i.pos++] = 127 & t | ((t >>>= 7) ? 128 : 0), t && (i.buf[i.pos++] = 127 & t | ((t >>>= 7) ? 128 : 0), t && (i.buf[i.pos++] = 127 & t))))) } function f(t, i, e) { var r = i <= 16383 ? 1 : i <= 2097151 ? 2 : i <= 268435455 ? 3 : Math.ceil(Math.log(i) / (7 * Math.LN2)); e.realloc(r); for (var s = e.pos - 1; s >= t; s--)e.buf[s + r] = e.buf[s] } function d(t, i) { for (var e = 0; e < t.length; e++)i.writeVarint(t[e]) } function p(t, i) { for (var e = 0; e < t.length; e++)i.writeSVarint(t[e]) } function c(t, i) { for (var e = 0; e < t.length; e++)i.writeFloat(t[e]) } function l(t, i) { for (var e = 0; e < t.length; e++)i.writeDouble(t[e]) } function w(t, i) { for (var e = 0; e < t.length; e++)i.writeBoolean(t[e]) } function F(t, i) { for (var e = 0; e < t.length; e++)i.writeFixed32(t[e]) } function b(t, i) { for (var e = 0; e < t.length; e++)i.writeSFixed32(t[e]) } function v(t, i) { for (var e = 0; e < t.length; e++)i.writeFixed64(t[e]) } function g(t, i) { for (var e = 0; e < t.length; e++)i.writeSFixed64(t[e]) } function x(t, i) { return (t[i] | t[i + 1] << 8 | t[i + 2] << 16) + 16777216 * t[i + 3] } function V(t, i, e) { t[e] = i, t[e + 1] = i >>> 8, t[e + 2] = i >>> 16, t[e + 3] = i >>> 24 } function y(t, i) { return (t[i] | t[i + 1] << 8 | t[i + 2] << 16) + (t[i + 3] << 24) } function M(t, i, e) { for (var r = "", s = i; s < e;) { var n = t[s], o = null, h = n > 239 ? 4 : n > 223 ? 3 : n > 191 ? 2 : 1; if (s + h > e) break; var a, u, f; 1 === h ? n < 128 && (o = n) : 2 === h ? (a = t[s + 1], 128 === (192 & a) && (o = (31 & n) << 6 | 63 & a, o <= 127 && (o = null))) : 3 === h ? (a = t[s + 1], u = t[s + 2], 128 === (192 & a) && 128 === (192 & u) && (o = (15 & n) << 12 | (63 & a) << 6 | 63 & u, (o <= 2047 || o >= 55296 && o <= 57343) && (o = null))) : 4 === h && (a = t[s + 1], u = t[s + 2], f = t[s + 3], 128 === (192 & a) && 128 === (192 & u) && 128 === (192 & f) && (o = (15 & n) << 18 | (63 & a) << 12 | (63 & u) << 6 | 63 & f, (o <= 65535 || o >= 1114112) && (o = null))), null === o ? (o = 65533, h = 1) : o > 65535 && (o -= 65536, r += String.fromCharCode(o >>> 10 & 1023 | 55296), o = 56320 | 1023 & o), r += String.fromCharCode(o), s += h } return r } function S(t, i, e) { for (var r, s, n = 0; n < i.length; n++) { if (r = i.charCodeAt(n), r > 55295 && r < 57344) { if (!s) { r > 56319 || n + 1 === i.length ? (t[e++] = 239, t[e++] = 191, t[e++] = 189) : s = r; continue } if (r < 56320) { t[e++] = 239, t[e++] = 191, t[e++] = 189, s = r; continue } r = s - 55296 << 10 | r - 56320 | 65536, s = null } else s && (t[e++] = 239, t[e++] = 191, t[e++] = 189, s = null); r < 128 ? t[e++] = r : (r < 2048 ? t[e++] = r >> 6 | 192 : (r < 65536 ? t[e++] = r >> 12 | 224 : (t[e++] = r >> 18 | 240, t[e++] = r >> 12 & 63 | 128), t[e++] = r >> 6 & 63 | 128), t[e++] = 63 & r | 128) } return e } i.exports = r; var B = t("ieee754"); r.Varint = 0, r.Fixed64 = 1, r.Bytes = 2, r.Fixed32 = 5; var k = 4294967296, P = 1 / k; r.prototype = { destroy: function () { this.buf = null }, readFields: function (t, i, e) { for (e = e || this.length; this.pos < e;) { var r = this.readVarint(), s = r >> 3, n = this.pos; this.type = 7 & r, t(s, i, this), this.pos === n && this.skip(r) } return i }, readMessage: function (t, i) { return this.readFields(t, i, this.readVarint() + this.pos) }, readFixed32: function () { var t = x(this.buf, this.pos); return this.pos += 4, t }, readSFixed32: function () { var t = y(this.buf, this.pos); return this.pos += 4, t }, readFixed64: function () { var t = x(this.buf, this.pos) + x(this.buf, this.pos + 4) * k; return this.pos += 8, t }, readSFixed64: function () { var t = x(this.buf, this.pos) + y(this.buf, this.pos + 4) * k; return this.pos += 8, t }, readFloat: function () { var t = B.read(this.buf, this.pos, !0, 23, 4); return this.pos += 4, t }, readDouble: function () { var t = B.read(this.buf, this.pos, !0, 52, 8); return this.pos += 8, t }, readVarint: function (t) { var i, e, r = this.buf; return e = r[this.pos++], i = 127 & e, e < 128 ? i : (e = r[this.pos++], i |= (127 & e) << 7, e < 128 ? i : (e = r[this.pos++], i |= (127 & e) << 14, e < 128 ? i : (e = r[this.pos++], i |= (127 & e) << 21, e < 128 ? i : (e = r[this.pos], i |= (15 & e) << 28, s(i, t, this))))) }, readVarint64: function () { return this.readVarint(!0) }, readSVarint: function () { var t = this.readVarint(); return t % 2 === 1 ? (t + 1) / -2 : t / 2 }, readBoolean: function () { return Boolean(this.readVarint()) }, readString: function () { var t = this.readVarint() + this.pos, i = M(this.buf, this.pos, t); return this.pos = t, i }, readBytes: function () { var t = this.readVarint() + this.pos, i = this.buf.subarray(this.pos, t); return this.pos = t, i }, readPackedVarint: function (t, i) { var e = n(this); for (t = t || []; this.pos < e;)t.push(this.readVarint(i)); return t }, readPackedSVarint: function (t) { var i = n(this); for (t = t || []; this.pos < i;)t.push(this.readSVarint()); return t }, readPackedBoolean: function (t) { var i = n(this); for (t = t || []; this.pos < i;)t.push(this.readBoolean()); return t }, readPackedFloat: function (t) { var i = n(this); for (t = t || []; this.pos < i;)t.push(this.readFloat()); return t }, readPackedDouble: function (t) { var i = n(this); for (t = t || []; this.pos < i;)t.push(this.readDouble()); return t }, readPackedFixed32: function (t) { var i = n(this); for (t = t || []; this.pos < i;)t.push(this.readFixed32()); return t }, readPackedSFixed32: function (t) { var i = n(this); for (t = t || []; this.pos < i;)t.push(this.readSFixed32()); return t }, readPackedFixed64: function (t) { var i = n(this); for (t = t || []; this.pos < i;)t.push(this.readFixed64()); return t }, readPackedSFixed64: function (t) { var i = n(this); for (t = t || []; this.pos < i;)t.push(this.readSFixed64()); return t }, skip: function (t) { var i = 7 & t; if (i === r.Varint) for (; this.buf[this.pos++] > 127;); else if (i === r.Bytes) this.pos = this.readVarint() + this.pos; else if (i === r.Fixed32) this.pos += 4; else { if (i !== r.Fixed64) throw new Error("Unimplemented type: " + i); this.pos += 8 } }, writeTag: function (t, i) { this.writeVarint(t << 3 | i) }, realloc: function (t) { for (var i = this.length || 16; i < this.pos + t;)i *= 2; if (i !== this.length) { var e = new Uint8Array(i); e.set(this.buf), this.buf = e, this.length = i } }, finish: function () { return this.length = this.pos, this.pos = 0, this.buf.subarray(0, this.length) }, writeFixed32: function (t) { this.realloc(4), V(this.buf, t, this.pos), this.pos += 4 }, writeSFixed32: function (t) { this.realloc(4), V(this.buf, t, this.pos), this.pos += 4 }, writeFixed64: function (t) { this.realloc(8), V(this.buf, t & -1, this.pos), V(this.buf, Math.floor(t * P), this.pos + 4), this.pos += 8 }, writeSFixed64: function (t) { this.realloc(8), V(this.buf, t & -1, this.pos), V(this.buf, Math.floor(t * P), this.pos + 4), this.pos += 8 }, writeVarint: function (t) { return t = +t || 0, t > 268435455 || t < 0 ? void h(t, this) : (this.realloc(4), this.buf[this.pos++] = 127 & t | (t > 127 ? 128 : 0), void (t <= 127 || (this.buf[this.pos++] = 127 & (t >>>= 7) | (t > 127 ? 128 : 0), t <= 127 || (this.buf[this.pos++] = 127 & (t >>>= 7) | (t > 127 ? 128 : 0), t <= 127 || (this.buf[this.pos++] = t >>> 7 & 127))))) }, writeSVarint: function (t) { this.writeVarint(t < 0 ? 2 * -t - 1 : 2 * t) }, writeBoolean: function (t) { this.writeVarint(Boolean(t)) }, writeString: function (t) { t = String(t), this.realloc(4 * t.length), this.pos++; var i = this.pos; this.pos = S(this.buf, t, this.pos); var e = this.pos - i; e >= 128 && f(i, e, this), this.pos = i - 1, this.writeVarint(e), this.pos += e }, writeFloat: function (t) { this.realloc(4), B.write(this.buf, t, this.pos, !0, 23, 4), this.pos += 4 }, writeDouble: function (t) { this.realloc(8), B.write(this.buf, t, this.pos, !0, 52, 8), this.pos += 8 }, writeBytes: function (t) { var i = t.length; this.writeVarint(i), this.realloc(i); for (var e = 0; e < i; e++)this.buf[this.pos++] = t[e] }, writeRawMessage: function (t, i) { this.pos++; var e = this.pos; t(i, this); var r = this.pos - e; r >= 128 && f(e, r, this), this.pos = e - 1, this.writeVarint(r), this.pos += r }, writeMessage: function (t, i, e) { this.writeTag(t, r.Bytes), this.writeRawMessage(i, e) }, writePackedVarint: function (t, i) { this.writeMessage(t, d, i) }, writePackedSVarint: function (t, i) { this.writeMessage(t, p, i) }, writePackedBoolean: function (t, i) { this.writeMessage(t, w, i) }, writePackedFloat: function (t, i) { this.writeMessage(t, c, i) }, writePackedDouble: function (t, i) { this.writeMessage(t, l, i) }, writePackedFixed32: function (t, i) { this.writeMessage(t, F, i) }, writePackedSFixed32: function (t, i) { this.writeMessage(t, b, i) }, writePackedFixed64: function (t, i) { this.writeMessage(t, v, i) }, writePackedSFixed64: function (t, i) { this.writeMessage(t, g, i) }, writeBytesField: function (t, i) { this.writeTag(t, r.Bytes), this.writeBytes(i) }, writeFixed32Field: function (t, i) { this.writeTag(t, r.Fixed32), this.writeFixed32(i) }, writeSFixed32Field: function (t, i) { this.writeTag(t, r.Fixed32), this.writeSFixed32(i) }, writeFixed64Field: function (t, i) { this.writeTag(t, r.Fixed64), this.writeFixed64(i) }, writeSFixed64Field: function (t, i) { this.writeTag(t, r.Fixed64), this.writeSFixed64(i) }, writeVarintField: function (t, i) { this.writeTag(t, r.Varint), this.writeVarint(i) }, writeSVarintField: function (t, i) { this.writeTag(t, r.Varint), this.writeSVarint(i) }, writeStringField: function (t, i) { this.writeTag(t, r.Bytes), this.writeString(i) }, writeFloatField: function (t, i) { this.writeTag(t, r.Fixed32), this.writeFloat(i) }, writeDoubleField: function (t, i) { this.writeTag(t, r.Fixed64), this.writeDouble(i) }, writeBooleanField: function (t, i) { this.writeVarintField(t, Boolean(i)) } } }, { ieee754: 2 }], 2: [function (t, i, e) { e.read = function (t, i, e, r, s) { var n, o, h = 8 * s - r - 1, a = (1 << h) - 1, u = a >> 1, f = -7, d = e ? s - 1 : 0, p = e ? -1 : 1, c = t[i + d]; for (d += p, n = c & (1 << -f) - 1, c >>= -f, f += h; f > 0; n = 256 * n + t[i + d], d += p, f -= 8); for (o = n & (1 << -f) - 1, n >>= -f, f += r; f > 0; o = 256 * o + t[i + d], d += p, f -= 8); if (0 === n) n = 1 - u; else { if (n === a) return o ? NaN : (c ? -1 : 1) * (1 / 0); o += Math.pow(2, r), n -= u } return (c ? -1 : 1) * o * Math.pow(2, n - r) }, e.write = function (t, i, e, r, s, n) { var o, h, a, u = 8 * n - s - 1, f = (1 << u) - 1, d = f >> 1, p = 23 === s ? Math.pow(2, -24) - Math.pow(2, -77) : 0, c = r ? 0 : n - 1, l = r ? 1 : -1, w = i < 0 || 0 === i && 1 / i < 0 ? 1 : 0; for (i = Math.abs(i), isNaN(i) || i === 1 / 0 ? (h = isNaN(i) ? 1 : 0, o = f) : (o = Math.floor(Math.log(i) / Math.LN2), i * (a = Math.pow(2, -o)) < 1 && (o--, a *= 2), i += o + d >= 1 ? p / a : p * Math.pow(2, 1 - d), i * a >= 2 && (o++, a /= 2), o + d >= f ? (h = 0, o = f) : o + d >= 1 ? (h = (i * a - 1) * Math.pow(2, s), o += d) : (h = i * Math.pow(2, d - 1) * Math.pow(2, s), o = 0)); s >= 8; t[e + c] = 255 & h, c += l, h /= 256, s -= 8); for (o = o << s | h, u += s; u > 0; t[e + c] = 255 & o, c += l, o /= 256, u -= 8); t[e + c - l] |= 128 * w } }, {}] }, {}, [1])(1) });
-
 function VectorTile(buffer, end) {
-
     this.layers = {};
     this._buffer = buffer;
-
     end = end || buffer.length;
 
     while (buffer.pos < end) {
@@ -12,24 +9,39 @@ function VectorTile(buffer, end) {
             tag = val >> 3;
 
         if (tag == 3) {
-            var layer = this.readLayer();
-            if (layer.length) this.layers[layer.name] = layer;
+            var layer = this._readLayer();
+            if (layer.length) {
+                this.layers[layer.name] = layer;
+            }
         } else {
             buffer.skip(val);
         }
     }
+    this.parseGeometries();
 }
 
-VectorTile.prototype.readLayer = function () {
+VectorTile.prototype._readLayer = function () {
     var buffer = this._buffer,
         bytes = buffer.readVarint(),
         end = buffer.pos + bytes,
         layer = new VectorTileLayer(buffer, end);
 
     buffer.pos = end;
-
     return layer;
 };
+
+VectorTile.prototype.parseGeometries = function () {
+    for (var key in this.layers) {
+        var layer = this.layers[key];
+        layer.parsedFeatures = [];
+        var featuresLength = layer._features.length;
+        for (var i = 0, len = featuresLength; i < len; i++) {
+            var feature = layer.feature(i);
+            feature.coordinates = feature.loadGeometry();
+            layer.parsedFeatures.push(feature);
+        }
+    }
+}
 
 function VectorTileFeature(buffer, end, extent, keys, values) {
 
@@ -401,7 +413,7 @@ function MVTFeature(mvtLayer, vtf, ctx, id, style) {
 
     this.id = id;
 
-    this.layerLink = this.mvtSource.layerLink;
+    //this.layerLink = this.mvtSource.layerLink;
     this.toggleEnabled = true;
     this.selected = false;
 
@@ -628,10 +640,10 @@ MVTFeature.prototype.select = function () {
     this.mvtSource.featureSelected(this);
     redrawTiles(this);
     //redrawFeatureInAllTiles(this);
-    var linkedFeature = this.linkedFeature();
-    if (linkedFeature && linkedFeature.staticLabel && !linkedFeature.staticLabel.selected) {
-        linkedFeature.staticLabel.select();
-    }
+    //var linkedFeature = this.linkedFeature();
+    //if (linkedFeature && linkedFeature.staticLabel && !linkedFeature.staticLabel.selected) {
+    //    linkedFeature.staticLabel.select();
+    //}
 };
 
 MVTFeature.prototype.deselect = function () {
@@ -639,10 +651,10 @@ MVTFeature.prototype.deselect = function () {
     this.mvtSource.featureDeselected(this);
     redrawTiles(this);
     //redrawFeatureInAllTiles(this);
-    var linkedFeature = this.linkedFeature();
-    if (linkedFeature && linkedFeature.staticLabel && linkedFeature.staticLabel.selected) {
-        linkedFeature.staticLabel.deselect();
-    }
+    //var linkedFeature = this.linkedFeature();
+    //if (linkedFeature && linkedFeature.staticLabel && linkedFeature.staticLabel.selected) {
+    //    linkedFeature.staticLabel.deselect();
+    //}
 };
 
 MVTFeature.prototype.on = function (eventType, callback) {
@@ -839,15 +851,15 @@ MVTFeature.prototype._tilePoint = function (coords) {
     };
 };
 
-MVTFeature.prototype.linkedFeature = function () {
-    var linkedLayer = this.mvtLayer.linkedLayer();
-    if (linkedLayer) {
-        var linkedFeature = linkedLayer.features[this.id];
-        return linkedFeature;
-    } else {
-        return null;
-    }
-};
+//MVTFeature.prototype.linkedFeature = function () {
+//    var linkedLayer = this.mvtLayer.linkedLayer();
+//    if (linkedLayer) {
+//        var linkedFeature = linkedLayer.features[this.id];
+//        return linkedFeature;
+//    } else {
+//        return null;
+//    }
+//};
 
 
 /**
@@ -857,17 +869,16 @@ MVTFeature.prototype.linkedFeature = function () {
 class MVTLayer {
     constructor(mvtSource, options) {
         this.map = mvtSource.map;
-        this.options = {
-            debug: false,
-            isHiddenLayer: false,
-            getIDForLayerFeature: function () { },
-            tileSize: 256,
-            lineClickTolerance: 2,
-            getIDForLayerFeature: options.getIDForLayerFeature || false,
-            filter: options.filter || false,
-            layerOrdering: options.layerOrdering || false,
-            asynch: options.asynch || true
-        };
+        //this.options = {
+            
+            
+            //tileSize: 256,
+        this.lineClickTolerance = 2;
+        this.getIDForLayerFeature = options.getIDForLayerFeature || false;
+        this.filter = options.filter || false;
+        this.layerOrdering = options.layerOrdering || false;
+        this.asynch = options.asynch || true;
+        //};
         this._featureIsClicked = {};
         this.mvtSource = mvtSource;
         this.style = options.style;
@@ -970,17 +981,20 @@ class MVTLayer {
         var tilePoint = parentCtx.tile;
         var ctx = this._tiles[tilePoint.x + ":" + tilePoint.y];
 
+        
+        
         if (ctx) {
             parentCtx.canvas = ctx;
             this.redrawTile(parentCtx.id);
-            return;
+        }
+        else {
+            ctx = this._tiles[tilePoint.x + ":" + tilePoint.y];
+            parentCtx.canvas = ctx;
+            this.redrawTile(parentCtx.id);
         }
 
-        var self = this;
-
-        ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
-        parentCtx.canvas = ctx;
-        self.redrawTile(parentCtx.id);
+        //var self = this;
+       
 
         ////This is a timer that will wait for a criterion to return true.
         ////If not true within the timeout duration, it will move on.
@@ -1001,10 +1015,16 @@ class MVTLayer {
 
     }
 
-    parseVectorTileLayer(vtl, ctx) {
+    parseVectorTileLayer(vtl, ctx) {        
         var self = this;
         var tilePoint = ctx.tile;
-        var layerCtx = { canvas: null, id: ctx.id, tile: ctx.tile, zoom: ctx.zoom, tileSize: ctx.tileSize };
+        var layerCtx = {
+            canvas: null,
+            id: ctx.id,
+            tile: ctx.tile,
+            zoom: ctx.zoom,
+            tileSize: ctx.tileSize
+        };
 
         //See if we can pluck the child tile from this PBF tile layer based on the master layer's tile id.
         self._tiles[tilePoint.x + ":" + tilePoint.y] = ctx.canvas;
@@ -1034,25 +1054,25 @@ class MVTLayer {
             * Apply filter on feature if there is one. Defined in the options object
             * of TileLayer.MVTSource.js
             */
-            var filter = self.options.filter;
+            var filter = self.filter;
             if (typeof filter === 'function') {
                 if (filter(vtf, layerCtx) === false) continue;
             }
 
             var getIDForLayerFeature;
-            if (typeof self.options.getIDForLayerFeature === 'function') {
-                getIDForLayerFeature = self.options.getIDForLayerFeature;
+            if (typeof self.getIDForLayerFeature === 'function') {
+                getIDForLayerFeature = self.getIDForLayerFeature;
             } else {
                 getIDForLayerFeature = Util.getIDForLayerFeature;
             }
-            var uniqueID = self.options.getIDForLayerFeature(vtf) || i;
+            var uniqueID = self.getIDForLayerFeature(vtf) || i;
             var mvtFeature = self.features[uniqueID];
 
             /**
             * Use layerOrdering function to apply a zIndex property to each vtf.  This is defined in
             * TileLayer.MVTSource.js.  Used below to sort features.npm
             */
-            var layerOrdering = self.options.layerOrdering;
+            var layerOrdering = self.layerOrdering;
             if (typeof layerOrdering === 'function') {
                 layerOrdering(vtf, layerCtx); //Applies a custom property to the feature, which is used after we're thru iterating to sort
             }
@@ -1081,7 +1101,7 @@ class MVTLayer {
             * Apply sorting (zIndex) on feature if there is a function defined in the options object
             * of TileLayer.MVTSource.js
             */
-        var layerOrdering = self.options.layerOrdering;
+        var layerOrdering = self.layerOrdering;
         if (layerOrdering) {
             //We've assigned the custom zIndex property when iterating above.  Now just sort.
             self._canvasIDToFeatures[layerCtx.id].features = self._canvasIDToFeatures[layerCtx.id].features.sort(function (a, b) {
@@ -1153,7 +1173,7 @@ class MVTLayer {
         //Click happened on the GroupLayer (Manager) and passed it here
         var tileID = evt.tileID.split(":").slice(1, 3).join(":");
         var zoom = evt.tileID.split(":")[0];
-        var canvas = this._tiles[tileID];
+        var canvas = this._tiles[tileID];        
         if (!canvas) {
             //break out
             cb(evt);
@@ -1198,7 +1218,7 @@ class MVTLayer {
                         if (feature.style) {
                             var distance = this._getDistanceFromLine(tilePoint, paths[j]);
                             var thickness = (feature.selected && feature.style.selected ? feature.style.selected.size : feature.style.size);
-                            if (distance < thickness / 2 + this.options.lineClickTolerance && distance < minDistance) {
+                            if (distance < thickness / 2 + this.lineClickTolerance && distance < minDistance) {
                                 nearest = feature;
                                 minDistance = distance;
                             }
@@ -1261,9 +1281,11 @@ class MVTLayer {
     }
 
     redrawTile(canvasID) {
+        
         //First, clear the canvas
-        //this.clearTile(canvasID);
-
+        //if (clearTile) {
+        this.clearTile(canvasID);
+        //}
 
         // If the features are not in the tile, then there is nothing to redraw.
         // This may happen if you call redraw before features have loaded and initially
@@ -1386,82 +1408,44 @@ function in_circle(center_x, center_y, radius, x, y) {
 //};
 class MVTSource {
     constructor(map, options) {
-        var self = this;
         this.map = map;
-        this.options = {
-            debug: options.debug || false,
-            url: options.url || "", //URL TO Vector Tile Source,
-            getIDForLayerFeature: options.getIDForLayerFeature || function (feature) {
-                return feature.properties.id;
-            },
-            tileSize: options.tileSize || 256,
-            visibleLayers: options.visibleLayers || [],
-            xhrHeaders: {},
-            clickableLayers: options.clickableLayers || false,
-            filter: options.filter || false,
-            mutexToggle: options.mutexToggle || false,
-            cache: options.cache || false
-        };
-
-        this.tileSize = new google.maps.Size(this.options.tileSize, this.options.tileSize);
-        this.layers = {}; //Keep a list of the layers contained in the PBFs
-        this.processedTiles = {}; //Keep a list of tiles that have been processed already
-        this._eventHandlers = {};
-        this._triggerOnTilesLoadedEvent = true; //whether or not to fire the onTilesLoaded event when all of the tiles finish loading.
-        this._url = this.options.url;
-
-
-        // tiles currently in the viewport
-        this.activeTiles = {};
-
-        // thats that have been loaded and drawn
-        this.loadedTiles = {};
-
-        /**
-         * For some reason, Leaflet has some code that resets the
-         * z index in the options object. I'm having trouble tracking
-         * down exactly what does this and why, so for now, we should
-         * just copy the value to this.zIndex so we can have the right
-         * number when we make the subsequent MVTLayers.
-         */
-        this.zIndex = this.options.zIndex;
-
+        this.url = options.url || ""; //Url TO Vector Tile Source,
+        this.debug = options.debug || false; // Draw tiles lines and ids
+        this.getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
+            return feature.properties.id;
+        };        
+        this.visibleLayers = options.visibleLayers || []; // List of visible layers
+        this.xhrHeaders = options.xhrHeaders || {}; // Headers added to every url request
+        this.clickableLayers = options.clickableLayers || false; // List of layers that are clickable
+        this.filter = options.filter || false; // Filter features
+        this.mutexToggle = options.mutexToggle || false;
+        this.cache = options.cache || false; // Load tiles in cache to avoid duplicated requests
+        this._tileSize = options.tileSize || 256; // Default tile size
+        this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);
+        //this.layerLink = options.layerLink || false; // Layer link
         if (typeof options.style === 'function') {
             this.style = options.style;
         }
-
-        if (typeof options.ajaxSource === 'function') {
-            this.ajaxSource = options.ajaxSource;
-        }
-
-        this.layerLink = options.layerLink;
-        this._eventHandlers = {};
-        //this._tilesToProcess = 0; //store the max number of tiles to be loaded.  Later, we can use this count to count down PBF loading.
-
-        //this.map.addListener("click", function(e) {
-        //    self._onClick(e);
-        //});
+        this.layers = {}; //Keep a list of the layers contained in the PBFs
+        this.processedTiles = {}; //Keep a list of tiles that have been processed already
+        this.activeTiles = {}; // tiles currently in the viewport        
     }
 
     getTile(coord, zoom, ownerDocument) {
         const canvas = ownerDocument.createElement("canvas");
-        canvas.width = this.tileSize.width;
-        canvas.height = this.tileSize.height;
-        var tilePoint = {
-            x: coord.x,
-            y: coord.y
-        }
-        this.drawTile(canvas, tilePoint, zoom);
+        canvas.width = this._tileSize;
+        canvas.height = this._tileSize;
+        this.drawTile(canvas, coord, zoom);        
         return canvas;
     }
 
-    releaseTile(tile) {
+    releaseTile(canvas) {
+        var id = canvas.id;
+        delete this.activeTiles[id];        
     }
-
 
     style(feature) {
         var style = {};
-
         var type = feature.type;
         switch (type) {
             case 1: //'Point'
@@ -1498,147 +1482,72 @@ class MVTSource {
         return style;
     }
 
-
-    //onAdd(map) {
-    //    console.log("onadd")
-    //    var self = this;
-    //    self.map = map;
-    //    L.TileLayer.Canvas.prototype.onAdd.call(this, map);
-
-    //    var mapOnClickCallback = function (e) {
-    //        self._onClick(e);
-    //    };
-
-    //    map.on('click', mapOnClickCallback);
-
-    //    map.on("layerremove", function (e) {
-    //        // check to see if the layer removed is this one
-    //        // call a method to remove the child layers (the ones that actually have something drawn on them).
-    //        if (e.layer._leaflet_id === self._leaflet_id && e.layer.removeChildLayers) {
-    //            e.layer.removeChildLayers(map);
-    //            map.off('click', mapOnClickCallback);
-    //        }
-    //    });
-
-    //    self.addChildLayers(map);
-
-    //    if (typeof DynamicLabel === 'function') {
-    //        this.dynamicLabel = new DynamicLabel(map, this, {});
-    //    }
-
-    //}
-
-    drawTile(canvas, tilePoint, zoom) {
+    drawTile(canvas, coord, zoom) {
+        var tile = {
+            x: coord.x,
+            y: coord.y
+        }        
+        var id = canvas.id = this._getContextID(zoom, tile.x, tile.y);
         var ctx = {
-            id: [zoom, tilePoint.x, tilePoint.y].join(":"),
+            id: id,
             canvas: canvas,
-            tile: tilePoint,
+            tile: tile,
             zoom: zoom,
-            tileSize: this.options.tileSize
+            tileSize: this._tileSize
         };
-
-        //Capture the max number of the tiles to load here. this._tilesToProcess is an internal number we use to know when we've finished requesting PBFs.
-        //if (this._tilesToProcess < this._tilesToLoad) {
-        //    this._tilesToProcess = this._tilesToLoad;
-        //}
-
-        var id = ctx.id = this._getContextID(ctx);
-        this.activeTiles[id] = ctx;
-
-        if (!this.processedTiles[ctx.zoom]) {
-            this.processedTiles[ctx.zoom] = {};
-        }
-
-        this.drawDebugInfo(ctx);
+        
+        //this.activeTiles[id] = ctx;
+        this._drawDebugInfo(ctx);
         this._draw(ctx);
     }
 
-    _getContextID = function (ctx) {
-        return [ctx.zoom, ctx.tile.x, ctx.tile.y].join(":");
+    _getContextID (zoom, x, y) {
+        return [zoom, x, y].join(":");
     }
 
-    setOpacity(opacity) {
-        this._setVisibleLayersStyle('opacity', opacity);
-    }
-
-    setZIndex(zIndex) {
-        this._setVisibleLayersStyle('zIndex', zIndex);
-    }
-
-    _setVisibleLayersStyle(style, value) {
-        for (var key in this.layers) {
-            this.layers[key]._tileContainer.style[style] = value;
-        }
-    }
-
-    drawDebugInfo(ctx) {
-        if (this.options.debug) {
-            this._drawDebugInfo(ctx);
-        }
-    }
     _drawDebugInfo(ctx) {
-        var max = this.options.tileSize;
+        if (!this.debug) return;
+        var width = this.tileSize.width;
+        var height = this.tileSize.height;
         var g = ctx.canvas.getContext('2d');
         g.strokeStyle = '#000000';
         g.fillStyle = '#FFFF00';
-        g.strokeRect(0, 0, max, max);
+        g.strokeRect(0, 0, width, height);
         g.font = "12px Arial";
         g.fillRect(0, 0, 5, 5);
-        g.fillRect(0, max - 5, 5, 5);
-        g.fillRect(max - 5, 0, 5, 5);
-        g.fillRect(max - 5, max - 5, 5, 5);
-        g.fillRect(max / 2 - 5, max / 2 - 5, 10, 10);
-        g.strokeText(ctx.zoom + ' ' + ctx.tile.x + ' ' + ctx.tile.y, max / 2 - 30, max / 2 - 10);
+        g.fillRect(0, height - 5, 5, 5);
+        g.fillRect(width - 5, 0, 5, 5);
+        g.fillRect(width - 5, height - 5, 5, 5);
+        g.fillRect(width / 2 - 5, height / 2 - 5, 10, 10);
+        g.strokeText(ctx.zoom + ' ' + ctx.tile.x + ' ' + ctx.tile.y, width / 2 - 30, height / 2 - 10);
     }
 
     _draw(ctx) {
         var self = this;
-
-        //This works to skip fetching and processing tiles if they've already been processed.
-        var vectorTile = this.processedTiles[ctx.zoom][ctx.id];
-        //if we've already parsed it, don't get it again.
+        //This works to skip fetching and processing tiles if they've already been processed (cache=true).
+        var vectorTile = this.processedTiles[ctx.id];
         if (vectorTile) {
-            self.checkVectorTileLayers(vectorTile, ctx, false);
-            //self.reduceTilesToProcessCount();
-            return;
+            return this.checkVectorTileLayers(vectorTile, ctx);            
         }
 
-        if (!this._url) return;
-        var src = this._url
+        if (!this.url) return;
+        var src = this.url
             .replace("{z}", ctx.zoom)
             .replace("{x}", ctx.tile.x)
             .replace("{y}", ctx.tile.y);
 
         var xhr = new XMLHttpRequest();
         xhr.onload = function () {
-            if (xhr.status == "200") {
-                if (!xhr.response) return;
-
-                var arrayBuffer = new Uint8Array(xhr.response);
-                var buf = new Pbf(arrayBuffer);
-                var vt = new VectorTile(buf);
-                //Check the current map layer zoom.  If fast zooming is occurring, then short circuit tiles that are for a different zoom level than we're currently on.
-                if (self.map && self.map.getZoom() != ctx.zoom) {
-                    return;
-                }
-                var vt = parseVT(vt);
-                self.checkVectorTileLayers(vt, ctx);
-                if (self.options.cache) {
-                    self.processedTiles[ctx.zoom][ctx.id] = vt;
-                }
-                //tileLoaded(self, ctx);
+            if (xhr.status == "200" && xhr.response) {
+                self._xhrResponseOk(ctx, xhr.response)
             }
-
-            //either way, reduce the count of tilesToProcess tiles here
-            //self.reduceTilesToProcessCount();
         };
 
         xhr.onerror = function () {
-            console.log("xhr error: " + xhr.status)
         };
 
         xhr.open('GET', src, true); //async is true
-        var headers = self.options.xhrHeaders;
+        var headers = this.xhrHeaders;
         for (var header in headers) {
             xhr.setRequestHeader(header, headers[header])
         }
@@ -1646,158 +1555,76 @@ class MVTSource {
         xhr.send();
     }
 
-    //reduceTilesToProcessCount() {
-    //    this._tilesToProcess--;        
-    //    if (!this._tilesToProcess) {
-    //        //Trigger event letting us know that all PBFs have been loaded and processed (or 404'd).
-    //        if (this._eventHandlers["PBFLoad"]) this._eventHandlers["PBFLoad"]();
-    //        this._pbfLoaded();
-    //    }
-    //}
+    _xhrResponseOk = function (ctx, response) {        
+        //If fast zooming is occurring, then short circuit tiles that are for a different zoom level.
+        if (this.map && this.map.getZoom() != ctx.zoom) {
+            return;
+        }
+        var uint8Array = new Uint8Array(response);
+        var pbf = new Pbf(uint8Array);
+        var vectorTile = new VectorTile(pbf);        
+        if (this.cache) {            
+            this.processedTiles[ctx.id] = vectorTile;
+        }
+        this.checkVectorTileLayers(vectorTile, ctx);                
+    }
+    _setActiveTile(vectorTile, ctx) {
+        ctx.vectorTile = vectorTile;
+        this.activeTiles[ctx.id] = ctx;
+    }
 
-    checkVectorTileLayers(vt, ctx, parsed) {
-        var self = this;
-        //Check if there are specified visible layers        
-        if (self.options.visibleLayers && self.options.visibleLayers.length > 0) {
+    checkVectorTileLayers(vectorTile, ctx) {
+        if (this.visibleLayers && this.visibleLayers.length > 0) {
             //only let thru the layers listed in the visibleLayers array
-            for (var i = 0; i < self.options.visibleLayers.length; i++) {
-                var layerName = self.options.visibleLayers[i];
-                if (vt.layers[layerName]) {
-                    //Proceed with parsing
-                    self.prepareMVTLayers(vt.layers[layerName], layerName, ctx, parsed);
+            for (var i = 0; i < this.visibleLayers.length; i++) {
+                var layerName = this.visibleLayers[i];
+                if (vectorTile.layers[layerName]) {
+                    this._prepareMVTLayers(vectorTile.layers[layerName], layerName, ctx);
                 }
             }
         } else {
-            //Parse all vt.layers
-            for (var key in vt.layers) {
-                self.prepareMVTLayers(vt.layers[key], key, ctx, parsed);
+            for (var key in vectorTile.layers) {
+                this._prepareMVTLayers(vectorTile.layers[key], key, ctx);
             }
         }
+        this._setActiveTile(vectorTile, ctx);
     }
 
-    prepareMVTLayers(lyr, key, ctx, parsed) {
-        var self = this;
-
-        if (!self.layers[key]) {
-            //Create MVTLayer or MVTPointLayer for user
-            self.layers[key] = self.createMVTLayer(key, lyr.parsedFeatures[0].type || null);
+    _prepareMVTLayers(layer, key, ctx) {
+        if (!this.layers[key]) {
+            this.layers[key] = this._createMVTLayer(key);
         }
-        if (parsed) {
-            //We've already parsed it.  Go get canvas and draw.
-            self.layers[key].getCanvas(ctx, lyr);
-        } else {
-            self.layers[key].parseVectorTileLayer(lyr, ctx);
-        }
+        this.layers[key].parseVectorTileLayer(layer, ctx);        
     }
 
-    createMVTLayer(key, type) {
-        var self = this;
-
-        //var getIDForLayerFeature;
-        //if (typeof self.options.getIDForLayerFeature === 'function') {
-        //    getIDForLayerFeature = self.options.getIDForLayerFeature;
-        //} else {
-        //    getIDForLayerFeature = Util.getIDForLayerFeature;
-        //}
-
-
+    _createMVTLayer(key) {        
         var options = {
-            getIDForLayerFeature: self.options.getIDForLayerFeature,
-            filter: self.options.filter,
-            layerOrdering: self.options.layerOrdering,
-            style: self.style,
+            getIDForLayerFeature: this.getIDForLayerFeature,
+            filter: this.filter,
+            layerOrdering: this.layerOrdering,
+            style: this.style,
             name: key,
             asynch: true
         };
-
-        if (self.options.zIndex) {
-            options.zIndex = self.zIndex;
-        }
-
-        //Take the layer and create a new MVTLayer or MVTPointLayer if one doesn't exist.
-        //var layer = new MVTLayer(self, options).addTo(self.map);
-        var layer = new MVTLayer(self, options);
-
-        return layer;
+        return new MVTLayer(this, options);
     }
 
     getLayers() {
         return this.layers;
     }
 
-    hideLayer(id) {
-        if (this.layers[id]) {
-            this.map.removeLayer(this.layers[id]);
-            if (this.options.visibleLayers.indexOf("id") > -1) {
-                this.visibleLayers.splice(this.options.visibleLayers.indexOf("id"), 1);
-            }
-        }
-    }
-
-    showLayer(id) {
-        if (this.layers[id]) {
-            this.map.addLayer(this.layers[id]);
-            if (this.options.visibleLayers.indexOf("id") == -1) {
-                this.visibleLayers.push(id);
-            }
-        }
-        //Make sure manager layer is always in front
-        this.bringToFront();
-    }
-
-    removeChildLayers(map) {
-        //Remove child layers of this group layer
-        for (var key in this.layers) {
-            var layer = this.layers[key];
-            map.removeLayer(layer);
-        }
-    }
-
-    addChildLayers(map) {
-        var self = this;
-        if (self.options.visibleLayers.length > 0) {
-            //only let thru the layers listed in the visibleLayers array
-            for (var i = 0; i < self.options.visibleLayers.length; i++) {
-                var layerName = self.options.visibleLayers[i];
-                var layer = this.layers[layerName];
-                if (layer) {
-                    //Proceed with parsing
-                    map.addLayer(layer);
-                }
-            }
-        } else {
-            //Add all layers
-            for (var key in this.layers) {
-                var layer = this.layers[key];
-                // layer is set to visible and is not already on map
-                if (!layer.map) {
-                    map.addLayer(layer);
-                }
-            }
-        }
-    }
-
-    bind(eventType, callback) {
-        this._eventHandlers[eventType] = callback;
-    }
-
     onClick(evt, callbackFunction) {
-        //Here, pass the event on to the child MVTLayer and have it do the hit test and handle the result.
-        var self = this;
-
-        var clickableLayers = self.options.clickableLayers;
-        var layers = self.layers;
+        var clickableLayers = this.clickableLayers;
+        var layers = this.layers;
         var zoom = this.map.getZoom();
 
-        evt.tileID = getTileURL(evt.latLng, zoom, this.options.tileSize);
+        evt.tileID = this._getTileID(evt.latLng, zoom);        
         evt.tilePoint = MERCATOR.fromLatLngToTilePoint(map, evt, zoom);
 
         // We must have an array of clickable layers, otherwise, we just pass
         // the event to the public onClick callback in options.
-
         if (!clickableLayers) {
-            clickableLayers = Object.keys(self.layers);
-
+            clickableLayers = Object.keys(this.layers);
         }
         if (clickableLayers && clickableLayers.length > 0) {
             for (var i = 0, len = clickableLayers.length; i < len; i++) {
@@ -1811,11 +1638,22 @@ class MVTSource {
                     });
                 }
             }
-        } else {
+        }
+        else {
             if (typeof callbackFunction === 'function') {
                 callbackFunction(evt);
             }
         }
+    }
+
+    _getTileID(latLng, zoom) {
+        const worldCoordinate = MERCATOR.project(latLng, this._tileSize);
+        const scale = 1 << zoom;
+        const tileCoordinate = new google.maps.Point(
+            Math.floor((worldCoordinate.x * scale) / this._tileSize),
+            Math.floor((worldCoordinate.y * scale) / this._tileSize)
+        );
+        return "" + zoom + ":" + tileCoordinate.x + ":" + tileCoordinate.y;
     }
 
     setFilter(filterFunction, layerName) {
@@ -1825,22 +1663,22 @@ class MVTSource {
         //Add filter to all child layers if no layer is specified.
         for (var key in this.layers) {
             var layer = this.layers[key];
-
             if (layerName) {
                 if (key.toLowerCase() == layerName.toLowerCase()) {
-                    layer.options.filter = filterFunction; //Assign filter to child layer, only if name matches
+                    layer.filter = filterFunction; //Assign filter to child layer, only if name matches
                     //After filter is set, the old feature hashes are invalid.  Clear them for next draw.
-                    layer.clearLayerFeatureHash();
+                    //layer.clearLayerFeatureHash();
                     //layer.clearTileFeatureHash();
                 }
             }
             else {
-                layer.options.filter = filterFunction; //Assign filter to child layer
+                layer.filter = filterFunction; //Assign filter to child layer                
                 //After filter is set, the old feature hashes are invalid.  Clear them for next draw.
-                layer.clearLayerFeatureHash();
+                //layer.clearLayerFeatureHash();
                 //layer.clearTileFeatureHash();
             }
         }
+        this.redrawTiles();
     }
 
     /**
@@ -1862,6 +1700,13 @@ class MVTSource {
         }
     }
 
+    redrawTiles() {
+        for (var tile in this.activeTiles) {
+            var ctx = this.activeTiles[tile];            
+            this.checkVectorTileLayers(ctx.vectorTile, ctx);
+        }
+    }
+
     deselectFeature() {
         if (this._selectedFeature) {
             this._selectedFeature.deselect();
@@ -1870,113 +1715,25 @@ class MVTSource {
     }
 
     featureSelected(mvtFeature) {
-        if (this.options.mutexToggle) {
+        if (this.mutexToggle) {
             if (this._selectedFeature) {
                 this._selectedFeature.deselect();
             }
             this._selectedFeature = mvtFeature;
         }
-        if (this.options.onSelect) {
-            this.options.onSelect(mvtFeature);
+        if (this.onSelect) {
+            this.onSelect(mvtFeature);
         }
     }
 
     featureDeselected(mvtFeature) {
-        if (this.options.mutexToggle && this._selectedFeature) {
+        if (this.mutexToggle && this._selectedFeature) {
             this._selectedFeature = null;
         }
-        if (this.options.onDeselect) {
-            this.options.onDeselect(mvtFeature);
+        if (this.onDeselect) {
+            this.onDeselect(mvtFeature);
         }
     }
-
-    //_pbfLoaded() {
-    //    //Fires when all tiles from this layer have been loaded and drawn (or 404'd).
-
-    //    //Make sure manager layer is always in front
-    //    this.bringToFront();
-
-    //    //See if there is an event to execute
-    //    var self = this;
-    //    var onTilesLoaded = self.options.onTilesLoaded;
-
-    //    if (onTilesLoaded && typeof onTilesLoaded === 'function' && this._triggerOnTilesLoadedEvent === true) {
-    //        onTilesLoaded(this);
-    //    }
-    //    self._triggerOnTilesLoadedEvent = true; //reset - if redraw() is called with the optinal 'false' parameter to temporarily disable the onTilesLoaded event from firing.  This resets it back to true after a single time of firing as 'false'.
-    //}
-}
-
-
-if (typeof (Number.prototype.toRad) === "undefined") {
-    Number.prototype.toRad = function () {
-        return this * Math.PI / 180;
-    }
-}
-
-//function getTileURL(lat, lon, zoom) {
-//    var xtile = parseInt(Math.floor((lon + 180) / 360 * (1 << zoom)));
-//    var ytile = parseInt(Math.floor((1 - Math.log(Math.tan(lat.toRad()) + 1 / Math.cos(lat.toRad())) / Math.PI) / 2 * (1 << zoom)));
-//    return "" + zoom + ":" + xtile + ":" + ytile;
-//}
-
-function getTileURL(latLng, zoom, tile_size) {
-    const worldCoordinate = project(latLng, tile_size);
-    const scale = 1 << zoom;
-    const tileCoordinate = new google.maps.Point(
-        Math.floor((worldCoordinate.x * scale) / tile_size),
-        Math.floor((worldCoordinate.y * scale) / tile_size)
-    );
-    return "" + zoom + ":" + tileCoordinate.x + ":" + tileCoordinate.y;
-}
-
-function project(latLng, tile_size) {
-    let siny = Math.sin((latLng.lat() * Math.PI) / 180);
-    siny = Math.min(Math.max(siny, -0.9999), 0.9999);
-    return new google.maps.Point(
-        tile_size * (0.5 + latLng.lng() / 360),
-        tile_size * (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI))
-    );
-}
-
-function tileToLatLng(x, y, z) {
-    var long = tile2long(x, z);
-    var lat = tile2long(y, z);
-    return {
-        lat: lat, long: long
-    }
-}
-
-function tile2long(x, z) {
-    return (x / Math.pow(2, z) * 360 - 180);
-}
-
-function tile2lat(y, z) {
-    var n = Math.PI - 2 * Math.PI * y / Math.pow(2, z);
-    return (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))));
-}
-
-//function tileLoaded(pbfSource, ctx) {
-//    pbfSource.loadedTiles[ctx.id] = ctx;
-//}
-
-function parseVT(vt) {
-    for (var key in vt.layers) {
-        var lyr = vt.layers[key];
-        parseVTFeatures(lyr);
-    }
-    return vt;
-}
-
-function parseVTFeatures(vtl) {
-    vtl.parsedFeatures = [];
-    var features = vtl._features;
-    for (var i = 0, len = features.length; i < len; i++) {
-        var vtf = vtl.feature(i);
-        vtf.coordinates = vtf.loadGeometry();
-        vtl.parsedFeatures.push(vtf);
-    }
-    return vtl;
 }
 MERCATOR = {
     fromLatLngToPoint: function (latLng) {
@@ -2056,5 +1813,16 @@ MERCATOR = {
             x: evt.pixel.x - tileSwPixels.x,
             y: evt.pixel.y - tileNePixels.y
         }
+    },
+
+
+    project(latLng, tile_size) {
+        let siny = Math.sin((latLng.lat() * Math.PI) / 180);
+        siny = Math.min(Math.max(siny, -0.9999), 0.9999);
+        return new google.maps.Point(
+            tile_size * (0.5 + latLng.lng() / 360),
+            tile_size * (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI))
+        );
     }
+
 }
