@@ -101,7 +101,6 @@
     <Content Include="src\MVTFeature.js" />
     <Content Include="src\MVTLayer.js" />
     <Content Include="src\MVTSource.js" />
-    <Content Include="src\MVTUtil.js" />
     <Content Include="src\StaticLabel\label.css" />
     <Content Include="src\StaticLabel\StaticLabel.js" />
     <Content Include="Web.config" />
