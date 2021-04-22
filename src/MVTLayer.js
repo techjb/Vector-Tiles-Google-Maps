@@ -4,46 +4,41 @@
 
 class MVTLayer {
     constructor(mvtSource, options) {
+        this.mvtSource = mvtSource;
         this.map = mvtSource.map;
-        //this.options = {
-            
-            
-            //tileSize: 256,
         this.lineClickTolerance = 2;
         this.getIDForLayerFeature = options.getIDForLayerFeature || false;
         this.filter = options.filter || false;
         this.layerOrdering = options.layerOrdering || false;
         this.asynch = options.asynch || true;
-        //};
-        this._featureIsClicked = {};
-        this.mvtSource = mvtSource;
+        this._featureIsClicked = {};        
         this.style = options.style;
         this.name = options.name;
         this._canvasIDToFeatures = {};
         this.features = {};
         this.featuresWithLabels = [];
         this._highestCount = 0;
-        this._tiles = [];
+        this._tilesCanvas = [];
     }
 
     // todo: sometimes it does not work properly
-    _isPointInPoly(pt, poly) {
-        if (poly && poly.length) {
-            for (var c = false, i = -1, l = poly.length, j = l - 1; ++i < l; j = i) {
-                ((poly[i].y <= pt.y && pt.y < poly[j].y) || (poly[j].y <= pt.y && pt.y < poly[i].y))
-                    && (pt.x < (poly[j].x - poly[i].x) * (pt.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)
+    _isPointInPolygon(point, polygon) {
+        if (polygon && polygon.length) {
+            for (var c = false, i = -1, l = polygon.length, j = l - 1; ++i < l; j = i) {
+                ((polygon[i].y <= point.y && point.y < polygon[j].y) || (polygon[j].y <= point.y && point.y < polygon[i].y))
+                    && (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x)
                     && (c = !c);
             }
             return c;
         }
     }
 
-    _getDistanceFromLine(pt, pts) {
+    _getDistanceFromLine(point, line) {
         var min = Number.POSITIVE_INFINITY;
-        if (pts && pts.length > 1) {
-            pt = L.point(pt.x, pt.y);
-            for (var i = 0, l = pts.length - 1; i < l; i++) {
-                var test = this._projectPointOnLineSegment(pt, pts[i], pts[i + 1]);
+        if (line && line.length > 1) {
+            point = L.point(point.x, point.y);
+            for (var i = 0, l = line.length - 1; i < l; i++) {
+                var test = this._projectPointOnLineSegment(point, line[i], line[i + 1]);
                 if (test.distance <= min) {
                     min = test.distance;
                 }
@@ -52,20 +47,20 @@ class MVTLayer {
         return min;
     }
 
-    _projectPointOnLineSegment(p, r0, r1) {
+    _projectPointOnLineSegment(point, r0, r1) {
         var lineLength = r0.distanceTo(r1);
         if (lineLength < 1) {
-            return { distance: p.distanceTo(r0), coordinate: r0 };
+            return { distance: point.distanceTo(r0), coordinate: r0 };
         }
-        var u = ((p.x - r0.x) * (r1.x - r0.x) + (p.y - r0.y) * (r1.y - r0.y)) / Math.pow(lineLength, 2);
+        var u = ((point.x - r0.x) * (r1.x - r0.x) + (point.y - r0.y) * (r1.y - r0.y)) / Math.pow(lineLength, 2);
         if (u < 0.0000001) {
-            return { distance: p.distanceTo(r0), coordinate: r0 };
+            return { distance: point.distanceTo(r0), coordinate: r0 };
         }
         if (u > 0.9999999) {
-            return { distance: p.distanceTo(r1), coordinate: r1 };
+            return { distance: point.distanceTo(r1), coordinate: r1 };
         }
         var a = L.point(r0.x + u * (r1.x - r0.x), r0.y + u * (r1.y - r0.y));
-        return { distance: p.distanceTo(a), point: a };
+        return { distance: point.distanceTo(a), point: a };
     }
 
     //onAdd(map) {
@@ -99,172 +94,166 @@ class MVTLayer {
     //    }
     //}
 
-    _initializeFeaturesHash(ctx) {
-        this._canvasIDToFeatures[ctx.id] = {};
-        this._canvasIDToFeatures[ctx.id].features = [];
-        this._canvasIDToFeatures[ctx.id].canvas = ctx.canvas;
+    _initializeFeaturesHash(tileContext) {
+        this._canvasIDToFeatures[tileContext.id] = {};
+        this._canvasIDToFeatures[tileContext.id].features = [];
+        this._canvasIDToFeatures[tileContext.id].canvas = tileContext.canvas;
     }
 
     //_draw(ctx) {
     //    //Draw is handled by the parent MVTSource object
     //}
 
-    getCanvas(parentCtx) {
-        //This gets called if a vector tile feature has already been parsed.
-        //We've already got the geom, just get on with the drawing.
-        //Need a way to pluck a canvas element from this layer given the parent layer's id.
-        //Wait for it to get loaded before proceeding.
-        var tilePoint = parentCtx.tile;
-        var ctx = this._tiles[tilePoint.x + ":" + tilePoint.y];
-
+    //getCanvas(parentCtx) {
+    //    //This gets called if a vector tile feature has already been parsed.
+    //    //We've already got the geom, just get on with the drawing.
+    //    //Need a way to pluck a canvas element from this layer given the parent layer's id.
+    //    //Wait for it to get loaded before proceeding.
+    //    var tilePoint = parentCtx.tile;
+    //    var ctx = this._tiles[tilePoint.x + ":" + tilePoint.y];
         
-        
-        if (ctx) {
-            parentCtx.canvas = ctx;
-            this.redrawTile(parentCtx.id);
-        }
-        else {
-            ctx = this._tiles[tilePoint.x + ":" + tilePoint.y];
-            parentCtx.canvas = ctx;
-            this.redrawTile(parentCtx.id);
-        }
+    //    if (ctx) {
+    //        parentCtx.canvas = ctx;
+    //        this.drawTile(parentCtx.id);
+    //    }
+    //    else {
+    //        ctx = this._tiles[tilePoint.x + ":" + tilePoint.y];
+    //        parentCtx.canvas = ctx;
+    //        this.drawTile(parentCtx.id);
+    //    }
 
-        //var self = this;
+    //    //var self = this;
        
 
-        ////This is a timer that will wait for a criterion to return true.
-        ////If not true within the timeout duration, it will move on.
-        //waitFor(function () {
-        //    ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
-        //    if (ctx) {
-        //        return true;
-        //    }
-        //},
-        //    function () {
-        //        //When it finishes, do this.
-        //        ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
-        //        parentCtx.canvas = ctx;
-        //        self.redrawTile(parentCtx.id);
+    //    ////This is a timer that will wait for a criterion to return true.
+    //    ////If not true within the timeout duration, it will move on.
+    //    //waitFor(function () {
+    //    //    ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
+    //    //    if (ctx) {
+    //    //        return true;
+    //    //    }
+    //    //},
+    //    //    function () {
+    //    //        //When it finishes, do this.
+    //    //        ctx = self._tiles[tilePoint.x + ":" + tilePoint.y];
+    //    //        parentCtx.canvas = ctx;
+    //    //        self.redrawTile(parentCtx.id);
 
-        //    }, //when done, go to next flow
-        //    2000); //The Timeout milliseconds.  After this, give up and move on
+    //    //    }, //when done, go to next flow
+    //    //    2000); //The Timeout milliseconds.  After this, give up and move on
 
-    }
+    //}
 
-    parseVectorTileLayer(vtl, ctx) {        
+    parseVectorTileLayer(vectorTileLayer, tileContext) {        
         var self = this;
-        var tilePoint = ctx.tile;
-        var layerCtx = {
-            canvas: null,
-            id: ctx.id,
-            tile: ctx.tile,
-            zoom: ctx.zoom,
-            tileSize: ctx.tileSize
-        };
+        //var tilePoint = ctx.tile;
 
         //See if we can pluck the child tile from this PBF tile layer based on the master layer's tile id.
-        self._tiles[tilePoint.x + ":" + tilePoint.y] = ctx.canvas;
-        layerCtx.canvas = self._tiles[tilePoint.x + ":" + tilePoint.y];
+        //self._tilesCanvas[tilePoint.x + ":" + tilePoint.y] = ctx.canvas;
+        //this._setCanvas(tilePoint, ctx.canvas);
+        this._setCanvas(tileContext.id, tileContext.canvas);
+        //layerCtx.canvas = self._tiles[tilePoint.x + ":" + tilePoint.y];
         //layerCtx.canvas = ctx.canvas;
 
         //Initialize this tile's feature storage hash, if it hasn't already been created.  Used for when filters are updated, and features are cleared to prepare for a fresh redraw.
 
-        if (!this._canvasIDToFeatures[layerCtx.id]) {
-            this._initializeFeaturesHash(layerCtx);
+        if (!this._canvasIDToFeatures[tileContext.id]) {
+            this._initializeFeaturesHash(tileContext);
         } else {
             //Clear this tile's previously saved features.
-            this.clearTileFeatureHash(layerCtx.id);
+            this.clearTileFeatureHash(tileContext.id);
         }
 
-        var features = vtl.parsedFeatures;
-        for (var i = 0, len = features.length; i < len; i++) {
-            var vtf = features[i]; //vector tile feature
-            vtf.layer = vtl;
+        var vectorTileFeatures = vectorTileLayer.parsedFeatures;
+        for (var i = 0, len = vectorTileFeatures.length; i < len; i++) {
+            var vectorTileFeature = vectorTileFeatures[i]; 
+            vectorTileFeature.layer = vectorTileLayer;
 
-            //if(vtf.properties.id != 135){
-            //    continue;
-            //}
-
-
-            /**
-            * Apply filter on feature if there is one. Defined in the options object
-            * of TileLayer.MVTSource.js
-            */
-            var filter = self.filter;
+            var filter = this.filter;
             if (typeof filter === 'function') {
-                if (filter(vtf, layerCtx) === false) continue;
+                if (filter(vectorTileFeature, tileContext) === false) continue;
+            }
+
+            var layerOrdering = this.layerOrdering;
+            if (typeof layerOrdering === 'function') {
+                layerOrdering(vectorTileFeature, tileContext); //Applies a custom property to the feature, which is used after we're thru iterating to sort
             }
 
             var getIDForLayerFeature;
-            if (typeof self.getIDForLayerFeature === 'function') {
-                getIDForLayerFeature = self.getIDForLayerFeature;
+            if (typeof this.getIDForLayerFeature === 'function') {
+                getIDForLayerFeature = this.getIDForLayerFeature;
             } else {
                 getIDForLayerFeature = Util.getIDForLayerFeature;
-            }
-            var uniqueID = self.getIDForLayerFeature(vtf) || i;
-            var mvtFeature = self.features[uniqueID];
+            }           
 
-            /**
-            * Use layerOrdering function to apply a zIndex property to each vtf.  This is defined in
-            * TileLayer.MVTSource.js.  Used below to sort features.npm
-            */
-            var layerOrdering = self.layerOrdering;
-            if (typeof layerOrdering === 'function') {
-                layerOrdering(vtf, layerCtx); //Applies a custom property to the feature, which is used after we're thru iterating to sort
-            }
-
-            //Create a new MVTFeature if one doesn't already exist for this feature.            
-            if (!mvtFeature) {
+            var featureId = getIDForLayerFeature(vectorTileFeature) || i;
+            var mVTFeature = this.features[featureId];            
+            if (!mVTFeature) {
                 //Get a style for the feature - set it just once for each new MVTFeature
-                var style = self.style(vtf);
-
-                //create a new feature
-                self.features[uniqueID] = mvtFeature = new MVTFeature(self, vtf, layerCtx, uniqueID, style);
+                var style = this.style(vectorTileFeature);
+                mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, featureId, style);
+                this.features[featureId] = mVTFeature;
                 if (style && style.dynamicLabel && typeof style.dynamicLabel === 'function') {
-                    self.featuresWithLabels.push(mvtFeature);
+                    this.featuresWithLabels.push(mVTFeature);
                 }
             } else {
                 //Add the new part to the existing feature
-                mvtFeature.addTileFeature(vtf, layerCtx);
+                mVTFeature.addTileFeature(vectorTileFeature, tileContext);
             }
 
             //Associate & Save this feature with this tile for later
-            if (layerCtx && layerCtx.id) self._canvasIDToFeatures[layerCtx.id]['features'].push(mvtFeature);
-
+            if (tileContext && tileContext.id) {
+                self._canvasIDToFeatures[tileContext.id]['features'].push(mVTFeature);
+            }
         }
 
         /**
             * Apply sorting (zIndex) on feature if there is a function defined in the options object
             * of TileLayer.MVTSource.js
             */
-        var layerOrdering = self.layerOrdering;
+        var layerOrdering = this.layerOrdering;
         if (layerOrdering) {
             //We've assigned the custom zIndex property when iterating above.  Now just sort.
-            self._canvasIDToFeatures[layerCtx.id].features = self._canvasIDToFeatures[layerCtx.id].features.sort(function (a, b) {
+            this._canvasIDToFeatures[tileContext.id].features = this._canvasIDToFeatures[tileContext.id].features.sort(function (a, b) {
                 return -(b.properties.zIndex - a.properties.zIndex)
             });
         }
-        self.redrawTile(layerCtx.id);
+        //this.drawTile(ctx.id);
+    }
+
+    //_setCanvas(tilePoint, canvas) {
+    //    this._tilesCanvas[tilePoint.x + ":" + tilePoint.y] = canvas;
+    //}
+    _setCanvas(id, canvas) {
+        this._tilesCanvas[id] = canvas;
+    }
+
+    getCanvas(id) {
+        return this._tilesCanvas[id];
     }
 
     setStyle(styleFn) {
         // refresh the number for the highest count value
         // this is used only for choropleth
-        this._highestCount = 0;
+        //this._highestCount = 0;
 
         // lowest count should not be 0, since we want to figure out the lowest
-        this._lowestCount = null;
+        //this._lowestCount = null;
 
         this.style = styleFn;
-        for (var key in this.features) {
-            var feat = this.features[key];
+        for (var id in this.features) {
+            var feat = this.features[id];
             feat.setStyle(styleFn);
         }
 
-        var z = this.map.getZoom();
-        for (var key in this._tiles) {
-            var id = z + ':' + key;
-            this.redrawTile(id);
+        //var zoom = this.map.getZoom();
+        //for (var key in this._tilesCanvas) {
+        //    var id = zoom + ':' + key;
+        //    this.drawTile(id);
+        //}
+        
+        for (var id in this._tilesCanvas) {            
+            this.drawTile(id);
         }
     }
 
@@ -274,45 +263,46 @@ class MVTLayer {
     * to create the color ramp for the fills of polygons.
     * @param count
     */
-    setHighestCount(count) {
-        if (count > this._highestCount) {
-            this._highestCount = count;
-        }
-    }
+    //setHighestCount(count) {
+    //    if (count > this._highestCount) {
+    //        this._highestCount = count;
+    //    }
+    //}
 
     /**
     * Returns the highest number of all of the counts that have come in
     * from setHighestCount. This is assumed to be set via ajax callbacks.
     * @returns {number}
     */
-    getHighestCount() {
-        return this._highestCount;
-    }
+    //getHighestCount() {
+    //    return this._highestCount;
+    //}
 
-    setLowestCount(count) {
-        if (!this._lowestCount || count < this._lowestCount) {
-            this._lowestCount = count;
-        }
-    }
+    //setLowestCount(count) {
+    //    if (!this._lowestCount || count < this._lowestCount) {
+    //        this._lowestCount = count;
+    //    }
+    //}
 
-    getLowestCount() {
-        return this._lowestCount;
-    }
+    //getLowestCount() {
+    //    return this._lowestCount;
+    //}
 
-    setCountRange(count) {
-        this.setHighestCount(count);
-        this.setLowestCount(count);
-    }
+    //setCountRange(count) {
+    //    this.setHighestCount(count);
+    //    this.setLowestCount(count);
+    //}
 
     //This is the old way.  It works, but is slow for mouseover events.  Fine for click events.
-    handleClickEvent(evt, cb) {
+    handleClickEvent(evt, callbackFunction) {
         //Click happened on the GroupLayer (Manager) and passed it here
-        var tileID = evt.tileID.split(":").slice(1, 3).join(":");
+        //var tileID = evt.tileID.split(":").slice(1, 3).join(":");
+        var tileID = evt.tileID;
         var zoom = evt.tileID.split(":")[0];
-        var canvas = this._tiles[tileID];        
+        var canvas = this._tilesCanvas[tileID];        
         if (!canvas) {
             //break out
-            cb(evt);
+            callbackFunction(evt);
             return;
         }
 
@@ -365,7 +355,7 @@ class MVTLayer {
                 case 3: //Polygon
                     paths = feature.getPathsForTile(evt.tileID);
                     for (j = 0; j < paths.length; j++) {
-                        if (this._isPointInPoly(tilePoint, paths[j])) {
+                        if (this._isPointInPolygon(tilePoint, paths[j])) {
                             nearest = feature;
                             minDistance = 0; // point is inside the polygon, so distance is zero
                         }
@@ -383,56 +373,59 @@ class MVTLayer {
         //}
 
         evt.feature = nearest;
-        cb(evt);
+        callbackFunction(evt);
     }
 
-    _drawSmallDot(canvas, x, y) {
-        var ctx = canvas.getContext("2d");
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(x, y, 2, 0, 2 * Math.PI);
-        ctx.fill();
-    }
+    //_drawSmallDot(canvas, x, y) {
+    //    var ctx = canvas.getContext("2d");
+    //    ctx.fillStyle = 'red';
+    //    ctx.beginPath();
+    //    ctx.arc(x, y, 2, 0, 2 * Math.PI);
+    //    ctx.fill();
+    //}
 
-    clearTile(id, ctx) {
-        //id is the entire zoom:x:y.  we just want x:y.
-        var ca = id.split(":");
-        var canvasId = ca[1] + ":" + ca[2];
-        if (typeof this._tiles[canvasId] === 'undefined') {
-            console.error("typeof this._tiles[canvasId] === 'undefined'");
-            return;
-        }
-        var canvas = this._tiles[canvasId];
-
-        var context = canvas.getContext('2d');
-        context.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    clearTileFeatureHash(canvasID) {
-        this._canvasIDToFeatures[canvasID] = { features: [] }; //Get rid of all saved features
+    clearTileFeatureHash(id) {
+        this._canvasIDToFeatures[id] = {
+            features: []
+        }; //Get rid of all saved features
     }
 
     clearLayerFeatureHash() {
         this.features = {};
     }
 
-    redrawTile(canvasID) {
-        
-        //First, clear the canvas
+    //clearTile(id) {
+    //    //id is the entire zoom:x:y.  we just want x:y.
+    //    //var ca = id.split(":");
+    //    //var canvasId = ca[1] + ":" + ca[2];
+    //    //if (typeof this._tilesCanvas[canvasId] === 'undefined') {
+    //    if (typeof this._tilesCanvas[id] === 'undefined') {
+    //        //console.error("typeof this._tiles[canvasId] === 'undefined'");
+    //        return;
+    //    }
+    //    //var canvas = this._tilesCanvas[canvasId];
+    //    var canvas = this._tilesCanvas[id];
+    //    //var context = canvas.getContext('2d');
+    //    //context.clearRect(0, 0, canvas.width, canvas.height);
+    //    this.mvtSource.clearTile(canvas);
+    //}
+
+    drawTile(id) {        
+        ////First, clear the canvas
         //if (clearTile) {
-        this.clearTile(canvasID);
+        //    this.clearTile(canvasID);
         //}
 
         // If the features are not in the tile, then there is nothing to redraw.
         // This may happen if you call redraw before features have loaded and initially
         // drawn the tile.
-        var featfeats = this._canvasIDToFeatures[canvasID];
-        if (!featfeats) {
+        var fetatures = this._canvasIDToFeatures[id];
+        if (!fetatures) {
             return;
         }
 
         //Get the features for this tile, and redraw them.
-        var features = featfeats.features;
+        var features = fetatures.features;
 
         // we want to skip drawing the selected features and draw them last
         var selectedFeatures = [];
@@ -443,16 +436,21 @@ class MVTLayer {
             if (feature.selected) {
                 selectedFeatures.push(feature);
             } else {
-                feature.draw(canvasID);
+                feature.draw(id);
             }
         }
 
         // drawing the selected features last
         for (var j = 0, len2 = selectedFeatures.length; j < len2; j++) {
-            var selFeat = selectedFeatures[j];
-            selFeat.draw(canvasID);
+            var feature = selectedFeatures[j];
+            feature.draw(id);
         }
     }
+
+    //redrawTile(id) {
+    //    this.clearTile(id);
+    //    this.drawTile(id);
+    //}
 
     //redrawFeature(canvasID,  mvtFeature) {
     //    var featfeats = this._canvasIDToFeatures[canvasID];
@@ -468,12 +466,10 @@ class MVTLayer {
     //    }
     //}
 
-    _resetCanvasIDToFeatures(canvasID, canvas) {
-
-        this._canvasIDToFeatures[canvasID] = {};
-        this._canvasIDToFeatures[canvasID].features = [];
-        this._canvasIDToFeatures[canvasID].canvas = canvas;
-
+    _resetCanvasIDToFeatures(id, canvas) {
+        this._canvasIDToFeatures[id] = {};
+        this._canvasIDToFeatures[id].features = [];
+        this._canvasIDToFeatures[id].canvas = canvas;
     }
 
     linkedLayer() {

@@ -18,9 +18,9 @@ class MVTSource {
         if (typeof options.style === 'function') {
             this.style = options.style;
         }
-        this.layers = {}; //Keep a list of the layers contained in the PBFs
-        this.processedTiles = {}; //Keep a list of tiles that have been processed already
-        this.activeTiles = {}; // tiles currently in the viewport        
+        this.mVTLayers = {}; //Keep a list of the layers contained in the PBFs
+        this.vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
+        this.visibleTiles = {}; // tiles currently in the viewport        
     }
 
     getTile(coord, zoom, ownerDocument) {
@@ -32,8 +32,7 @@ class MVTSource {
     }
 
     releaseTile(canvas) {
-        var id = canvas.id;
-        delete this.activeTiles[id];        
+        delete this.visibleTiles[canvas.id];
     }
 
     style(feature) {
@@ -79,29 +78,30 @@ class MVTSource {
             x: coord.x,
             y: coord.y
         }        
-        var id = canvas.id = this._getContextID(zoom, tile.x, tile.y);
-        var ctx = {
-            id: id,
+        var tileId = canvas.id = this._getTileId(zoom, tile.x, tile.y);
+        var tileContext = {
+            id: tileId,
             canvas: canvas,
             tile: tile,
             zoom: zoom,
             tileSize: this._tileSize
         };
         
-        //this.activeTiles[id] = ctx;
-        this._drawDebugInfo(ctx);
-        this._draw(ctx);
+        this._drawDebugInfo(tileContext);
+        this._draw(tileContext);
     }
 
-    _getContextID (zoom, x, y) {
+    _getTileId (zoom, x, y) {
         return [zoom, x, y].join(":");
     }
 
-    _drawDebugInfo(ctx) {
-        if (!this.debug) return;
+    _drawDebugInfo(tileContext) {
+        if (!this.debug) {
+            return;
+        }
         var width = this.tileSize.width;
         var height = this.tileSize.height;
-        var g = ctx.canvas.getContext('2d');
+        var g = tileContext.canvas.getContext('2d');
         g.strokeStyle = '#000000';
         g.fillStyle = '#FFFF00';
         g.strokeRect(0, 0, width, height);
@@ -111,33 +111,33 @@ class MVTSource {
         g.fillRect(width - 5, 0, 5, 5);
         g.fillRect(width - 5, height - 5, 5, 5);
         g.fillRect(width / 2 - 5, height / 2 - 5, 10, 10);
-        g.strokeText(ctx.zoom + ' ' + ctx.tile.x + ' ' + ctx.tile.y, width / 2 - 30, height / 2 - 10);
+        g.strokeText(tileContext.zoom + ' ' + tileContext.tile.x + ' ' + tileContext.tile.y, width / 2 - 30, height / 2 - 10);
     }
 
-    _draw(ctx) {
+    _draw(tileContext) {
         var self = this;
         //This works to skip fetching and processing tiles if they've already been processed (cache=true).
-        var vectorTile = this.processedTiles[ctx.id];
+        var vectorTile = this.vectorTilesProcessed[tileContext.id];
         if (vectorTile) {
-            return this.checkVectorTileLayers(vectorTile, ctx);            
+            return this._drawVectorTile(vectorTile, tileContext);            
         }
 
-        if (!this.url) return;
+        if (!this.url) {
+            return;
+        }
         var src = this.url
-            .replace("{z}", ctx.zoom)
-            .replace("{x}", ctx.tile.x)
-            .replace("{y}", ctx.tile.y);
+            .replace("{z}", tileContext.zoom)
+            .replace("{x}", tileContext.tile.x)
+            .replace("{y}", tileContext.tile.y);
 
         var xhr = new XMLHttpRequest();
         xhr.onload = function () {
             if (xhr.status == "200" && xhr.response) {
-                self._xhrResponseOk(ctx, xhr.response)
+                self._xhrResponseOk(tileContext, xhr.response)
             }
         };
 
-        xhr.onerror = function () {
-        };
-
+        xhr.onerror = function () {};
         xhr.open('GET', src, true); //async is true
         var headers = this.xhrHeaders;
         for (var header in headers) {
@@ -147,46 +147,46 @@ class MVTSource {
         xhr.send();
     }
 
-    _xhrResponseOk = function (ctx, response) {        
+    _xhrResponseOk = function (tileContext, response) {        
         //If fast zooming is occurring, then short circuit tiles that are for a different zoom level.
-        if (this.map && this.map.getZoom() != ctx.zoom) {
+        if (this.map && this.map.getZoom() != tileContext.zoom) {
             return;
         }
         var uint8Array = new Uint8Array(response);
         var pbf = new Pbf(uint8Array);
         var vectorTile = new VectorTile(pbf);        
         if (this.cache) {            
-            this.processedTiles[ctx.id] = vectorTile;
+            this.vectorTilesProcessed[tileContext.id] = vectorTile;
         }
-        this.checkVectorTileLayers(vectorTile, ctx);                
-    }
-    _setActiveTile(vectorTile, ctx) {
-        ctx.vectorTile = vectorTile;
-        this.activeTiles[ctx.id] = ctx;
+        this._drawVectorTile(vectorTile, tileContext);                
     }
 
-    checkVectorTileLayers(vectorTile, ctx) {
+    _drawVectorTile(vectorTile, tileContext) {
         if (this.visibleLayers && this.visibleLayers.length > 0) {
             //only let thru the layers listed in the visibleLayers array
             for (var i = 0; i < this.visibleLayers.length; i++) {
-                var layerName = this.visibleLayers[i];
-                if (vectorTile.layers[layerName]) {
-                    this._prepareMVTLayers(vectorTile.layers[layerName], layerName, ctx);
+                var key = this.visibleLayers[i];
+                if (vectorTile.layers[key]) {
+                    var vectorTileLayer = vectorTile.layers[key];
+                    this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
                 }
             }
         } else {
-            for (var key in vectorTile.layers) {
-                this._prepareMVTLayers(vectorTile.layers[key], key, ctx);
+            for (var key in vectorTile.layers) {                
+                var vectorTileLayer = vectorTile.layers[key];
+                this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
             }
         }
-        this._setActiveTile(vectorTile, ctx);
+        this._addVisibleTile(vectorTile, tileContext);
     }
 
-    _prepareMVTLayers(layer, key, ctx) {
-        if (!this.layers[key]) {
-            this.layers[key] = this._createMVTLayer(key);
-        }
-        this.layers[key].parseVectorTileLayer(layer, ctx);        
+    _drawVectorTileLayer(vectorTileLayer, key, tileContext) {
+        if (!this.mVTLayers[key]) {
+            this.mVTLayers[key] = this._createMVTLayer(key);
+        }                
+        var mVTLayer = this.mVTLayers[key];
+        mVTLayer.parseVectorTileLayer(vectorTileLayer, tileContext);
+        mVTLayer.drawTile(tileContext.id);
     }
 
     _createMVTLayer(key) {        
@@ -201,27 +201,30 @@ class MVTSource {
         return new MVTLayer(this, options);
     }
 
+    _addVisibleTile(vectorTile, tileContext) {
+        tileContext.vectorTile = vectorTile;
+        this.visibleTiles[tileContext.id] = tileContext;
+    }
+
     getLayers() {
-        return this.layers;
+        return this.mVTLayers;
     }
 
     onClick(evt, callbackFunction) {
-        var clickableLayers = this.clickableLayers;
-        var layers = this.layers;
+        var clickableLayers = this.clickableLayers;        
         var zoom = this.map.getZoom();
 
-        evt.tileID = this._getTileID(evt.latLng, zoom);        
+        var tile = MERCATOR.getTileAtLatLng(evt.latLng, zoom);
+        evt.tileID = this._getTileId(tile.z,  tile.x, tile.y);              
         evt.tilePoint = MERCATOR.fromLatLngToTilePoint(map, evt, zoom);
 
-        // We must have an array of clickable layers, otherwise, we just pass
-        // the event to the public onClick callback in options.
         if (!clickableLayers) {
-            clickableLayers = Object.keys(this.layers);
+            clickableLayers = Object.keys(this.mVTLayers);
         }
         if (clickableLayers && clickableLayers.length > 0) {
             for (var i = 0, len = clickableLayers.length; i < len; i++) {
                 var key = clickableLayers[i];
-                var layer = layers[key];
+                var layer = this.mVTLayers[key];
                 if (layer) {
                     layer.handleClickEvent(evt, function (evt) {
                         if (typeof callbackFunction === 'function') {
@@ -238,65 +241,38 @@ class MVTSource {
         }
     }
 
-    _getTileID(latLng, zoom) {
-        const worldCoordinate = MERCATOR.project(latLng, this._tileSize);
-        const scale = 1 << zoom;
-        const tileCoordinate = new google.maps.Point(
-            Math.floor((worldCoordinate.x * scale) / this._tileSize),
-            Math.floor((worldCoordinate.y * scale) / this._tileSize)
-        );
-        return "" + zoom + ":" + tileCoordinate.x + ":" + tileCoordinate.y;
-    }
-
-    setFilter(filterFunction, layerName) {
-        //take in a new filter function.
-        //Propagate to child layers.
-
-        //Add filter to all child layers if no layer is specified.
-        for (var key in this.layers) {
-            var layer = this.layers[key];
-            if (layerName) {
-                if (key.toLowerCase() == layerName.toLowerCase()) {
-                    layer.filter = filterFunction; //Assign filter to child layer, only if name matches
-                    //After filter is set, the old feature hashes are invalid.  Clear them for next draw.
-                    //layer.clearLayerFeatureHash();
-                    //layer.clearTileFeatureHash();
-                }
-            }
-            else {
-                layer.filter = filterFunction; //Assign filter to child layer                
-                //After filter is set, the old feature hashes are invalid.  Clear them for next draw.
-                //layer.clearLayerFeatureHash();
-                //layer.clearTileFeatureHash();
-            }
+    setFilter(filterFunction) {
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].filter = filterFunction;
         }
         this.redrawTiles();
     }
 
-    /**
-     * Take in a new style function and propogate to child layers.
-     * If you do not set a layer name, it resets the style for all of the layers.
-     * @param styleFunction
-     * @param layerName
-     */
-    setStyle(styleFn, layerName) {
-        for (var key in this.layers) {
-            var layer = this.layers[key];
-            if (layerName) {
-                if (key.toLowerCase() == layerName.toLowerCase()) {
-                    layer.setStyle(styleFn);
-                }
-            } else {
-                layer.setStyle(styleFn);
-            }
+    setStyle(styleFn) {
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].setStyle(styleFn);
         }
+        this.redrawTiles();
     }
 
     redrawTiles() {
-        for (var tile in this.activeTiles) {
-            var ctx = this.activeTiles[tile];            
-            this.checkVectorTileLayers(ctx.vectorTile, ctx);
+        for (var tile in this.visibleTiles) {            
+            this.redrawTile(tile);
         }
+    }
+
+    redrawTile(id) {
+        var tileContext = this.visibleTiles[id];        
+        if (!tileContext) return;
+        this.clearTile(tileContext);
+        this._drawVectorTile(tileContext.vectorTile, tileContext);
+
+    }
+
+    clearTile(tileContext) {
+        var canvas = tileContext.canvas;
+        var context = canvas.getContext('2d');
+        context.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     deselectFeature() {
