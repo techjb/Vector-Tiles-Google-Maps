@@ -582,7 +582,7 @@ MVTFeature.prototype.clearTileFeatures = function (zoom) {
  *
  * @param self
  */
-MVTFeature.prototype.redrawTiles = function() {
+MVTFeature.prototype.redrawTiles = function () {    
     //Redraw the whole tile, not just this vtf
     var mapZoom = this.map.getZoom();
     for (var id in this.tiles) {
@@ -1458,17 +1458,17 @@ class MVTSource {
         }
         var width = this.tileSize.width;
         var height = this.tileSize.height;
-        var g = tileContext.canvas.getContext('2d');
-        g.strokeStyle = '#000000';
-        g.fillStyle = '#FFFF00';
-        g.strokeRect(0, 0, width, height);
-        g.font = "12px Arial";
-        g.fillRect(0, 0, 5, 5);
-        g.fillRect(0, height - 5, 5, 5);
-        g.fillRect(width - 5, 0, 5, 5);
-        g.fillRect(width - 5, height - 5, 5, 5);
-        g.fillRect(width / 2 - 5, height / 2 - 5, 10, 10);
-        g.strokeText(tileContext.zoom + ' ' + tileContext.tile.x + ' ' + tileContext.tile.y, width / 2 - 30, height / 2 - 10);
+        var context2d = tileContext.canvas.getContext('2d');
+        context2d.strokeStyle = '#000000';
+        context2d.fillStyle = '#FFFF00';
+        context2d.strokeRect(0, 0, width, height);
+        context2d.font = "12px Arial";
+        context2d.fillRect(0, 0, 5, 5);
+        context2d.fillRect(0, height - 5, 5, 5);
+        context2d.fillRect(width - 5, 0, 5, 5);
+        context2d.fillRect(width - 5, height - 5, 5, 5);
+        context2d.fillRect(width / 2 - 5, height / 2 - 5, 10, 10);
+        context2d.strokeText(tileContext.zoom + ' ' + tileContext.tile.x + ' ' + tileContext.tile.y, width / 2 - 30, height / 2 - 10);
     }
 
     _draw(tileContext) {
@@ -1622,7 +1622,10 @@ class MVTSource {
         var tileContext = this.visibleTiles[id];        
         if (!tileContext) return;
         this.clearTile(tileContext);
+        this._drawDebugInfo(tileContext);
+        //return;
         this._drawVectorTile(tileContext.vectorTile, tileContext);
+        
 
     }
 

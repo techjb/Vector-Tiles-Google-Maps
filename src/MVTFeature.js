@@ -190,7 +190,7 @@ MVTFeature.prototype.clearTileFeatures = function (zoom) {
  *
  * @param self
  */
-MVTFeature.prototype.redrawTiles = function() {
+MVTFeature.prototype.redrawTiles = function () {    
     //Redraw the whole tile, not just this vtf
     var mapZoom = this.map.getZoom();
     for (var id in this.tiles) {
