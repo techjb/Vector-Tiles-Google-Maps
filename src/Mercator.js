@@ -76,5 +76,53 @@
             x: evt.pixel.x - tileSwPixels.x,
             y: evt.pixel.y - tileNePixels.y
         }
+    },
+
+    // todo: sometimes it does not work properly
+    isPointInPolygon(point, polygon) {
+        if (polygon && polygon.length) {
+            for (var c = false, i = -1, l = polygon.length, j = l - 1; ++i < l; j = i) {
+                ((polygon[i].y <= point.y && point.y < polygon[j].y) || (polygon[j].y <= point.y && point.y < polygon[i].y))
+                    && (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x)
+                    && (c = !c);
+            }
+            return c;
+        }
+    },
+
+    in_circle(center_x, center_y, radius, x, y) {
+        var square_dist = Math.pow((center_x - x), 2) + Math.pow((center_y - y), 2);
+        return square_dist <= Math.pow(radius, 2);
+    },
+
+    // TODO: not tested
+    getDistanceFromLine(point, line) {
+        var min = Number.POSITIVE_INFINITY;
+        if (line && line.length > 1) {
+            point = L.point(point.x, point.y);
+            for (var i = 0, l = line.length - 1; i < l; i++) {
+                var test = this.projectPointOnLineSegment(point, line[i], line[i + 1]);
+                if (test.distance <= min) {
+                    min = test.distance;
+                }
+            }
+        }
+        return min;
+    },
+
+    projectPointOnLineSegment(point, r0, r1) {
+        var lineLength = r0.distanceTo(r1);
+        if (lineLength < 1) {
+            return { distance: point.distanceTo(r0), coordinate: r0 };
+        }
+        var u = ((point.x - r0.x) * (r1.x - r0.x) + (point.y - r0.y) * (r1.y - r0.y)) / Math.pow(lineLength, 2);
+        if (u < 0.0000001) {
+            return { distance: point.distanceTo(r0), coordinate: r0 };
+        }
+        if (u > 0.9999999) {
+            return { distance: point.distanceTo(r1), coordinate: r1 };
+        }
+        var a = L.point(r0.x + u * (r1.x - r0.x), r0.y + u * (r1.y - r0.y));
+        return { distance: point.distanceTo(a), point: a };
     }
 }

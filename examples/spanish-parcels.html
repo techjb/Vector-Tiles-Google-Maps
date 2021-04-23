@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Basic</title>
+    <title>Spanish Parcels</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">    
     <style>
@@ -38,7 +38,6 @@
         function InitVectorTiles() {
             var mvtSource = new MVTSource(map, {
                 url: "https://api.mapbox.com/v4/techjb.9o01nh3m/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=pk.eyJ1IjoidGVjaGpiIiwiYSI6ImNqZnAxdGprYTB3a2EzM3JxN3ozazE1a3kifQ.WTzyyZbmKbyehCBm9HNhbg",
-                debug: false,
                 style: function (feature) {
                     var style = {};
 
