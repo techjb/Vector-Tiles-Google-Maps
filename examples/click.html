@@ -63,8 +63,7 @@
         function ShowSelectedFeatures(event) {
             if (!event.feature) {
                 mvtSource.deselectAllFeatures();
-            }
-            console.log(event.feature.coordinates)
+            }            
             var features = mvtSource.getSelectedFeatures();
             var listSelectedFeatures = document.getElementById("listSelectedFeatures");
             listSelectedFeatures.innerHTML = '';

@@ -400,6 +400,7 @@ class MVTFeature {
         this.tileInfos = {};
         this.style = style;
         this.label = label;
+        //this.centroid = false;
         for (var key in vectorTileFeature) {
             this[key] = vectorTileFeature[key];
         }
@@ -507,7 +508,7 @@ class MVTFeature {
         }
 
         context2d.stroke();        
-        this._drawLabel(context2d, projCoords);
+        this._drawLabel(context2d);
         this.tileInfos[tileContext.id].paths.push(projCoords);        
     }
 
@@ -529,12 +530,12 @@ class MVTFeature {
         context2d.closePath();
         context2d.fill();
         context2d.stroke();        
-        this._drawLabel(context2d, projCoords);
+        this._drawLabel(context2d);
         this.tileInfos[tileContext.id].paths.push(projCoords);        
     }
 
-    _drawLabel(context2d, coordinates) {
-        if (!this.label || !this.label.text) {
+    _drawLabel(context2d) {
+        if (!this.label || !this.label.text || !this.coordinates) {
             return;
         }
         context2d.restore();
@@ -544,9 +545,14 @@ class MVTFeature {
             }
             context2d[key] = this.label[key];
         }        
-        var centroid = MERCATOR.get_centroid(coordinates);
+        var centroid = MERCATOR.get_centroid(this.coordinates[0]);        
         context2d.fillText(this.label.text, centroid.x, centroid.y);
     }
+
+    //calculateCentroid() {
+    //    var coordinates = getPathsForTile()
+    //    this.centroid = MERCATOR.get_centroid(coordinates);
+    //}
 
     _getContext2d(canvas, style) {
         var context2d = canvas.getContext('2d');
@@ -604,7 +610,10 @@ class MVTLayer {
         var mVTFeature = this._features[featureId];
         if (!mVTFeature) {
             var style = this.style(vectorTileFeature);
-            var label = this.label(vectorTileFeature);
+            var label = this.label;
+            if (label) {
+                label = this.label(vectorTileFeature);
+            }
             mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style, label);
             this._features[featureId] = mVTFeature;
         } else {
@@ -667,7 +676,6 @@ class MVTLayer {
     setFilter(filterFunction) {
         this._filter = filterFunction
     }
-
 
     handleClickEvent(event, callbackFunction) {
         var canvas = this._tileCanvas[event.id];
@@ -739,6 +747,13 @@ class MVTLayer {
         event.feature = selectedFeature;
         callbackFunction(event);
     }
+
+    //calculateCentroids() {
+    //    for (var id in this._features) {
+    //        var feature = this._features[id];
+    //        feature.calculateCentroid();
+    //    }
+    //}
 };
 class MVTSource {
     constructor(map, options) {
@@ -759,9 +774,11 @@ class MVTSource {
         if (typeof options.style === 'function') {            
             this.style = options.style;
         }
+        this.label = false;
         if (typeof options.label === 'function') {
             this.label = options.label;
-        }        
+        }
+        
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
         this.vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
         this.visibleTiles = {}; // tiles currently in the viewport 
@@ -832,9 +849,6 @@ class MVTSource {
         return style;
     }
 
-    label(feature) {
-
-    }
 
     drawTile(canvas, coord, zoom) {
         var self = this;
@@ -856,17 +870,17 @@ class MVTSource {
             .replace("{x}", coord.x)
             .replace("{y}", coord.y);
 
-        this._pendingUrls.push(src);
+        //this._pendingUrls.push(src);
         var xmlHttpRequest = new XMLHttpRequest();
         xmlHttpRequest.onload = function () {
             if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
                 self._xhrResponseOk(tileContext, xmlHttpRequest.response)
             }
-            var index = self._pendingUrls.indexOf(src);
-            self._pendingUrls.splice(index, 1);
-            if (self._pendingUrls.length === 0) {
-                self._allTilesLoaded();
-            }
+            //var index = self._pendingUrls.indexOf(src);
+            //self._pendingUrls.splice(index, 1);
+            //if (self._pendingUrls.length === 0) {
+            //    self._allTilesLoaded();
+            //}
         };
         xmlHttpRequest.open('GET', src, true);
         for (var header in this._xhrHeaders) {
@@ -876,9 +890,15 @@ class MVTSource {
         xmlHttpRequest.send();
     }
 
-    _allTilesLoaded() {
-        console.log("all loaded");
-    }
+    //_allTilesLoaded() {
+    //    if (!this.label) {
+    //        return;
+    //    }
+    //    for (var key in this.mVTLayers) {
+    //        this.mVTLayers[key].CalculateCentroids();
+    //    }
+    //    this.redrawAllTiles();
+    //}
 
     _getTileId(zoom, x, y) {
         return [zoom, x, y].join(":");
@@ -1204,15 +1224,16 @@ MERCATOR = {
         return { distance: point.distanceTo(a), point: a };
     },
 
-    get_centroid(pts) {
-        var first = pts[0], last = pts[pts.length - 1];
-        if (first.x != last.x || first.y != last.y) pts.push(first);
+
+    get_centroid(points) {
+        var first = points[0], last = points[points.length - 1];
+        if (first.x != last.x || first.y != last.y) points.push(first);
         var twicearea = 0,
             x = 0, y = 0,
-            nPts = pts.length,
+            nPts = points.length,
             p1, p2, f;
         for (var i = 0, j = nPts - 1; i < nPts; j = i++) {
-            p1 = pts[i]; p2 = pts[j];
+            p1 = points[i]; p2 = points[j];
             f = p1.x * p2.y - p2.x * p1.y;
             twicearea += f;
             x += (p1.x + p2.x) * f;
@@ -1221,4 +1242,21 @@ MERCATOR = {
         f = twicearea * 3;
         return { x: x / f, y: y / f };
     }
+    //get_centroid(pts) {
+    //    var first = pts[0], last = pts[pts.length - 1];
+    //    if (first.x != last.x || first.y != last.y) pts.push(first);
+    //    var twicearea = 0,
+    //        x = 0, y = 0,
+    //        nPts = pts.length,
+    //        p1, p2, f;
+    //    for (var i = 0, j = nPts - 1; i < nPts; j = i++) {
+    //        p1 = pts[i]; p2 = pts[j];
+    //        f = p1.x * p2.y - p2.x * p1.y;
+    //        twicearea += f;
+    //        x += (p1.x + p2.x) * f;
+    //        y += (p1.y + p2.y) * f;
+    //    }
+    //    f = twicearea * 3;
+    //    return { x: x / f, y: y / f };
+    //}
 }

@@ -8,6 +8,7 @@ class MVTFeature {
         this.tileInfos = {};
         this.style = style;
         this.label = label;
+        //this.centroid = false;
         for (var key in vectorTileFeature) {
             this[key] = vectorTileFeature[key];
         }
@@ -115,7 +116,7 @@ class MVTFeature {
         }
 
         context2d.stroke();        
-        this._drawLabel(context2d, projCoords);
+        this._drawLabel(context2d);
         this.tileInfos[tileContext.id].paths.push(projCoords);        
     }
 
@@ -137,12 +138,12 @@ class MVTFeature {
         context2d.closePath();
         context2d.fill();
         context2d.stroke();        
-        this._drawLabel(context2d, projCoords);
+        this._drawLabel(context2d);
         this.tileInfos[tileContext.id].paths.push(projCoords);        
     }
 
-    _drawLabel(context2d, coordinates) {
-        if (!this.label || !this.label.text) {
+    _drawLabel(context2d) {
+        if (!this.label || !this.label.text || !this.coordinates) {
             return;
         }
         context2d.restore();
@@ -152,9 +153,14 @@ class MVTFeature {
             }
             context2d[key] = this.label[key];
         }        
-        var centroid = MERCATOR.get_centroid(coordinates);
+        var centroid = MERCATOR.get_centroid(this.coordinates[0]);        
         context2d.fillText(this.label.text, centroid.x, centroid.y);
     }
+
+    //calculateCentroid() {
+    //    var coordinates = getPathsForTile()
+    //    this.centroid = MERCATOR.get_centroid(coordinates);
+    //}
 
     _getContext2d(canvas, style) {
         var context2d = canvas.getContext('2d');

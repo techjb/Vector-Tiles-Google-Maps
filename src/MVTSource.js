@@ -17,9 +17,11 @@ class MVTSource {
         if (typeof options.style === 'function') {            
             this.style = options.style;
         }
+        this.label = false;
         if (typeof options.label === 'function') {
             this.label = options.label;
-        }        
+        }
+        
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
         this.vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
         this.visibleTiles = {}; // tiles currently in the viewport 
@@ -90,9 +92,6 @@ class MVTSource {
         return style;
     }
 
-    label(feature) {
-
-    }
 
     drawTile(canvas, coord, zoom) {
         var self = this;
@@ -114,17 +113,17 @@ class MVTSource {
             .replace("{x}", coord.x)
             .replace("{y}", coord.y);
 
-        this._pendingUrls.push(src);
+        //this._pendingUrls.push(src);
         var xmlHttpRequest = new XMLHttpRequest();
         xmlHttpRequest.onload = function () {
             if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
                 self._xhrResponseOk(tileContext, xmlHttpRequest.response)
             }
-            var index = self._pendingUrls.indexOf(src);
-            self._pendingUrls.splice(index, 1);
-            if (self._pendingUrls.length === 0) {
-                self._allTilesLoaded();
-            }
+            //var index = self._pendingUrls.indexOf(src);
+            //self._pendingUrls.splice(index, 1);
+            //if (self._pendingUrls.length === 0) {
+            //    self._allTilesLoaded();
+            //}
         };
         xmlHttpRequest.open('GET', src, true);
         for (var header in this._xhrHeaders) {
@@ -134,9 +133,15 @@ class MVTSource {
         xmlHttpRequest.send();
     }
 
-    _allTilesLoaded() {
-        console.log("all loaded");
-    }
+    //_allTilesLoaded() {
+    //    if (!this.label) {
+    //        return;
+    //    }
+    //    for (var key in this.mVTLayers) {
+    //        this.mVTLayers[key].CalculateCentroids();
+    //    }
+    //    this.redrawAllTiles();
+    //}
 
     _getTileId(zoom, x, y) {
         return [zoom, x, y].join(":");

@@ -36,7 +36,10 @@ class MVTLayer {
         var mVTFeature = this._features[featureId];
         if (!mVTFeature) {
             var style = this.style(vectorTileFeature);
-            var label = this.label(vectorTileFeature);
+            var label = this.label;
+            if (label) {
+                label = this.label(vectorTileFeature);
+            }
             mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style, label);
             this._features[featureId] = mVTFeature;
         } else {
@@ -99,7 +102,6 @@ class MVTLayer {
     setFilter(filterFunction) {
         this._filter = filterFunction
     }
-
 
     handleClickEvent(event, callbackFunction) {
         var canvas = this._tileCanvas[event.id];
@@ -171,4 +173,11 @@ class MVTLayer {
         event.feature = selectedFeature;
         callbackFunction(event);
     }
+
+    //calculateCentroids() {
+    //    for (var id in this._features) {
+    //        var feature = this._features[id];
+    //        feature.calculateCentroid();
+    //    }
+    //}
 };
