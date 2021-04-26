@@ -391,7 +391,7 @@ Point.convert = function (a) {
     return a;
 };
 class MVTFeature {
-    constructor(mVTLayer, vectorTileFeature, tileContext, style) {
+    constructor(mVTLayer, vectorTileFeature, tileContext, style, label) {
         this.mVTLayer = mVTLayer;
         this.selected = false;
         this.divisor = vectorTileFeature.extent / tileContext.tileSize;
@@ -399,6 +399,7 @@ class MVTFeature {
         this.tileSize = tileContext.tileSize;
         this.tileInfos = {};
         this.style = style;
+        this.label = label;
         for (var key in vectorTileFeature) {
             this[key] = vectorTileFeature[key];
         }
@@ -414,6 +415,10 @@ class MVTFeature {
 
     setStyle(styleFunction) {
         this.style = styleFunction(this, null);
+    }
+
+    setLabel(labelFunction) {
+        this.label = labelFunction(this);
     }
 
     draw(tileContext) {
@@ -433,7 +438,7 @@ class MVTFeature {
             case 3: //Polygon
                 this._drawPolygon(tileContext, vectorTileFeature.coordinates, style);
                 break;
-        }
+        }        
     }
 
     getPathsForTile(id) {
@@ -475,77 +480,47 @@ class MVTFeature {
     }
 
     _drawPoint(tileContext, coordinates, style) {
-        var radius = 1;
-        if (typeof style.radius === 'function') {
-            radius = style.radius(tileContext.zoom);
-        }
-        else {
-            radius = style.radius;
-        }
-
-        var context2d = tileContext.canvas.getContext('2d')
-        context2d.beginPath();
-        context2d.fillStyle = style.color;
-        var point = this.getPoint(coordinates[0][0]);
-        context2d.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        var context2d = this._getContext2d(tileContext.canvas, style);
+        var radio = style.radio || 4;
+        context2d.beginPath();        
+        var point = this._getPoint(coordinates[0][0]);
+        context2d.arc(point.x, point.y, radio, 0, Math.PI * 2);
         context2d.closePath();
         context2d.fill();
-
-        if (style.lineWidth && style.strokeStyle) {
-            context2d.lineWidth = style.lineWidth;
-            context2d.strokeStyle = style.strokeStyle;
-            context2d.stroke();
-        }
-
-        context2d.restore();
+        context2d.stroke();        
+        this._drawLabel(context2d, [point]);
         this.tileInfos[tileContext.id].paths.push([point]);
     }
 
     _drawLineString(tileContext, coordinates, style) {
-        var context2d = tileContext.canvas.getContext('2d');
-        context2d.strokeStyle = style.color;
-        context2d.lineWidth = style.size;
+        var context2d = this._getContext2d(tileContext.canvas, style);        
         context2d.beginPath();
-
         var projCoords = [];
         for (var i in coordinates) {
             var coordinate = coordinates[i];
             for (var j = 0; j < coordinate.length; j++) {
                 var method = (j === 0 ? 'move' : 'line') + 'To';
-                var point = this.getPoint(coordinate[j]);
+                var point = this._getPoint(coordinate[j]);
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
         }
 
-        context2d.stroke();
-        context2d.restore();
-        this.tileInfos[tileContext.id].paths.push(projCoords);
+        context2d.stroke();        
+        this._drawLabel(context2d, projCoords);
+        this.tileInfos[tileContext.id].paths.push(projCoords);        
     }
 
     _drawPolygon(tileContext, coordinates, style) {
-        var context2d = tileContext.canvas.getContext('2d');
-        var outline = style.outline;
-
-        if (typeof style.color === 'function') {
-            context2d.fillStyle = style.color(context2d);
-        } else {
-            context2d.fillStyle = style.color;
-        }
-
-        if (outline) {
-            context2d.strokeStyle = outline.color;
-            context2d.lineWidth = outline.size;
-        }
-        var projCoords = [];
+        var context2d = this._getContext2d(tileContext.canvas, style);       
         context2d.beginPath();
+        var projCoords = [];
 
         for (var i = 0; i < coordinates.length; i++) {
-            var j = coordinates[i];
-            for (var k = 0; k < j.length; k++) {
-                var coordinate = j[k];
-                var method = (k === 0 ? 'move' : 'line') + 'To';
-                var point = this.getPoint(coordinate);
+            var coordinate = coordinates[i];
+            for (var j = 0; j < coordinate.length; j++) {                
+                var method = (j === 0 ? 'move' : 'line') + 'To';
+                var point = this._getPoint(coordinate[j]);
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
@@ -553,13 +528,38 @@ class MVTFeature {
 
         context2d.closePath();
         context2d.fill();
-        if (outline) {
-            context2d.stroke();
-        }
-        this.tileInfos[tileContext.id].paths.push(projCoords);
+        context2d.stroke();        
+        this._drawLabel(context2d, projCoords);
+        this.tileInfos[tileContext.id].paths.push(projCoords);        
     }
 
-    getPoint(coords) {
+    _drawLabel(context2d, coordinates) {
+        if (!this.label || !this.label.text) {
+            return;
+        }
+        context2d.restore();
+        for (var key in this.label) {
+            if (key === 'text') {
+                continue;
+            }
+            context2d[key] = this.label[key];
+        }        
+        var centroid = MERCATOR.get_centroid(coordinates);
+        context2d.fillText(this.label.text, centroid.x, centroid.y);
+    }
+
+    _getContext2d(canvas, style) {
+        var context2d = canvas.getContext('2d');
+        for (var key in style) {
+            if (key === 'selected' || key==='label') {
+                continue;
+            }
+            context2d[key] = style[key];
+        }
+        return context2d;
+    }
+
+    _getPoint(coords) {
         return {
             x: coords.x / this.divisor,
             y: coords.y / this.divisor
@@ -575,6 +575,7 @@ class MVTLayer {
             return feature.properties.id;
         };
         this.style = options.style;
+        this.label = options.label;        
         this.name = options.name;
         this._filter = options.filter || false;
         this._mVTFeatures = {};
@@ -603,7 +604,8 @@ class MVTLayer {
         var mVTFeature = this._features[featureId];
         if (!mVTFeature) {
             var style = this.style(vectorTileFeature);
-            mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style);
+            var label = this.label(vectorTileFeature);
+            mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style, label);
             this._features[featureId] = mVTFeature;
         } else {
             mVTFeature.addTileFeature(vectorTileFeature, tileContext);
@@ -651,6 +653,14 @@ class MVTLayer {
         for (var id in this._features) {
             var feature = this._features[id];
             feature.setStyle(styleFunction);
+        }
+    }
+
+    setLabel(labelFunction) {
+        this.label = labelFunction;
+        for (var id in this._features) {
+            var feature = this._features[id];
+            feature.setLabel(labelFunction);
         }
     }
 
@@ -746,13 +756,17 @@ class MVTSource {
         this._cache = options.cache || false; // Load tiles in cache to avoid duplicated requests
         this._tileSize = options.tileSize || 256; // Default tile size
         this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);
-        if (typeof options.style === 'function') {
+        if (typeof options.style === 'function') {            
             this.style = options.style;
         }
+        if (typeof options.label === 'function') {
+            this.label = options.label;
+        }        
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
         this.vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
         this.visibleTiles = {}; // tiles currently in the viewport 
         this._selectedFeatures = []; // list of selected features        
+        this._pendingUrls = [];
 
         this.map.addListener("zoom_changed", () => {
             self.clearAtNonVisibleZoom();
@@ -789,37 +803,37 @@ class MVTSource {
         var type = feature.type;
         switch (type) {
             case 1: //'Point'
-                style.color = 'rgba(49,79,79,1)';
-                style.radius = 5;
+                style.fillStyle = 'rgba(49,79,79,1)';
+                style.radio = 5;
                 style.selected = {
-                    color: 'rgba(255,255,0,0.5)',
-                    radius: 6
-                };
+                    fillStyle: 'rgba(255,255,0,0.5)',
+                    radio: 6
+                }
                 break;
             case 2: //'LineString'
-                style.color = 'rgba(161,217,155,0.8)';
-                style.size = 3;
+                style.strokeStyle = 'rgba(161,217,155,0.8)';
+                style.lineWidth = 3;
                 style.selected = {
-                    color: 'rgba(255,25,0,0.5)',
-                    size: 4
-                };
+                    strokeStyle: 'rgba(255,25,0,0.5)',
+                    lineWidth: 4
+                }
                 break;
             case 3: //'Polygon'
-                style.color = 'rgba(49,79,79, 0.4)';
-                style.outline = {
-                    color: 'rgba(161,217,155,0.8)',
-                    size: 1
-                };
+                style.fillStyle = 'rgba(49,79,79, 0.4)';
+                style.strokeStyle = 'rgba(161,217,155,0.8)';
+                style.lineWidth = 1;
                 style.selected = {
-                    color: 'rgba(255,140,0,0.3)',
-                    outline: {
-                        color: 'rgba(255,140,0,1)',
-                        size: 2
-                    }
-                };
+                    fillStyle: 'rgba(255,140,0,0.3)',
+                    strokeStyle: 'rgba(255,140,0,1)',
+                    lineWidth: 2
+                }
                 break;
         }
         return style;
+    }
+
+    label(feature) {
+
     }
 
     drawTile(canvas, coord, zoom) {
@@ -842,10 +856,16 @@ class MVTSource {
             .replace("{x}", coord.x)
             .replace("{y}", coord.y);
 
+        this._pendingUrls.push(src);
         var xmlHttpRequest = new XMLHttpRequest();
         xmlHttpRequest.onload = function () {
             if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
                 self._xhrResponseOk(tileContext, xmlHttpRequest.response)
+            }
+            var index = self._pendingUrls.indexOf(src);
+            self._pendingUrls.splice(index, 1);
+            if (self._pendingUrls.length === 0) {
+                self._allTilesLoaded();
             }
         };
         xmlHttpRequest.open('GET', src, true);
@@ -854,6 +874,10 @@ class MVTSource {
         }
         xmlHttpRequest.responseType = 'arraybuffer';
         xmlHttpRequest.send();
+    }
+
+    _allTilesLoaded() {
+        console.log("all loaded");
     }
 
     _getTileId(zoom, x, y) {
@@ -916,8 +940,9 @@ class MVTSource {
             filter: this._filter,
             layerOrdering: this.layerOrdering,
             style: this.style,
+            label: this.label,
             name: key
-        };
+        };        
         return new MVTLayer(this, options);
     }
 
@@ -1011,6 +1036,14 @@ class MVTSource {
         this.style = styleFunction
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].setStyle(styleFunction);
+        }
+        this.redrawAllTiles();
+    }
+
+    setLabel(labelFunction) {
+        this.label = labelFunction
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].setLabel(labelFunction);
         }
         this.redrawAllTiles();
     }
@@ -1169,5 +1202,23 @@ MERCATOR = {
         }
         var a = L.point(r0.x + u * (r1.x - r0.x), r0.y + u * (r1.y - r0.y));
         return { distance: point.distanceTo(a), point: a };
+    },
+
+    get_centroid(pts) {
+        var first = pts[0], last = pts[pts.length - 1];
+        if (first.x != last.x || first.y != last.y) pts.push(first);
+        var twicearea = 0,
+            x = 0, y = 0,
+            nPts = pts.length,
+            p1, p2, f;
+        for (var i = 0, j = nPts - 1; i < nPts; j = i++) {
+            p1 = pts[i]; p2 = pts[j];
+            f = p1.x * p2.y - p2.x * p1.y;
+            twicearea += f;
+            x += (p1.x + p2.x) * f;
+            y += (p1.y + p2.y) * f;
+        }
+        f = twicearea * 3;
+        return { x: x / f, y: y / f };
     }
 }

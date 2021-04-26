@@ -1,5 +1,5 @@
 class MVTFeature {
-    constructor(mVTLayer, vectorTileFeature, tileContext, style) {
+    constructor(mVTLayer, vectorTileFeature, tileContext, style, label) {
         this.mVTLayer = mVTLayer;
         this.selected = false;
         this.divisor = vectorTileFeature.extent / tileContext.tileSize;
@@ -7,6 +7,7 @@ class MVTFeature {
         this.tileSize = tileContext.tileSize;
         this.tileInfos = {};
         this.style = style;
+        this.label = label;
         for (var key in vectorTileFeature) {
             this[key] = vectorTileFeature[key];
         }
@@ -22,6 +23,10 @@ class MVTFeature {
 
     setStyle(styleFunction) {
         this.style = styleFunction(this, null);
+    }
+
+    setLabel(labelFunction) {
+        this.label = labelFunction(this);
     }
 
     draw(tileContext) {
@@ -41,7 +46,7 @@ class MVTFeature {
             case 3: //Polygon
                 this._drawPolygon(tileContext, vectorTileFeature.coordinates, style);
                 break;
-        }
+        }        
     }
 
     getPathsForTile(id) {
@@ -83,77 +88,47 @@ class MVTFeature {
     }
 
     _drawPoint(tileContext, coordinates, style) {
-        var radius = 1;
-        if (typeof style.radius === 'function') {
-            radius = style.radius(tileContext.zoom);
-        }
-        else {
-            radius = style.radius;
-        }
-
-        var context2d = tileContext.canvas.getContext('2d')
-        context2d.beginPath();
-        context2d.fillStyle = style.color;
-        var point = this.getPoint(coordinates[0][0]);
-        context2d.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        var context2d = this._getContext2d(tileContext.canvas, style);
+        var radio = style.radio || 4;
+        context2d.beginPath();        
+        var point = this._getPoint(coordinates[0][0]);
+        context2d.arc(point.x, point.y, radio, 0, Math.PI * 2);
         context2d.closePath();
         context2d.fill();
-
-        if (style.lineWidth && style.strokeStyle) {
-            context2d.lineWidth = style.lineWidth;
-            context2d.strokeStyle = style.strokeStyle;
-            context2d.stroke();
-        }
-
-        context2d.restore();
+        context2d.stroke();        
+        this._drawLabel(context2d, [point]);
         this.tileInfos[tileContext.id].paths.push([point]);
     }
 
     _drawLineString(tileContext, coordinates, style) {
-        var context2d = tileContext.canvas.getContext('2d');
-        context2d.strokeStyle = style.color;
-        context2d.lineWidth = style.size;
+        var context2d = this._getContext2d(tileContext.canvas, style);        
         context2d.beginPath();
-
         var projCoords = [];
         for (var i in coordinates) {
             var coordinate = coordinates[i];
             for (var j = 0; j < coordinate.length; j++) {
                 var method = (j === 0 ? 'move' : 'line') + 'To';
-                var point = this.getPoint(coordinate[j]);
+                var point = this._getPoint(coordinate[j]);
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
         }
 
-        context2d.stroke();
-        context2d.restore();
-        this.tileInfos[tileContext.id].paths.push(projCoords);
+        context2d.stroke();        
+        this._drawLabel(context2d, projCoords);
+        this.tileInfos[tileContext.id].paths.push(projCoords);        
     }
 
     _drawPolygon(tileContext, coordinates, style) {
-        var context2d = tileContext.canvas.getContext('2d');
-        var outline = style.outline;
-
-        if (typeof style.color === 'function') {
-            context2d.fillStyle = style.color(context2d);
-        } else {
-            context2d.fillStyle = style.color;
-        }
-
-        if (outline) {
-            context2d.strokeStyle = outline.color;
-            context2d.lineWidth = outline.size;
-        }
-        var projCoords = [];
+        var context2d = this._getContext2d(tileContext.canvas, style);       
         context2d.beginPath();
+        var projCoords = [];
 
         for (var i = 0; i < coordinates.length; i++) {
-            var j = coordinates[i];
-            for (var k = 0; k < j.length; k++) {
-                var coordinate = j[k];
-                var method = (k === 0 ? 'move' : 'line') + 'To';
-                var point = this.getPoint(coordinate);
+            var coordinate = coordinates[i];
+            for (var j = 0; j < coordinate.length; j++) {                
+                var method = (j === 0 ? 'move' : 'line') + 'To';
+                var point = this._getPoint(coordinate[j]);
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
@@ -161,13 +136,38 @@ class MVTFeature {
 
         context2d.closePath();
         context2d.fill();
-        if (outline) {
-            context2d.stroke();
-        }
-        this.tileInfos[tileContext.id].paths.push(projCoords);
+        context2d.stroke();        
+        this._drawLabel(context2d, projCoords);
+        this.tileInfos[tileContext.id].paths.push(projCoords);        
     }
 
-    getPoint(coords) {
+    _drawLabel(context2d, coordinates) {
+        if (!this.label || !this.label.text) {
+            return;
+        }
+        context2d.restore();
+        for (var key in this.label) {
+            if (key === 'text') {
+                continue;
+            }
+            context2d[key] = this.label[key];
+        }        
+        var centroid = MERCATOR.get_centroid(coordinates);
+        context2d.fillText(this.label.text, centroid.x, centroid.y);
+    }
+
+    _getContext2d(canvas, style) {
+        var context2d = canvas.getContext('2d');
+        for (var key in style) {
+            if (key === 'selected' || key==='label') {
+                continue;
+            }
+            context2d[key] = style[key];
+        }
+        return context2d;
+    }
+
+    _getPoint(coords) {
         return {
             x: coords.x / this.divisor,
             y: coords.y / this.divisor

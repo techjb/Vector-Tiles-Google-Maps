@@ -43,12 +43,14 @@
 
         function GetFilter() {
             var value = parseInt(document.getElementById("inputFilter").value);
-            document.getElementById("label").innerHTML  = value;
-            return new Function('feature', 'context', 'return ' + value +' > feature.properties.id % 10');
+            document.getElementById("label").innerHTML = value;        
+            
+            return function (feature) {
+                return value > feature.properties.id % 10;
+            }
         }
 
-        function InitVectorTiles() {
-           
+        function InitVectorTiles() {           
             var options = {
                 url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
                 filter: GetFilter()

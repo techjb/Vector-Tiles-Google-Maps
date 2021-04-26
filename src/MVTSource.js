@@ -14,13 +14,17 @@ class MVTSource {
         this._cache = options.cache || false; // Load tiles in cache to avoid duplicated requests
         this._tileSize = options.tileSize || 256; // Default tile size
         this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);
-        if (typeof options.style === 'function') {
+        if (typeof options.style === 'function') {            
             this.style = options.style;
         }
+        if (typeof options.label === 'function') {
+            this.label = options.label;
+        }        
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
         this.vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
         this.visibleTiles = {}; // tiles currently in the viewport 
         this._selectedFeatures = []; // list of selected features        
+        this._pendingUrls = [];
 
         this.map.addListener("zoom_changed", () => {
             self.clearAtNonVisibleZoom();
@@ -57,37 +61,37 @@ class MVTSource {
         var type = feature.type;
         switch (type) {
             case 1: //'Point'
-                style.color = 'rgba(49,79,79,1)';
-                style.radius = 5;
+                style.fillStyle = 'rgba(49,79,79,1)';
+                style.radio = 5;
                 style.selected = {
-                    color: 'rgba(255,255,0,0.5)',
-                    radius: 6
-                };
+                    fillStyle: 'rgba(255,255,0,0.5)',
+                    radio: 6
+                }
                 break;
             case 2: //'LineString'
-                style.color = 'rgba(161,217,155,0.8)';
-                style.size = 3;
+                style.strokeStyle = 'rgba(161,217,155,0.8)';
+                style.lineWidth = 3;
                 style.selected = {
-                    color: 'rgba(255,25,0,0.5)',
-                    size: 4
-                };
+                    strokeStyle: 'rgba(255,25,0,0.5)',
+                    lineWidth: 4
+                }
                 break;
             case 3: //'Polygon'
-                style.color = 'rgba(49,79,79, 0.4)';
-                style.outline = {
-                    color: 'rgba(161,217,155,0.8)',
-                    size: 1
-                };
+                style.fillStyle = 'rgba(49,79,79, 0.4)';
+                style.strokeStyle = 'rgba(161,217,155,0.8)';
+                style.lineWidth = 1;
                 style.selected = {
-                    color: 'rgba(255,140,0,0.3)',
-                    outline: {
-                        color: 'rgba(255,140,0,1)',
-                        size: 2
-                    }
-                };
+                    fillStyle: 'rgba(255,140,0,0.3)',
+                    strokeStyle: 'rgba(255,140,0,1)',
+                    lineWidth: 2
+                }
                 break;
         }
         return style;
+    }
+
+    label(feature) {
+
     }
 
     drawTile(canvas, coord, zoom) {
@@ -110,10 +114,16 @@ class MVTSource {
             .replace("{x}", coord.x)
             .replace("{y}", coord.y);
 
+        this._pendingUrls.push(src);
         var xmlHttpRequest = new XMLHttpRequest();
         xmlHttpRequest.onload = function () {
             if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
                 self._xhrResponseOk(tileContext, xmlHttpRequest.response)
+            }
+            var index = self._pendingUrls.indexOf(src);
+            self._pendingUrls.splice(index, 1);
+            if (self._pendingUrls.length === 0) {
+                self._allTilesLoaded();
             }
         };
         xmlHttpRequest.open('GET', src, true);
@@ -122,6 +132,10 @@ class MVTSource {
         }
         xmlHttpRequest.responseType = 'arraybuffer';
         xmlHttpRequest.send();
+    }
+
+    _allTilesLoaded() {
+        console.log("all loaded");
     }
 
     _getTileId(zoom, x, y) {
@@ -184,8 +198,9 @@ class MVTSource {
             filter: this._filter,
             layerOrdering: this.layerOrdering,
             style: this.style,
+            label: this.label,
             name: key
-        };
+        };        
         return new MVTLayer(this, options);
     }
 
@@ -279,6 +294,14 @@ class MVTSource {
         this.style = styleFunction
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].setStyle(styleFunction);
+        }
+        this.redrawAllTiles();
+    }
+
+    setLabel(labelFunction) {
+        this.label = labelFunction
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].setLabel(labelFunction);
         }
         this.redrawAllTiles();
     }

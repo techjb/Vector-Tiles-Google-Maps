@@ -25,6 +25,7 @@
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
         var map;
+        var mvtSource;
 
         function InitGoogleMap() {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -44,9 +45,8 @@
                 visibleLayers: ["GAUL0"]
             }
 
-            var mvtSource = new MVTSource(map, options);
+            mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
-
 
             map.addListener("click", function (event) {
                 mvtSource.onClick(event, ShowSelectedFeatures);
@@ -58,20 +58,21 @@
             map.addListener("rightclick", function (event) {
                 mvtSource.onClick(event, ShowSelectedFeatures, clickOptions);
             });
+        }
 
-            function ShowSelectedFeatures(event) {
-                if (!event.feature) {
-                    mvtSource.deselectAllFeatures();
-                }
-                var features = mvtSource.getSelectedFeatures();
-                var listSelectedFeatures = document.getElementById("listSelectedFeatures");
-                listSelectedFeatures.innerHTML = '';
-                for (var i = 0; i < features.length; i++) {
-                    var li = document.createElement("li");
-                    var feature = features[i];
-                    li.innerHTML = JSON.stringify(feature.properties);
-                    listSelectedFeatures.appendChild(li);
-                }
+        function ShowSelectedFeatures(event) {
+            if (!event.feature) {
+                mvtSource.deselectAllFeatures();
+            }
+            console.log(event.feature.coordinates)
+            var features = mvtSource.getSelectedFeatures();
+            var listSelectedFeatures = document.getElementById("listSelectedFeatures");
+            listSelectedFeatures.innerHTML = '';
+            for (var i = 0; i < features.length; i++) {
+                var li = document.createElement("li");
+                var feature = features[i];
+                li.innerHTML = JSON.stringify(feature.properties);
+                listSelectedFeatures.appendChild(li);
             }
         }
 

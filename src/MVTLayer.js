@@ -7,6 +7,7 @@ class MVTLayer {
             return feature.properties.id;
         };
         this.style = options.style;
+        this.label = options.label;        
         this.name = options.name;
         this._filter = options.filter || false;
         this._mVTFeatures = {};
@@ -35,7 +36,8 @@ class MVTLayer {
         var mVTFeature = this._features[featureId];
         if (!mVTFeature) {
             var style = this.style(vectorTileFeature);
-            mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style);
+            var label = this.label(vectorTileFeature);
+            mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style, label);
             this._features[featureId] = mVTFeature;
         } else {
             mVTFeature.addTileFeature(vectorTileFeature, tileContext);
@@ -83,6 +85,14 @@ class MVTLayer {
         for (var id in this._features) {
             var feature = this._features[id];
             feature.setStyle(styleFunction);
+        }
+    }
+
+    setLabel(labelFunction) {
+        this.label = labelFunction;
+        for (var id in this._features) {
+            var feature = this._features[id];
+            feature.setLabel(labelFunction);
         }
     }
 
