@@ -2,8 +2,6 @@
   {
     "outputFileName": "dist/vector-tiles-google-maps.js",
     "inputFiles": [
-      //"lib/jsts/javascript.util.js",
-      //"lib/jsts/jsts-src.js",      
       "src/Protobuf.js",
       "src/VectorTile.js",
       "src/VectorTileFeature.js",
@@ -13,17 +11,6 @@
       "src/MVTLayer.js",
       "src/MVTSource.js",     
       "src/Mercator.js"
-      //"src/PointInPolygon/CFG.js"
-      //"src/PointInPolygon/robust-pnp.js",
-      //"src/PointInPolygon/orientation.js",
-      //"src/PointInPolygon/robust-sum.js",
-      //"src/PointInPolygon/two-product.js"
-      //"src/PointInPolygon/PointInPolygon.js"
-      //"src/StaticLabel/StaticLabel.js"
-
-      //"src/DynamicLabel/PositionWorker.js",
-      //"src/DynamicLabel/Feature.js"
-      //"src/DynamicLabel/DynamicLabel.js"
     ]
   }
 ]

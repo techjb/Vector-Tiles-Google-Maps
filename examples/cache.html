@@ -4,22 +4,20 @@
     <title>Cache</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        #map {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 100%;
-        }
-
-        html, body {
-            padding: 0;
-            margin: 0;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <div id="map"></div>
+    <div class="container-left">
+        <div id="map"></div>
+    </div>
+    <div class="container-right">
+        <div>
+            <h2>Cache enabled</h2>
+            <p>
+                Tiles are stored in memory after being loaded first time. 
+            </p>            
+        </div>
+    </div>
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
         var map;
@@ -38,7 +36,6 @@
         function InitVectorTiles() {
             var options = {
                 url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
-                debug: true,
                 cache: true
             };
             var mvtSource = new MVTSource(map, options);

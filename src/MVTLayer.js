@@ -12,8 +12,7 @@ class MVTLayer {
         this._layerOrdering = options.layerOrdering || false;                
         this._mVTFeatures = {};
         this._tileCanvas = [];
-        this._features = {};
-        this._featuresWithLabels = [];
+        this._features = {};        
     }
 
     parseVectorTileLayer(vectorTileFeatures, tileContext) {                
@@ -49,10 +48,7 @@ class MVTLayer {
         if (!mVTFeature) {
             var style = this.style(vectorTileFeature);
             mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style);
-            this._features[featureId] = mVTFeature;
-            if (style && style.dynamicLabel && typeof style.dynamicLabel === 'function') {
-                this._featuresWithLabels.push(mVTFeature);
-            }
+            this._features[featureId] = mVTFeature;            
         } else {
             mVTFeature.addTileFeature(vectorTileFeature, tileContext);
         }
@@ -200,18 +196,4 @@ class MVTLayer {
             return null;
         }
     }
-
-    featureWithLabelAdded(feature) {
-        this._featuresWithLabels.push(feature);
-    }
 };
-
-
-function removeLabels(self) {
-    var features = self.featuresWithLabels;
-    for (var i = 0, len = features.length; i < len; i++) {
-        var feat = features[i];
-        feat.removeLabel();
-    }
-    self.featuresWithLabels = [];
-}

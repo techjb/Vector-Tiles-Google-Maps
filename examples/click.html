@@ -4,22 +4,24 @@
     <title>Click</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        #map {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 100%;
-        }
-
-        html, body {
-            padding: 0;
-            margin: 0;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <div id="map"></div>
+    <div class="container-left">
+        <div id="map"></div>
+    </div>
+    <div class="container-right">
+        <div>
+            <h2>Basic</h2>
+            <p>
+                Click to select feature. Right click to select multiple features.
+            </p>
+            <p>
+                Features selected:
+                <ul id="listSelectedFeatures"></ul>
+            </p>
+        </div>
+    </div>
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
         var map;
@@ -37,8 +39,7 @@
 
         function InitVectorTiles() {
             var options = {
-                url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
-                debug: true,
+                url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",                
                 mutexToggle: true,
                 clickableLayers: ["GAUL0"],
                 visibleLayers: ["GAUL0"],
@@ -50,20 +51,29 @@
             var mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
 
-            const infoWindow = new google.maps.InfoWindow();
             map.addListener("click", function (e) {
                 mvtSource.onClick(e, function (evt) {
-                    infoWindow.close();
-                    if (!evt.feature) {
-                        //mvtSource.deselectFeature();
-                        return;
+                    var selectedFeatures = [];
+                    if (evt.feature) {
+                        selectedFeatures.push(evt.feature.properties);
                     }
-                    var text = JSON.stringify(evt.feature.properties);
-                    infoWindow.setContent(text)
-                    infoWindow.setPosition(evt.latLng);
-                    infoWindow.open(map);
+                    else {
+                        mvtSource.deselectFeature();
+                    }
+                    DrawSelectedFeatures(selectedFeatures);
                 });
             });
+
+            function DrawSelectedFeatures(selectedFeatures) {
+                var listSelectedFeatures = document.getElementById("listSelectedFeatures");
+                listSelectedFeatures.innerHTML = '';                
+                for (var i = 0; i < selectedFeatures.length; i++) {
+                    var selectedFeature = selectedFeatures[i];                    
+                    var li = document.createElement("li");
+                    li.innerHTML = JSON.stringify(selectedFeature);
+                    listSelectedFeatures.appendChild(li);
+                }
+            }
         }
 
     </script>

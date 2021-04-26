@@ -4,37 +4,17 @@
     <title>Filter</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        #map {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 80%;
-        }
-        .container {
-            position: absolute;
-            right:0;
-            width: 20%;
-            height:100%
-        }
-        .container >div{
-            padding:12pt;
-        }
-
-        html, body {
-            padding: 0;
-            margin: 0;
-        }
-        
-    </style>
+    <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <div id="map"></div>
-    <div class="container">
+    <div class="container-left">
+        <div id="map"></div>
+    </div>    
+    <div class="container-right">
         <div>
             <h2>Filter</h2>
             <p>
-                Filter features by it last char id number
+                Filter features by its last char id lower than:
             </p>
             <p>
                 <input type="range" min="0" max="9" id="inputFilter" />
@@ -64,7 +44,7 @@
         function GetFilter() {
             var value = parseInt(document.getElementById("inputFilter").value);
             document.getElementById("label").innerHTML  = value;
-            return new Function('feature', 'context', 'return ' + value +' === feature.properties.id % 10');
+            return new Function('feature', 'context', 'return ' + value +' > feature.properties.id % 10');
         }
 
         function InitVectorTiles() {

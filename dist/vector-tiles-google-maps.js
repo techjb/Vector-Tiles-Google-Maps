@@ -395,20 +395,16 @@ class MVTFeature {
         this.mVTLayer = mVTLayer;
         this.toggleEnabled = true;
         this.selected = false;
-        this.divisor = vectorTileFeature.extent / tileContext.tileSize; // how much we divide the coordinate from the vector tile
+        this.divisor = vectorTileFeature.extent / tileContext.tileSize; 
         this.extent = vectorTileFeature.extent;
         this.tileSize = tileContext.tileSize;
         this.tileInfos = {};
         this.style = style;
         for (var key in vectorTileFeature) {
             this[key] = vectorTileFeature[key];
-        }
-        if (style && style.dynamicLabel && typeof style.dynamicLabel === 'function') {
-            this.dynamicLabel = this.mVTLayer.mVTSource.dynamicLabel.createFeature(this);
-        }
+        }        
         this.addTileFeature(vectorTileFeature, tileContext);
     }
-
 
     addTileFeature(vectorTileFeature, tileContext) {
         this.tileInfos[tileContext.id] = {
@@ -417,33 +413,20 @@ class MVTFeature {
         };
     }
 
-    setStyle(styleFn) {
-        this.style = styleFn(this, null);
-        this.removeLabel();
+    setStyle(styleFunction) {
+        this.style = styleFunction(this, null);        
     }
 
     draw (tileContext) {
         var vectorTileFeature = this.tileInfos[tileContext.id].vectorTileFeature;
-
-        //  This could be used to directly compute the style function from the layer on every draw.
-        //  This is much less efficient...
-        //  this.style = this.mvtLayer.style(this);
-
         var style = this.style;
         if (this.selected) {
             var style = this.style.selected || this.style;
         }
         switch (vectorTileFeature.type) {
             case 1: //Point
-                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);
-                if (!this.staticLabel && typeof this.style.staticLabel === 'function') {
-                    if (this.style.ajaxSource && !this.ajaxData) {
-                        break;
-                    }
-                    this._drawStaticLabel(tileContext, vectorTileFeature.coordinates, style);
-                }
+                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);                
                 break;
-
             case 2: //LineString
                 this._drawLineString(tileContext, vectorTileFeature.coordinates, style);
                 break;
@@ -451,17 +434,12 @@ class MVTFeature {
             case 3: //Polygon
                 this._drawPolygon(tileContext, vectorTileFeature.coordinates, style);
                 break;
-
-            default:
-                throw new Error('Unmanaged type: ' + vectorTileFeature.type);
         }
-
     }
 
     getPathsForTile(id) {
         return this.tileInfos[id].paths;
     }
-
 
     clearTiles(zoom) {
         for (var key in this.tileInfos) {
@@ -488,48 +466,28 @@ class MVTFeature {
     select() {
         this.selected = true;
         this.mVTLayer.mVTSource.featureSelected(this);
-        this.redrawTiles();
-        //redrawFeatureInAllTiles(this);
-        //var linkedFeature = this.linkedFeature();
-        //if (linkedFeature && linkedFeature.staticLabel && !linkedFeature.staticLabel.selected) {
-        //    linkedFeature.staticLabel.select();
-        //}
+        this.redrawTiles();        
     }
 
     deselect() {
         this.selected = false;
         this.mVTLayer.mVTSource.featureDeselected(this);
-        this.redrawTiles();
-        //redrawFeatureInAllTiles(this);
-        //var linkedFeature = this.linkedFeature();
-        //if (linkedFeature && linkedFeature.staticLabel && linkedFeature.staticLabel.selected) {
-        //    linkedFeature.staticLabel.deselect();
-        //}
+        this.redrawTiles();        
     }
 
-    //MVTFeature.prototype.on = function (eventType, callback) {
-    //    this._eventHandlers[eventType] = callback;
-    //};
-
-    _drawPoint(tileContext, coordsArray, style) {
-        if (!style) return;
-
-        var tile = this.tileInfos[tileContext.id];
-
-        //Get radius
+    _drawPoint(tileContext, coordinates, style) {
         var radius = 1;
         if (typeof style.radius === 'function') {
-            radius = style.radius(tileContext.zoom); //Allows for scale dependent rednering
+            radius = style.radius(tileContext.zoom);
         }
         else {
             radius = style.radius;
         }
 
-        var point = this.getPoint(coordsArray[0][0]);
         var context2d = tileContext.canvas.getContext('2d')
-
         context2d.beginPath();
         context2d.fillStyle = style.color;
+        var point = this.getPoint(coordinates[0][0]);
         context2d.arc(point.x, point.y, radius, 0, Math.PI * 2);
         context2d.closePath();
         context2d.fill();
@@ -541,25 +499,21 @@ class MVTFeature {
         }
 
         context2d.restore();
-        tile.paths.push([point]);
+        this.tileInfos[tileContext.id].paths.push([point]);
     }
 
-    _drawLineString(tileContext, coordsArray, style) {
-        if (!style) return;
-
+    _drawLineString(tileContext, coordinates, style) {
         var context2d = tileContext.canvas.getContext('2d');
         context2d.strokeStyle = style.color;
         context2d.lineWidth = style.size;
         context2d.beginPath();
 
         var projCoords = [];
-        var tile = this.tileInfos[tileContext.id];
-
-        for (var gidx in coordsArray) {
-            var coords = coordsArray[gidx];
-            for (i = 0; i < coords.length; i++) {
-                var method = (i === 0 ? 'move' : 'line') + 'To';
-                var point = this.getPoint(coords[i]);
+        for (var i in coordinates) {
+            var coordinate = coordinates[i];
+            for (var j = 0; j < coordinate.length; j++) {
+                var method = (j === 0 ? 'move' : 'line') + 'To';
+                var point = this.getPoint(coordinate[j]);
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
@@ -567,16 +521,13 @@ class MVTFeature {
 
         context2d.stroke();
         context2d.restore();
-        tile.paths.push(projCoords);
+        this.tileInfos[tileContext.id].paths.push(projCoords);
     }
 
-    _drawPolygon(tileContext, coordsArray, style) {
-        if (!style) return;
-
+    _drawPolygon(tileContext, coordinates, style) {
         var context2d = tileContext.canvas.getContext('2d');
         var outline = style.outline;
 
-        // color may be defined via function to make choropleth work right
         if (typeof style.color === 'function') {
             context2d.fillStyle = style.color(context2d);
         } else {
@@ -587,22 +538,15 @@ class MVTFeature {
             context2d.strokeStyle = outline.color;
             context2d.lineWidth = outline.size;
         }
+        var projCoords = [];
         context2d.beginPath();
 
-        var projCoords = [];
-        var tileInfo = this.tileInfos[tileContext.id];
-
-        var featureLabel = this.dynamicLabel;
-        if (featureLabel) {
-            featureLabel.addTilePolys(tileContext, coordsArray);
-        }
-
-        for (var gidx = 0, len = coordsArray.length; gidx < len; gidx++) {
-            var coords = coordsArray[gidx];
-            for (var i = 0; i < coords.length; i++) {
-                var coord = coords[i];
-                var method = (i === 0 ? 'move' : 'line') + 'To';
-                var point = this.getPoint(coord);
+        for (var i = 0; i < coordinates.length; i++) {
+            var j = coordinates[i];
+            for (var k = 0; k < j.length; k++) {
+                var coordinate = j[k];
+                var method = (k === 0 ? 'move' : 'line') + 'To';
+                var point = this.getPoint(coordinate);
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
@@ -613,42 +557,8 @@ class MVTFeature {
         if (outline) {
             context2d.stroke();
         }
-        tileInfo.paths.push(projCoords);
+        this.tileInfos[tileContext.id].paths.push(projCoords);
     }
-
-    //_drawStaticLabel(tileContext, coordsArray, style) {
-    //    if (!style) return;
-
-    //    // If the corresponding layer is not on the map, 
-    //    // we dont want to put on a label.
-    //    if (!this.mVTLayer._map) return;
-
-    //    var point = this.getPoint(coordsArray[0][0]);
-
-    //    // We're making a standard Leaflet Marker for this label.
-    //    var p = this._project(point, tileContext.tile.x, tileContext.tile.y, this.extent, this.tileSize); //vectile pt to merc pt
-    //    var mercPt = L.point(p.x, p.y); // make into leaflet obj
-    //    var latLng = this.map.unproject(mercPt); // merc pt to latlng
-
-    //    this.staticLabel = new StaticLabel(this, tileContext, latLng, style);
-    //    this.mVTLayer.featureWithLabelAdded(this);
-    //}
-
-    //removeLabel() {
-    //    if (!this.staticLabel) return;
-    //    this.staticLabel.remove();
-    //    this.staticLabel = null;
-    //}
-
-   
-    //_project(vecPt, tileX, tileY, extent, tileSize) {
-    //    var xOffset = tileX * tileSize;
-    //    var yOffset = tileY * tileSize;
-    //    return {
-    //        x: Math.floor(vecPt.x + xOffset),
-    //        y: Math.floor(vecPt.y + yOffset)
-    //    };
-    //}
 
     getPoint(coords) {
         return {
@@ -671,8 +581,7 @@ class MVTLayer {
         this._layerOrdering = options.layerOrdering || false;                
         this._mVTFeatures = {};
         this._tileCanvas = [];
-        this._features = {};
-        this._featuresWithLabels = [];
+        this._features = {};        
     }
 
     parseVectorTileLayer(vectorTileFeatures, tileContext) {                
@@ -708,10 +617,7 @@ class MVTLayer {
         if (!mVTFeature) {
             var style = this.style(vectorTileFeature);
             mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style);
-            this._features[featureId] = mVTFeature;
-            if (style && style.dynamicLabel && typeof style.dynamicLabel === 'function') {
-                this._featuresWithLabels.push(mVTFeature);
-            }
+            this._features[featureId] = mVTFeature;            
         } else {
             mVTFeature.addTileFeature(vectorTileFeature, tileContext);
         }
@@ -859,22 +765,7 @@ class MVTLayer {
             return null;
         }
     }
-
-    featureWithLabelAdded(feature) {
-        this._featuresWithLabels.push(feature);
-    }
 };
-
-
-function removeLabels(self) {
-    var features = self.featuresWithLabels;
-    for (var i = 0, len = features.length; i < len; i++) {
-        var feat = features[i];
-        feat.removeLabel();
-    }
-    self.featuresWithLabels = [];
-}
-
 class MVTSource {
     constructor(map, options) {
         var self = this;
