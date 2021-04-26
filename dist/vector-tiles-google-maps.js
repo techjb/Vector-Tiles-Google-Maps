@@ -393,16 +393,15 @@ Point.convert = function (a) {
 class MVTFeature {
     constructor(mVTLayer, vectorTileFeature, tileContext, style) {
         this.mVTLayer = mVTLayer;
-        this.toggleEnabled = true;
         this.selected = false;
-        this.divisor = vectorTileFeature.extent / tileContext.tileSize; 
+        this.divisor = vectorTileFeature.extent / tileContext.tileSize;
         this.extent = vectorTileFeature.extent;
         this.tileSize = tileContext.tileSize;
         this.tileInfos = {};
         this.style = style;
         for (var key in vectorTileFeature) {
             this[key] = vectorTileFeature[key];
-        }        
+        }
         this.addTileFeature(vectorTileFeature, tileContext);
     }
 
@@ -414,10 +413,10 @@ class MVTFeature {
     }
 
     setStyle(styleFunction) {
-        this.style = styleFunction(this, null);        
+        this.style = styleFunction(this, null);
     }
 
-    draw (tileContext) {
+    draw(tileContext) {
         var vectorTileFeature = this.tileInfos[tileContext.id].vectorTileFeature;
         var style = this.style;
         if (this.selected) {
@@ -425,7 +424,7 @@ class MVTFeature {
         }
         switch (vectorTileFeature.type) {
             case 1: //Point
-                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);                
+                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);
                 break;
             case 2: //LineString
                 this._drawLineString(tileContext, vectorTileFeature.coordinates, style);
@@ -466,13 +465,13 @@ class MVTFeature {
     select() {
         this.selected = true;
         this.mVTLayer.mVTSource.featureSelected(this);
-        this.redrawTiles();        
+        this.redrawTiles();
     }
 
     deselect() {
         this.selected = false;
         this.mVTLayer.mVTSource.featureDeselected(this);
-        this.redrawTiles();        
+        this.redrawTiles();
     }
 
     _drawPoint(tileContext, coordinates, style) {
@@ -578,26 +577,18 @@ class MVTLayer {
         this.style = options.style;
         this.name = options.name;
         this._filter = options.filter || false;
-        this._layerOrdering = options.layerOrdering || false;                
         this._mVTFeatures = {};
         this._tileCanvas = [];
-        this._features = {};        
+        this._features = {};
     }
 
-    parseVectorTileLayer(vectorTileFeatures, tileContext) {                
+    parseVectorTileLayer(vectorTileFeatures, tileContext) {
         this._tileCanvas[tileContext.id] = tileContext.canvas;
-        this._mVTFeatures[tileContext.id] = [];        
+        this._mVTFeatures[tileContext.id] = [];
         for (var i = 0, len = vectorTileFeatures.length; i < len; i++) {
             var vectorTileFeature = vectorTileFeatures[i];
             this._parseVectorTileFeature(vectorTileFeature, tileContext, i);
         }
-
-        if (this._layerOrdering) {
-            this._mVTFeatures[tileContext.id] = this._mVTFeatures[tileContext.id].sort(function (a, b) {
-                return -(b.properties.zIndex - a.properties.zIndex)
-            });
-        }
-        
         this.drawTile(tileContext);
     }
 
@@ -608,16 +599,12 @@ class MVTLayer {
             }
         }
 
-        if (this._layerOrdering && typeof layerOrdering === 'function') {
-            this._layerOrdering(vectorTileFeature, tileContext);
-        }
-
         var featureId = this.getIDForLayerFeature(vectorTileFeature) || i;
         var mVTFeature = this._features[featureId];
         if (!mVTFeature) {
             var style = this.style(vectorTileFeature);
             mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style);
-            this._features[featureId] = mVTFeature;            
+            this._features[featureId] = mVTFeature;
         } else {
             mVTFeature.addTileFeature(vectorTileFeature, tileContext);
         }
@@ -659,46 +646,35 @@ class MVTLayer {
         return this._tileCanvas[id];
     }
 
-    setStyle(styleFn) {
-        this.style = styleFn;
+    setStyle(styleFunction) {
+        this.style = styleFunction;
         for (var id in this._features) {
             var feature = this._features[id];
-            feature.setStyle(styleFn);
-        }
-
-        for (var id in this._tileCanvas) {            
-            this.drawTile(id);
+            feature.setStyle(styleFunction);
         }
     }
 
     setFilter(filterFunction) {
         this._filter = filterFunction
     }
-   
 
-    handleClickEvent(evt, callbackFunction) {
-        var tileID = evt.tileID;
-        var zoom = evt.tileID.split(":")[0];
-        var canvas = this._tileCanvas[tileID];        
-        if (!canvas) {            
-            callbackFunction(evt);
-            return;
+
+    handleClickEvent(event, callbackFunction) {
+        var canvas = this._tileCanvas[event.id];
+        var features = this._mVTFeatures[event.id];
+        if (!canvas || !features) {
+            return callbackFunction(event);
         }
 
-        var tilePoint = evt.tilePoint;
-        var features = this._mVTFeatures[evt.tileID];
-
         var minDistance = Number.POSITIVE_INFINITY;
-        var nearest = null;
+        var zoom = event.id.split(":")[0];
+        var selectedFeature = null;
         var j, paths, distance;
 
         for (var i = 0; i < features.length; i++) {
             var feature = features[i];
             switch (feature.type) {
-
-                case 1: //Point - currently rendered as circular paths.  Intersect with that.
-
-                    //Find the radius of the point.
+                case 1: //Point - currently rendered as circular paths.  Intersect with that. Find the radius of the point.
                     var radius = 3;
                     if (typeof feature.style.radius === 'function') {
                         radius = feature.style.radius(zoom); //Allows for scale dependent rednering
@@ -707,24 +683,24 @@ class MVTLayer {
                         radius = feature.style.radius;
                     }
 
-                    paths = feature.getPathsForTile(evt.tileID);
+                    paths = feature.getPathsForTile(event.id);
                     for (j = 0; j < paths.length; j++) {
                         //Builds a circle of radius feature.style.radius (assuming circular point symbology).
                         if (MERCATOR.in_circle(paths[j][0].x, paths[j][0].y, radius, x, y)) {
-                            nearest = feature;
+                            selectedFeature = feature;
                             minDistance = 0;
                         }
                     }
                     break;
 
                 case 2: //LineString
-                    paths = feature.getPathsForTile(evt.tileID);
+                    paths = feature.getPathsForTile(event.id);
                     for (j = 0; j < paths.length; j++) {
                         if (feature.style) {
-                            var distance = MERCATOR.getDistanceFromLine(tilePoint, paths[j]);
+                            var distance = MERCATOR.getDistanceFromLine(event.tilePoint, paths[j]);
                             var thickness = (feature.selected && feature.style.selected ? feature.style.selected.size : feature.style.size);
                             if (distance < thickness / 2 + this.lineClickTolerance && distance < minDistance) {
-                                nearest = feature;
+                                selectedFeature = feature;
                                 minDistance = distance;
                             }
                         }
@@ -732,64 +708,51 @@ class MVTLayer {
                     break;
 
                 case 3: //Polygon
-                    paths = feature.getPathsForTile(evt.tileID);
+                    paths = feature.getPathsForTile(event.id);
                     for (j = 0; j < paths.length; j++) {
-                        if (MERCATOR.isPointInPolygon(tilePoint, paths[j])) {
-                            nearest = feature;
+                        if (MERCATOR.isPointInPolygon(event.tilePoint, paths[j])) {
+                            selectedFeature = feature;
                             minDistance = 0; // point is inside the polygon, so distance is zero
                         }
                     }
                     break;
             }
-            if (minDistance == 0) break;
+            if (minDistance == 0) {
+                break;
+            }
         }
 
-        if (nearest && nearest.toggleEnabled) {
-            nearest.toggle();            
+        //if (feature && nearest.toggleEnabled) {
+        if (selectedFeature) {
+            selectedFeature.toggle();
         }
-        //else {
-        //    return;
-        //}
-        
-        evt.feature = nearest;
-        callbackFunction(evt);
-    }
-
-    
-    linkedLayer() {
-        if (this.mVTSource.layerLink) {
-            var linkName = this.mVTSource.layerLink(this.name);
-            return this.mVTSource.layers[linkName];
-        }
-        else {
-            return null;
-        }
+        event.feature = selectedFeature;
+        callbackFunction(event);
     }
 };
 class MVTSource {
     constructor(map, options) {
         var self = this;
         this.map = map;
-        this.url = options.url || ""; //Url TO Vector Tile Source,
-        this.debug = options.debug || false; // Draw tiles lines and ids
+        this._url = options.url || ""; //Url TO Vector Tile Source,
+        this._debug = options.debug || false; // Draw tiles lines and ids
         this.getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
             return feature.properties.id;
-        };        
-        this.visibleLayers = options.visibleLayers || []; // List of visible layers
-        this.xhrHeaders = options.xhrHeaders || {}; // Headers added to every url request
-        this.clickableLayers = options.clickableLayers || false; // List of layers that are clickable
-        this.filter = options.filter || false; // Filter features
-        this.mutexToggle = options.mutexToggle || false;
-        this.cache = options.cache || false; // Load tiles in cache to avoid duplicated requests
+        };
+        this._visibleLayers = options.visibleLayers || [];  // List of visible layers
+        this._xhrHeaders = options.xhrHeaders || {}; // Headers added to every url request
+        this._clickableLayers = options.clickableLayers || false;   // List of layers that are clickable
+        this._filter = options.filter || false; // Filter features
+        this._cache = options.cache || false; // Load tiles in cache to avoid duplicated requests
         this._tileSize = options.tileSize || 256; // Default tile size
         this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);
-        //this.layerLink = options.layerLink || false; // Layer link
         if (typeof options.style === 'function') {
             this.style = options.style;
         }
-        this.mVTLayers = {}; //Keep a list of the layers contained in the PBFs
+        this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
         this.vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
         this.visibleTiles = {}; // tiles currently in the viewport 
+        this._selectedFeatures = []; // list of selected features        
 
         this.map.addListener("zoom_changed", () => {
             self.clearAtNonVisibleZoom();
@@ -800,25 +763,25 @@ class MVTSource {
         const canvas = ownerDocument.createElement("canvas");
         canvas.width = this._tileSize;
         canvas.height = this._tileSize;
-        this.drawTile(canvas, coord, zoom);        
+        this.drawTile(canvas, coord, zoom);
         return canvas;
     }
 
     releaseTile(canvas) {
         delete this.visibleTiles[canvas.id];
-        this.deleteTiles(canvas.id);
+        this.deleteTile(canvas.id);
     }
 
-    deleteTiles(id) {
+    deleteTile(id) {
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].deleteTile(id);
         }
     }
 
-    clearAtNonVisibleZoom() {       
+    clearAtNonVisibleZoom() {
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].clearFeaturesAtNonVisibleZoom();
-        }        
+        }
     }
 
     style(feature) {
@@ -860,40 +823,40 @@ class MVTSource {
     }
 
     drawTile(canvas, coord, zoom) {
-        var tileId = canvas.id = this._getTileId(zoom, coord.x, coord.y);
+        var self = this;
+        var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);
         var tileContext = {
-            id: tileId,
+            id: id,
             canvas: canvas,
             zoom: zoom,
             tileSize: this._tileSize
-        };        
+        };
 
-        var self = this;
         var vectorTile = this.vectorTilesProcessed[tileContext.id];
         if (vectorTile) {
             return this._drawVectorTile(vectorTile, tileContext);
         }
 
-        var src = this.url
+        var src = this._url
             .replace("{z}", zoom)
             .replace("{x}", coord.x)
             .replace("{y}", coord.y);
 
-        var xhr = new XMLHttpRequest();
-        xhr.onload = function () {
-            if (xhr.status == "200" && xhr.response) {
-                self._xhrResponseOk(tileContext, xhr.response)
+        var xmlHttpRequest = new XMLHttpRequest();
+        xmlHttpRequest.onload = function () {
+            if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
+                self._xhrResponseOk(tileContext, xmlHttpRequest.response)
             }
         };
-        xhr.open('GET', src, true);
-        for (var header in this.xhrHeaders) {
-            xhr.setRequestHeader(header, headers[header])
+        xmlHttpRequest.open('GET', src, true);
+        for (var header in this._xhrHeaders) {
+            xmlHttpRequest.setRequestHeader(header, headers[header])
         }
-        xhr.responseType = 'arraybuffer';
-        xhr.send();
+        xmlHttpRequest.responseType = 'arraybuffer';
+        xmlHttpRequest.send();
     }
 
-    _getTileId (zoom, x, y) {
+    _getTileId(zoom, x, y) {
         return [zoom, x, y].join(":");
     }
 
@@ -906,8 +869,60 @@ class MVTSource {
         }
     }
 
+    _xhrResponseOk = function (tileContext, response) {
+        if (this.map && this.map.getZoom() != tileContext.zoom) {
+            return;
+        }
+        var uint8Array = new Uint8Array(response);
+        var pbf = new Pbf(uint8Array);
+        var vectorTile = new VectorTile(pbf);
+        if (this._cache) {
+            this.vectorTilesProcessed[tileContext.id] = vectorTile;
+        }
+        this._drawVectorTile(vectorTile, tileContext);
+    }
+
+    _drawVectorTile(vectorTile, tileContext) {
+        if (this._visibleLayers && this._visibleLayers.length > 0) {
+            for (var i = 0; i < this._visibleLayers.length; i++) {
+                var key = this._visibleLayers[i];
+                if (vectorTile.layers[key]) {
+                    var vectorTileLayer = vectorTile.layers[key];
+                    this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
+                }
+            }
+        } else {
+            for (var key in vectorTile.layers) {
+                var vectorTileLayer = vectorTile.layers[key];
+                this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
+            }
+        }
+
+        this._setTileAsVisible(vectorTile, tileContext);
+        this._drawDebugInfo(tileContext);
+    }
+
+    _drawVectorTileLayer(vectorTileLayer, key, tileContext) {
+        if (!this.mVTLayers[key]) {
+            this.mVTLayers[key] = this._createMVTLayer(key);
+        }
+        var mVTLayer = this.mVTLayers[key];
+        mVTLayer.parseVectorTileLayer(vectorTileLayer.parsedFeatures, tileContext);
+    }
+
+    _createMVTLayer(key) {
+        var options = {
+            getIDForLayerFeature: this.getIDForLayerFeature,
+            filter: this._filter,
+            layerOrdering: this.layerOrdering,
+            style: this.style,
+            name: key
+        };
+        return new MVTLayer(this, options);
+    }
+
     _drawDebugInfo(tileContext) {
-        if (!this.debug) {            
+        if (!this._debug) {
             return;
         };
         var tile = this._getTile(tileContext.id)
@@ -926,58 +941,6 @@ class MVTSource {
         context2d.strokeText(tileContext.zoom + ' ' + tile.x + ' ' + tile.y, width / 2 - 30, height / 2 - 10);
     }
 
-    _xhrResponseOk = function (tileContext, response) {        
-        if (this.map && this.map.getZoom() != tileContext.zoom) {
-            return;
-        }
-        var uint8Array = new Uint8Array(response);
-        var pbf = new Pbf(uint8Array);
-        var vectorTile = new VectorTile(pbf);        
-        if (this.cache) {            
-            this.vectorTilesProcessed[tileContext.id] = vectorTile;
-        }
-        this._drawVectorTile(vectorTile, tileContext);                
-    }
-
-    _drawVectorTile(vectorTile, tileContext) {        
-        if (this.visibleLayers && this.visibleLayers.length > 0) {
-            for (var i = 0; i < this.visibleLayers.length; i++) {
-                var key = this.visibleLayers[i];
-                if (vectorTile.layers[key]) {
-                    var vectorTileLayer = vectorTile.layers[key];
-                    this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
-                }
-            }
-        } else {
-            for (var key in vectorTile.layers) {                
-                var vectorTileLayer = vectorTile.layers[key];
-                this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
-            }
-        }
-        
-        this._setTileAsVisible(vectorTile, tileContext);
-        this._drawDebugInfo(tileContext);
-    }
-
-    _drawVectorTileLayer(vectorTileLayer, key, tileContext) {
-        if (!this.mVTLayers[key]) {
-            this.mVTLayers[key] = this._createMVTLayer(key);
-        }                
-        var mVTLayer = this.mVTLayers[key];        
-        mVTLayer.parseVectorTileLayer(vectorTileLayer.parsedFeatures, tileContext);        
-    }
-
-    _createMVTLayer(key) {        
-        var options = {
-            getIDForLayerFeature: this.getIDForLayerFeature,
-            filter: this.filter,
-            layerOrdering: this.layerOrdering,
-            style: this.style,
-            name: key
-        };
-        return new MVTLayer(this, options);
-    }
-
     _setTileAsVisible(vectorTile, tileContext) {
         tileContext.vectorTile = vectorTile;
         this.visibleTiles[tileContext.id] = tileContext;
@@ -987,89 +950,97 @@ class MVTSource {
         return this.mVTLayers;
     }
 
-    onClick(evt, callbackFunction) {        
+    onClick(event, callbackFunction, clickOptions) {
+        this._multipleSelection = (clickOptions && clickOptions.multipleSelection) || false;
+        callbackFunction = callbackFunction || function () { };
         var zoom = this.map.getZoom();
-        var tile = MERCATOR.getTileAtLatLng(evt.latLng, zoom);
-        evt.tileID = this._getTileId(tile.z,  tile.x, tile.y);              
-        evt.tilePoint = MERCATOR.fromLatLngToTilePoint(map, evt, zoom);
+        var tile = MERCATOR.getTileAtLatLng(event.latLng, zoom);
+        event.id = this._getTileId(tile.z, tile.x, tile.y);
+        event.tilePoint = MERCATOR.fromLatLngToTilePoint(map, event, zoom);
 
-        var clickableLayers = this.clickableLayers;        
-        if (!clickableLayers) {
-            clickableLayers = Object.keys(this.mVTLayers);
-        }
-        if (clickableLayers && clickableLayers.length > 0) {
-            for (var i = 0, len = clickableLayers.length; i < len; i++) {
+        var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers);
+        if (clickableLayers) {
+            for (var i = 0; i < clickableLayers.length; i++) {
                 var key = clickableLayers[i];
                 var layer = this.mVTLayers[key];
                 if (layer) {
-                    layer.handleClickEvent(evt, function (evt) {
-                        if (typeof callbackFunction === 'function') {
-                            callbackFunction(evt);
-                        }
+                    layer.handleClickEvent(event, function (event) {
+                        callbackFunction(event);
                     });
                 }
             }
         }
         else {
-            if (typeof callbackFunction === 'function') {
-                callbackFunction(evt);
-            }
+            callbackFunction(event);
         }
+    }
+
+    deselectAllFeatures() {
+        for (var i = this._selectedFeatures.length - 1; i >= 0; i--) {
+            this._selectedFeatures[i].deselect();
+        }
+        this._selectedFeatures = [];
+    }
+
+    featureSelected(mvtFeature) {
+        if (!this._multipleSelection) {
+            this.deselectAllFeatures();
+        }
+        this._selectedFeatures.push(mvtFeature);
+    }
+
+    featureDeselected(mvtFeature) {
+        const index = this._selectedFeatures.indexOf(mvtFeature);
+        if (index > -1) {
+            this._selectedFeatures.splice(index, 1);
+        }
+    }
+
+    getSelectedFeatures() {
+        return this._selectedFeatures;
     }
 
     setFilter(filterFunction) {
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].setFilter(filterFunction);
         }
-        this.redrawTiles();
+        this.redrawAllTiles();
     }
 
-    setStyle(styleFn) {
+    setStyle(styleFunction) {
+        this.style = styleFunction
         for (var key in this.mVTLayers) {
-            this.mVTLayers[key].setStyle(styleFn);
+            this.mVTLayers[key].setStyle(styleFunction);
         }
-        this.redrawTiles();
+        this.redrawAllTiles();
     }
 
-    redrawTiles() {
-        for (var tile in this.visibleTiles) {            
+    setVisibleLayers(visibleLayers) {
+        this._visibleLayers = visibleLayers;
+        this.redrawAllTiles();
+    }
+
+    redrawAllTiles() {
+        this.redrawTiles(this.visibleTiles);
+    }
+
+    redrawTiles(tiles) {
+        for (var tile in tiles) {
             this.redrawTile(tile);
         }
     }
 
     redrawTile(id) {
-        var tileContext = this.visibleTiles[id];        
+        var tileContext = this.visibleTiles[id];
         if (!tileContext) return;
-        this.clearTile(tileContext);        
+        this.clearTile(tileContext);
         this._drawVectorTile(tileContext.vectorTile, tileContext);
     }
 
     clearTile(tileContext) {
         var canvas = tileContext.canvas;
-        var context = canvas.getContext('2d');        
-        context.clearRect(0, 0, canvas.width, canvas.height);        
-    }
-
-    deselectFeature() {
-        if (this._selectedFeature) {
-            this._selectedFeature.deselect();
-            this._selectedFeature = false;
-        }
-    }
-
-    featureSelected(mvtFeature) {
-        if (this.mutexToggle) {
-            if (this._selectedFeature) {
-                this._selectedFeature.deselect();
-            }
-            this._selectedFeature = mvtFeature;
-        }        
-    }
-
-    featureDeselected(mvtFeature) {
-        if (this.mutexToggle && this._selectedFeature) {
-            this._selectedFeature = null;
-        }
+        var context = canvas.getContext('2d');
+        context.clearRect(0, 0, canvas.width, canvas.height);
     }
 }
 MERCATOR = {

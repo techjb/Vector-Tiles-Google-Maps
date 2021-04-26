@@ -1,16 +1,15 @@
 class MVTFeature {
     constructor(mVTLayer, vectorTileFeature, tileContext, style) {
         this.mVTLayer = mVTLayer;
-        this.toggleEnabled = true;
         this.selected = false;
-        this.divisor = vectorTileFeature.extent / tileContext.tileSize; 
+        this.divisor = vectorTileFeature.extent / tileContext.tileSize;
         this.extent = vectorTileFeature.extent;
         this.tileSize = tileContext.tileSize;
         this.tileInfos = {};
         this.style = style;
         for (var key in vectorTileFeature) {
             this[key] = vectorTileFeature[key];
-        }        
+        }
         this.addTileFeature(vectorTileFeature, tileContext);
     }
 
@@ -22,10 +21,10 @@ class MVTFeature {
     }
 
     setStyle(styleFunction) {
-        this.style = styleFunction(this, null);        
+        this.style = styleFunction(this, null);
     }
 
-    draw (tileContext) {
+    draw(tileContext) {
         var vectorTileFeature = this.tileInfos[tileContext.id].vectorTileFeature;
         var style = this.style;
         if (this.selected) {
@@ -33,7 +32,7 @@ class MVTFeature {
         }
         switch (vectorTileFeature.type) {
             case 1: //Point
-                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);                
+                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);
                 break;
             case 2: //LineString
                 this._drawLineString(tileContext, vectorTileFeature.coordinates, style);
@@ -74,13 +73,13 @@ class MVTFeature {
     select() {
         this.selected = true;
         this.mVTLayer.mVTSource.featureSelected(this);
-        this.redrawTiles();        
+        this.redrawTiles();
     }
 
     deselect() {
         this.selected = false;
         this.mVTLayer.mVTSource.featureDeselected(this);
-        this.redrawTiles();        
+        this.redrawTiles();
     }
 
     _drawPoint(tileContext, coordinates, style) {
