@@ -17,16 +17,6 @@
                 zoom: 12,
                 styles: [
                     {
-                        "stylers": [
-                            {
-                                "color": "#ffffff"
-                            },
-                            {
-                                "visibility": "simplified"
-                            }
-                        ]
-                    },
-                    {
                         "featureType": "poi",
                         "elementType": "all",
                         "stylers": [
@@ -34,16 +24,7 @@
                                 "visibility": "off"
                             }
                         ]
-                    },
-                    {
-                        "featureType": "transit",
-                        "elementType": "all",
-                        "stylers": [
-                            {
-                                "visibility": "off"
-                            }
-                        ]
-                    }
+                    }                
                 ]
             });           
             
@@ -58,8 +39,8 @@
                 url: "https://betaserver.icgc.cat/tileserver3/tileserver.php/bt5m_stpropi/{z}/{x}/{y}.pbf",
                 visibleLayers: [
                     "ILL01_pol",  // polygon                    
-                    "TOR02_poi", "CNS03_poi", "VER01_poi", // Point
-                    "EDI01_lin" // linestring
+                    "EDI01_lin", // linestring
+                    "TOR02_poi", "CNS03_poi", "VER01_poi" // Point                    
                 ],                
                 style: function (feature) {
                     switch (feature.type) {
@@ -68,7 +49,7 @@
                                 fillStyle: 'rgba(115, 255, 0, 1)',
                                 strokeStyle: 'rgba(2, 0, 255, 1)',                                
                                 lineWidth: 3,
-                                radio: 10
+                                radio: 5
                             }
                         } break;
                         case 2: { //LineString

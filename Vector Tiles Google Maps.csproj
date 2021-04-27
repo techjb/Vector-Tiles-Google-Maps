@@ -80,12 +80,14 @@
     <Content Include="examples\spanish-parcels.html" />
     <Content Include="examples\basic.html" />
     <Content Include="examples\styles.css" />
+    <Content Include="images\screenshot.png" />
     <Content Include="lib\mercator\Mercator.js" />
     <Content Include="lib\vectortiles\Point.js" />
     <Content Include="lib\protobuf\Protobuf.js" />
     <Content Include="lib\vectortiles\VectorTile.js" />
     <Content Include="lib\vectortiles\VectorTileFeature.js" />
     <Content Include="lib\vectortiles\VectorTileLayer.js" />
+    <None Include="README.md" />
     <Content Include="src\MVTFeature.js" />
     <Content Include="src\MVTLayer.js" />
     <Content Include="src\MVTSource.js" />
