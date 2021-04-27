@@ -1,3 +1,7 @@
+/*
+ *  Created by Jesús Barrio on 04/2021
+ */
+
 class MVTSource {
     constructor(map, options) {
         var self = this;
@@ -210,10 +214,6 @@ class MVTSource {
         this.visibleTiles[tileContext.id] = tileContext;
     }
 
-    getLayers() {
-        return this.mVTLayers;
-    }
-
     onClick(event, callbackFunction, clickOptions) {
         if (!event.latLng || !event.pixel) return;
         this._multipleSelection = (clickOptions && clickOptions.multipleSelection) || false;
@@ -224,12 +224,12 @@ class MVTSource {
         event.tilePoint = MERCATOR.fromLatLngToTilePoint(this.map, event);
 
         var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers);
-        if (clickableLayers) {
+        if (clickableLayers && clickableLayers.length > 0) {
             for (var i = 0; i < clickableLayers.length; i++) {
                 var key = clickableLayers[i];
                 var layer = this.mVTLayers[key];
                 if (layer) {
-                    layer.handleClickEvent(event, function (event) {
+                    layer.handleClickEvent(event, function (event) {                        
                         callbackFunction(event);
                     });
                 }
@@ -291,8 +291,8 @@ class MVTSource {
     }
 
     redrawTiles(tiles) {
-        for (var tile in tiles) {
-            this.redrawTile(tile);
+        for (var id in tiles) {
+            this.redrawTile(id);
         }
     }
 

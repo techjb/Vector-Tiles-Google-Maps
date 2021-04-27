@@ -1,3 +1,7 @@
+/*
+ *  Created by Jesús Barrio on 04/2021
+ */
+
 class MVTFeature {
     constructor(mVTLayer, vectorTileFeature, tileContext, style) {
         this.mVTLayer = mVTLayer;
@@ -19,7 +23,7 @@ class MVTFeature {
     }
 
     setStyle(styleFunction) {
-        this.style = styleFunction(this, null);
+        this.style = styleFunction(this);
     }
 
     draw(tileContext) {
@@ -96,7 +100,6 @@ class MVTFeature {
         var context2d = this._getContext2d(tileContext.canvas, style);
         var projCoords = this._drawCoordinates(context2d, coordinates);
         context2d.stroke();
-
         this.tiles[tileContext.id].paths.push(projCoords);
     }
 

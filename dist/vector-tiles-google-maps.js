@@ -405,7 +405,6 @@ MERCATOR = {
                 Math.PI / 2) / (Math.PI / 180),
             lng: (point.x - 128) / (256 / 360)
         };
-
     },
 
     getTileAtLatLng: function (latLng, zoom) {
@@ -452,7 +451,10 @@ MERCATOR = {
         var bottomLeft = map.getProjection().fromLatLngToPoint(sw);
         var scale = Math.pow(2, map.getZoom());
         var worldPoint = map.getProjection().fromLatLngToPoint(latLng);
-        return new google.maps.Point((worldPoint.x - bottomLeft.x) * scale, (worldPoint.y - topRight.y) * scale);
+        return {
+            x: (worldPoint.x - bottomLeft.x) * scale,
+            y: (worldPoint.y - topRight.y) * scale
+        }
     },
 
     fromLatLngToTilePoint: function (map, evt) {
@@ -539,6 +541,10 @@ MERCATOR = {
     }
 }
 
+/*
+ *  Created by Jes�s Barrio on 04/2021
+ */
+
 class MVTFeature {
     constructor(mVTLayer, vectorTileFeature, tileContext, style) {
         this.mVTLayer = mVTLayer;
@@ -560,7 +566,7 @@ class MVTFeature {
     }
 
     setStyle(styleFunction) {
-        this.style = styleFunction(this, null);
+        this.style = styleFunction(this);
     }
 
     draw(tileContext) {
@@ -637,7 +643,6 @@ class MVTFeature {
         var context2d = this._getContext2d(tileContext.canvas, style);
         var projCoords = this._drawCoordinates(context2d, coordinates);
         context2d.stroke();
-
         this.tiles[tileContext.id].paths.push(projCoords);
     }
 
@@ -689,6 +694,10 @@ class MVTFeature {
         };
     }
 }
+/*
+ *  Created by Jes�s Barrio on 04/2021
+ */
+
 class MVTLayer {
     constructor(mVTSource, options) {
         this.mVTSource = mVTSource;        
@@ -707,7 +716,7 @@ class MVTLayer {
     parseVectorTileLayer(vectorTileFeatures, tileContext) {
         this._tileCanvas[tileContext.id] = tileContext.canvas;
         this._mVTFeatures[tileContext.id] = [];
-        for (var i = 0, len = vectorTileFeatures.length; i < len; i++) {
+        for (var i = 0; i < vectorTileFeatures.length; i++) {
             var vectorTileFeature = vectorTileFeatures[i];
             this._parseVectorTileFeature(vectorTileFeature, tileContext, i);
         }
@@ -759,8 +768,7 @@ class MVTLayer {
     clearFeaturesAtNonVisibleZoom() {
         var zoom = this.mVTSource.map.getZoom();
         for (var featureId in this._features) {
-            var mVTFeature = this._features[featureId];
-            mVTFeature.clearTiles(zoom);
+            this._features[featureId].clearTiles(zoom);
         }
     }
 
@@ -770,14 +778,13 @@ class MVTLayer {
 
     setStyle(styleFunction) {
         this.style = styleFunction;
-        for (var id in this._features) {
-            var feature = this._features[id];
-            feature.setStyle(styleFunction);
+        for (var featureId in this._features) {            
+            this._features[featureId].setStyle(styleFunction);
         }
     }
 
     setFilter(filterFunction) {
-        this._filter = filterFunction
+        this._filter = filterFunction;
     }
 
     handleClickEvent(event, callbackFunction) {
@@ -830,6 +837,10 @@ class MVTLayer {
         callbackFunction(event);
     }
 };
+/*
+ *  Created by Jes�s Barrio on 04/2021
+ */
+
 class MVTSource {
     constructor(map, options) {
         var self = this;
@@ -1042,10 +1053,6 @@ class MVTSource {
         this.visibleTiles[tileContext.id] = tileContext;
     }
 
-    getLayers() {
-        return this.mVTLayers;
-    }
-
     onClick(event, callbackFunction, clickOptions) {
         if (!event.latLng || !event.pixel) return;
         this._multipleSelection = (clickOptions && clickOptions.multipleSelection) || false;
@@ -1056,12 +1063,12 @@ class MVTSource {
         event.tilePoint = MERCATOR.fromLatLngToTilePoint(this.map, event);
 
         var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers);
-        if (clickableLayers) {
+        if (clickableLayers && clickableLayers.length > 0) {
             for (var i = 0; i < clickableLayers.length; i++) {
                 var key = clickableLayers[i];
                 var layer = this.mVTLayers[key];
                 if (layer) {
-                    layer.handleClickEvent(event, function (event) {
+                    layer.handleClickEvent(event, function (event) {                        
                         callbackFunction(event);
                     });
                 }
@@ -1123,8 +1130,8 @@ class MVTSource {
     }
 
     redrawTiles(tiles) {
-        for (var tile in tiles) {
-            this.redrawTile(tile);
+        for (var id in tiles) {
+            this.redrawTile(id);
         }
     }
 

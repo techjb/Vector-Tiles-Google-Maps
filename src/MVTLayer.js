@@ -1,3 +1,7 @@
+/*
+ *  Created by Jesús Barrio on 04/2021
+ */
+
 class MVTLayer {
     constructor(mVTSource, options) {
         this.mVTSource = mVTSource;        
@@ -16,7 +20,7 @@ class MVTLayer {
     parseVectorTileLayer(vectorTileFeatures, tileContext) {
         this._tileCanvas[tileContext.id] = tileContext.canvas;
         this._mVTFeatures[tileContext.id] = [];
-        for (var i = 0, len = vectorTileFeatures.length; i < len; i++) {
+        for (var i = 0; i < vectorTileFeatures.length; i++) {
             var vectorTileFeature = vectorTileFeatures[i];
             this._parseVectorTileFeature(vectorTileFeature, tileContext, i);
         }
@@ -68,8 +72,7 @@ class MVTLayer {
     clearFeaturesAtNonVisibleZoom() {
         var zoom = this.mVTSource.map.getZoom();
         for (var featureId in this._features) {
-            var mVTFeature = this._features[featureId];
-            mVTFeature.clearTiles(zoom);
+            this._features[featureId].clearTiles(zoom);
         }
     }
 
@@ -79,14 +82,13 @@ class MVTLayer {
 
     setStyle(styleFunction) {
         this.style = styleFunction;
-        for (var id in this._features) {
-            var feature = this._features[id];
-            feature.setStyle(styleFunction);
+        for (var featureId in this._features) {            
+            this._features[featureId].setStyle(styleFunction);
         }
     }
 
     setFilter(filterFunction) {
-        this._filter = filterFunction
+        this._filter = filterFunction;
     }
 
     handleClickEvent(event, callbackFunction) {
