@@ -66,7 +66,7 @@
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>    
-    <li><a href="#examples">Demo examples</a></li>
+    <li><a href="#demo-examples">Demo examples</a></li>
     <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
