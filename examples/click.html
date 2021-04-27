@@ -42,7 +42,10 @@
             var options = {
                 url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
                 clickableLayers: ["GAUL0"], // Trigger click event to some layers
-                visibleLayers: ["GAUL0"]
+                visibleLayers: ["GAUL0"],
+                getIDForLayerFeature: function (feature) {  // Unique identifier for each feature
+                    return feature.properties.id;
+                }
             }
 
             mvtSource = new MVTSource(map, options);

@@ -14,8 +14,15 @@
         function InitGoogleMap() {            
 
             map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 38.62, lng: -1.57 },
-                zoom: 5
+                center: { lat: 40.50, lng: -3.89 },
+                zoom: 16,                
+                styles: [
+                    {
+                        featureType: "poi",
+                        elementType: "labels",
+                        stylers: [{ visibility: "off" }]
+                    }
+                ]
             });
             // if tiles have not been loaded, GetTile will trigger twice.
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
@@ -25,49 +32,38 @@
         }
 
         function InitVectorTiles() {
-            var mvtSource = new MVTSource(map, {
+
+            var options = {
                 url: "https://api.mapbox.com/v4/techjb.9o01nh3m/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=pk.eyJ1IjoidGVjaGpiIiwiYSI6ImNqZnAxdGprYTB3a2EzM3JxN3ozazE1a3kifQ.WTzyyZbmKbyehCBm9HNhbg",
+                //debug: true,
+                //getIDForLayerFeature: function (feature) {  // Unique identifier for each feature
+                //    return feature.properties.id 
+                //},
                 style: function (feature) {
-                    var style = {};
-
-                    var type = feature.type;
-                    switch (type) {
-                        case 1: //'Point'
-                            style.color = 'rgba(49,79,79,1)';
-                            style.radius = 5;
-                            style.selected = {
-                                color: 'rgba(255,255,0,0.5)',
-                                radius: 6
-                            };
-                            break;
-                        case 2: //'LineString'
-                            style.color = 'rgba(161,217,155,0.8)';
-                            style.size = 3;
-                            style.selected = {
-                                color: 'rgba(255,25,0,0.5)',
-                                size: 4
-                            };
-                            break;
-                        case 3: //'Polygon'
-                            style.color = 'rgba(149,139,255,0)';
-                            style.outline = {
-                                color: 'rgba(0, 0, 0, 0.7)',
-                                size: 1
-                            };
-                            style.selected = {
-                                color: 'rgba(255,140,0,0.3)',
-                                outline: {
-                                    color: 'rgba(255,140,0,1)',
-                                    size: 2
-                                }
-                            };
-                            break;
-                    }
-                    return style;
+                    return {
+                        fillStyle: 'rgba(0,0,0, 0.0)',
+                        strokeStyle: 'rgba(0,0,0, 1)',
+                        lineWidth: 1,
+                        selected: {
+                            fillStyle: 'rgba(0,0,0, 0.5)',
+                            strokeStyle: 'rgba(0,0,0, 1)',
+                            lineWidth: 2,
+                        }
+                    };
                 }
+            };
 
-            });           
+            var mvtSource = new MVTSource(map, options);           
             map.overlayMapTypes.insertAt(0, mvtSource);
+
+            map.addListener("click", function (event) {
+                mvtSource.onClick(event, function (event) {
+                    if (!event.feature) {
+                        return mvtSource.deselectAllFeatures();
+                    }
+                    console.log(event.feature.properties)
+                });
+            });
         }
 
     </script>

@@ -67,13 +67,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="dist\Leaflet.MapboxVectorTile.js" />
-    <Content Include="dist\Leaflet.MapboxVectorTile.min.js" />
     <Content Include="dist\vector-tiles-google-maps.js" />
     <Content Include="dist\vector-tiles-google-maps.min.js">
       <DependentUpon>vector-tiles-google-maps.js</DependentUpon>
     </Content>
-    <Content Include="examples\labels.html" />
     <Content Include="examples\styles.html" />
     <Content Include="examples\layers.html" />
     <Content Include="examples\filter.html" />
@@ -83,13 +80,12 @@
     <Content Include="examples\spanish-parcels.html" />
     <Content Include="examples\basic.html" />
     <Content Include="examples\styles.css" />
-    <Content Include="src\Mercator.js" />
-    <Content Include="src\Point.js" />
-    <Content Include="src\Protobuf.js" />
-    <Content Include="src\Protobuf.old.js" />
-    <Content Include="src\VectorTile.js" />
-    <Content Include="src\VectorTileFeature.js" />
-    <Content Include="src\VectorTileLayer.js" />
+    <Content Include="lib\mercator\Mercator.js" />
+    <Content Include="lib\vectortiles\Point.js" />
+    <Content Include="lib\protobuf\Protobuf.js" />
+    <Content Include="lib\vectortiles\VectorTile.js" />
+    <Content Include="lib\vectortiles\VectorTileFeature.js" />
+    <Content Include="lib\vectortiles\VectorTileLayer.js" />
     <Content Include="src\MVTFeature.js" />
     <Content Include="src\MVTLayer.js" />
     <Content Include="src\MVTSource.js" />

@@ -24,7 +24,13 @@
                 <input type="color" value="#ffff00" id="strokeStyle" name="input" /><br />
 
                 <label for="lineWidth">lineWidth: </label>
-                <input type="number" min="0" value="3" id="lineWidth" name="input" /><br />
+                <input type="number" min="0" value="1" id="lineWidth" name="input" /><br />
+
+                <label for="shadowColor">shadowColor: </label>
+                <input type="color" value="#BF3FBF" id="shadowColor" name="input" /><br />
+
+                <label for="shadowBlur">shadowBlur: </label>
+                <input type="number" min="0" value="1" id="shadowBlur" name="input" /><br />
 
                 <label for="globalAlpha">globalAlpha: </label>
                 <input type="number" min="0" max="1" value="0.7" step="0.1" id="globalAlpha" name="input" /><br />
@@ -69,6 +75,8 @@
                     fillStyle: document.getElementById("fillStyle").value,
                     strokeStyle: document.getElementById("strokeStyle").value,
                     lineWidth: document.getElementById("lineWidth").value,
+                    shadowColor: document.getElementById("shadowColor").value,
+                    shadowBlur: document.getElementById("shadowBlur").value,
                     globalAlpha: document.getElementById("globalAlpha").value,
                     lineCap: document.getElementById("lineCap").value,
                     lineJoin: document.getElementById("lineJoin").value

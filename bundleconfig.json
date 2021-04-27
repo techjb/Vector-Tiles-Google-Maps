@@ -2,15 +2,15 @@
   {
     "outputFileName": "dist/vector-tiles-google-maps.js",
     "inputFiles": [
-      "src/Protobuf.js",
-      "src/VectorTile.js",
-      "src/VectorTileFeature.js",
-      "src/VectorTileLayer.js",
-      "src/Point.js",
+      "lib/protobuf/Protobuf.js",
+      "lib/vectortiles/VectorTile.js",
+      "lib/vectortiles/VectorTileFeature.js",
+      "lib/vectortiles/VectorTileLayer.js",
+      "lib/vectortiles/Point.js",
+      "lib/mercator/Mercator.js",
       "src/MVTFeature.js",
       "src/MVTLayer.js",
-      "src/MVTSource.js",     
-      "src/Mercator.js"
+      "src/MVTSource.js"
     ]
   }
 ]

@@ -42,7 +42,6 @@ VectorTile.prototype.parseGeometries = function () {
         }
     }
 }
-
 function VectorTileFeature(buffer, end, extent, keys, values) {
 
     this.properties = {};
@@ -262,7 +261,6 @@ VectorTileLayer.prototype.feature = function (i) {
 
     return new VectorTileFeature(this._buffer, end, this.extent, this._keys, this._values);
 };
-
 function Point(x, y) {
     this.x = x;
     this.y = y;
@@ -390,712 +388,6 @@ Point.convert = function (a) {
     }
     return a;
 };
-class MVTFeature {
-    constructor(mVTLayer, vectorTileFeature, tileContext, style, label) {
-        this.mVTLayer = mVTLayer;
-        this.selected = false;
-        this.divisor = vectorTileFeature.extent / tileContext.tileSize;
-        this.extent = vectorTileFeature.extent;
-        this.tileSize = tileContext.tileSize;
-        this.tileInfos = {};
-        this.style = style;
-        this.label = label;
-        //this.centroid = false;
-        for (var key in vectorTileFeature) {
-            this[key] = vectorTileFeature[key];
-        }
-        this.addTileFeature(vectorTileFeature, tileContext);
-    }
-
-    addTileFeature(vectorTileFeature, tileContext) {
-        this.tileInfos[tileContext.id] = {
-            vectorTileFeature: vectorTileFeature,
-            paths: []
-        };
-    }
-
-    setStyle(styleFunction) {
-        this.style = styleFunction(this, null);
-    }
-
-    setLabel(labelFunction) {
-        this.label = labelFunction(this);
-    }
-
-    draw(tileContext) {
-        var vectorTileFeature = this.tileInfos[tileContext.id].vectorTileFeature;
-        var style = this.style;
-        if (this.selected) {
-            var style = this.style.selected || this.style;
-        }
-        switch (vectorTileFeature.type) {
-            case 1: //Point
-                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);
-                break;
-            case 2: //LineString
-                this._drawLineString(tileContext, vectorTileFeature.coordinates, style);
-                break;
-
-            case 3: //Polygon
-                this._drawPolygon(tileContext, vectorTileFeature.coordinates, style);
-                break;
-        }        
-    }
-
-    getPathsForTile(id) {
-        return this.tileInfos[id].paths;
-    }
-
-    clearTiles(zoom) {
-        for (var key in this.tileInfos) {
-            if (key.split(":")[0] != zoom) {
-                delete this.tileInfos[key];
-            }
-        }
-    }
-
-    redrawTiles() {
-        for (var id in this.tileInfos) {
-            this.mVTLayer.mVTSource.redrawTile(id);
-        }
-    }
-
-    toggle() {
-        if (this.selected) {
-            this.deselect();
-        } else {
-            this.select();
-        }
-    }
-
-    select() {
-        this.selected = true;
-        this.mVTLayer.mVTSource.featureSelected(this);
-        this.redrawTiles();
-    }
-
-    deselect() {
-        this.selected = false;
-        this.mVTLayer.mVTSource.featureDeselected(this);
-        this.redrawTiles();
-    }
-
-    _drawPoint(tileContext, coordinates, style) {
-        var context2d = this._getContext2d(tileContext.canvas, style);
-        var radio = style.radio || 4;
-        context2d.beginPath();        
-        var point = this._getPoint(coordinates[0][0]);
-        context2d.arc(point.x, point.y, radio, 0, Math.PI * 2);
-        context2d.closePath();
-        context2d.fill();
-        context2d.stroke();        
-        this._drawLabel(context2d, [point]);
-        this.tileInfos[tileContext.id].paths.push([point]);
-    }
-
-    _drawLineString(tileContext, coordinates, style) {
-        var context2d = this._getContext2d(tileContext.canvas, style);        
-        context2d.beginPath();
-        var projCoords = [];
-        for (var i in coordinates) {
-            var coordinate = coordinates[i];
-            for (var j = 0; j < coordinate.length; j++) {
-                var method = (j === 0 ? 'move' : 'line') + 'To';
-                var point = this._getPoint(coordinate[j]);
-                projCoords.push(point);
-                context2d[method](point.x, point.y);
-            }
-        }
-
-        context2d.stroke();        
-        this._drawLabel(context2d);
-        this.tileInfos[tileContext.id].paths.push(projCoords);        
-    }
-
-    _drawPolygon(tileContext, coordinates, style) {
-        var context2d = this._getContext2d(tileContext.canvas, style);       
-        context2d.beginPath();
-        var projCoords = [];
-
-        for (var i = 0; i < coordinates.length; i++) {
-            var coordinate = coordinates[i];
-            for (var j = 0; j < coordinate.length; j++) {                
-                var method = (j === 0 ? 'move' : 'line') + 'To';
-                var point = this._getPoint(coordinate[j]);
-                projCoords.push(point);
-                context2d[method](point.x, point.y);
-            }
-        }
-
-        context2d.closePath();
-        context2d.fill();
-        context2d.stroke();        
-        this._drawLabel(context2d);
-        this.tileInfos[tileContext.id].paths.push(projCoords);        
-    }
-
-    _drawLabel(context2d) {
-        if (!this.label || !this.label.text || !this.coordinates) {
-            return;
-        }
-        context2d.restore();
-        for (var key in this.label) {
-            if (key === 'text') {
-                continue;
-            }
-            context2d[key] = this.label[key];
-        }        
-        var centroid = MERCATOR.get_centroid(this.coordinates[0]);        
-        context2d.fillText(this.label.text, centroid.x, centroid.y);
-    }
-
-    //calculateCentroid() {
-    //    var coordinates = getPathsForTile()
-    //    this.centroid = MERCATOR.get_centroid(coordinates);
-    //}
-
-    _getContext2d(canvas, style) {
-        var context2d = canvas.getContext('2d');
-        for (var key in style) {
-            if (key === 'selected' || key==='label') {
-                continue;
-            }
-            context2d[key] = style[key];
-        }
-        return context2d;
-    }
-
-    _getPoint(coords) {
-        return {
-            x: coords.x / this.divisor,
-            y: coords.y / this.divisor
-        };
-    }
-}
-class MVTLayer {
-    constructor(mVTSource, options) {
-        this.mVTSource = mVTSource;
-        this.map = mVTSource.map;
-        this.lineClickTolerance = 2;
-        this.getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
-            return feature.properties.id;
-        };
-        this.style = options.style;
-        this.label = options.label;        
-        this.name = options.name;
-        this._filter = options.filter || false;
-        this._mVTFeatures = {};
-        this._tileCanvas = [];
-        this._features = {};
-    }
-
-    parseVectorTileLayer(vectorTileFeatures, tileContext) {
-        this._tileCanvas[tileContext.id] = tileContext.canvas;
-        this._mVTFeatures[tileContext.id] = [];
-        for (var i = 0, len = vectorTileFeatures.length; i < len; i++) {
-            var vectorTileFeature = vectorTileFeatures[i];
-            this._parseVectorTileFeature(vectorTileFeature, tileContext, i);
-        }
-        this.drawTile(tileContext);
-    }
-
-    _parseVectorTileFeature(vectorTileFeature, tileContext, i) {
-        if (this._filter && typeof this._filter === 'function') {
-            if (this._filter(vectorTileFeature, tileContext) === false) {
-                return;
-            }
-        }
-
-        var featureId = this.getIDForLayerFeature(vectorTileFeature) || i;
-        var mVTFeature = this._features[featureId];
-        if (!mVTFeature) {
-            var style = this.style(vectorTileFeature);
-            var label = this.label;
-            if (label) {
-                label = this.label(vectorTileFeature);
-            }
-            mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style, label);
-            this._features[featureId] = mVTFeature;
-        } else {
-            mVTFeature.addTileFeature(vectorTileFeature, tileContext);
-        }
-
-        this._mVTFeatures[tileContext.id].push(mVTFeature);
-    }
-
-    drawTile(tileContext) {
-        var features = this._mVTFeatures[tileContext.id];
-        if (!features) return;
-        var selectedFeatures = [];
-        for (var i = 0; i < features.length; i++) {
-            var feature = features[i];
-            if (feature.selected) {
-                selectedFeatures.push(feature);
-            } else {
-                feature.draw(tileContext);
-            }
-        }
-        for (var i = 0; i < selectedFeatures.length; i++) {
-            selectedFeatures[i].draw(tileContext);
-        }
-    }
-
-    deleteTile(id) {
-        delete this._mVTFeatures[id];
-        delete this._tileCanvas[id];
-    }
-
-    clearFeaturesAtNonVisibleZoom() {
-        var zoom = this.mVTSource.map.getZoom();
-        for (var featureId in this._features) {
-            var mVTFeature = this._features[featureId];
-            mVTFeature.clearTiles(zoom);
-        }
-    }
-
-    getCanvas(id) {
-        return this._tileCanvas[id];
-    }
-
-    setStyle(styleFunction) {
-        this.style = styleFunction;
-        for (var id in this._features) {
-            var feature = this._features[id];
-            feature.setStyle(styleFunction);
-        }
-    }
-
-    setLabel(labelFunction) {
-        this.label = labelFunction;
-        for (var id in this._features) {
-            var feature = this._features[id];
-            feature.setLabel(labelFunction);
-        }
-    }
-
-    setFilter(filterFunction) {
-        this._filter = filterFunction
-    }
-
-    handleClickEvent(event, callbackFunction) {
-        var canvas = this._tileCanvas[event.id];
-        var features = this._mVTFeatures[event.id];
-        if (!canvas || !features) {
-            return callbackFunction(event);
-        }
-
-        var minDistance = Number.POSITIVE_INFINITY;
-        var zoom = event.id.split(":")[0];
-        var selectedFeature = null;
-        var j, paths, distance;
-
-        for (var i = 0; i < features.length; i++) {
-            var feature = features[i];
-            switch (feature.type) {
-                case 1: //Point - currently rendered as circular paths.  Intersect with that. Find the radius of the point.
-                    var radius = 3;
-                    if (typeof feature.style.radius === 'function') {
-                        radius = feature.style.radius(zoom); //Allows for scale dependent rednering
-                    }
-                    else {
-                        radius = feature.style.radius;
-                    }
-
-                    paths = feature.getPathsForTile(event.id);
-                    for (j = 0; j < paths.length; j++) {
-                        //Builds a circle of radius feature.style.radius (assuming circular point symbology).
-                        if (MERCATOR.in_circle(paths[j][0].x, paths[j][0].y, radius, x, y)) {
-                            selectedFeature = feature;
-                            minDistance = 0;
-                        }
-                    }
-                    break;
-
-                case 2: //LineString
-                    paths = feature.getPathsForTile(event.id);
-                    for (j = 0; j < paths.length; j++) {
-                        if (feature.style) {
-                            var distance = MERCATOR.getDistanceFromLine(event.tilePoint, paths[j]);
-                            var thickness = (feature.selected && feature.style.selected ? feature.style.selected.size : feature.style.size);
-                            if (distance < thickness / 2 + this.lineClickTolerance && distance < minDistance) {
-                                selectedFeature = feature;
-                                minDistance = distance;
-                            }
-                        }
-                    }
-                    break;
-
-                case 3: //Polygon
-                    paths = feature.getPathsForTile(event.id);
-                    for (j = 0; j < paths.length; j++) {
-                        if (MERCATOR.isPointInPolygon(event.tilePoint, paths[j])) {
-                            selectedFeature = feature;
-                            minDistance = 0; // point is inside the polygon, so distance is zero
-                        }
-                    }
-                    break;
-            }
-            if (minDistance == 0) {
-                break;
-            }
-        }
-
-        //if (feature && nearest.toggleEnabled) {
-        if (selectedFeature) {
-            selectedFeature.toggle();
-        }
-        event.feature = selectedFeature;
-        callbackFunction(event);
-    }
-
-    //calculateCentroids() {
-    //    for (var id in this._features) {
-    //        var feature = this._features[id];
-    //        feature.calculateCentroid();
-    //    }
-    //}
-};
-class MVTSource {
-    constructor(map, options) {
-        var self = this;
-        this.map = map;
-        this._url = options.url || ""; //Url TO Vector Tile Source,
-        this._debug = options.debug || false; // Draw tiles lines and ids
-        this.getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
-            return feature.properties.id;
-        };
-        this._visibleLayers = options.visibleLayers || [];  // List of visible layers
-        this._xhrHeaders = options.xhrHeaders || {}; // Headers added to every url request
-        this._clickableLayers = options.clickableLayers || false;   // List of layers that are clickable
-        this._filter = options.filter || false; // Filter features
-        this._cache = options.cache || false; // Load tiles in cache to avoid duplicated requests
-        this._tileSize = options.tileSize || 256; // Default tile size
-        this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);
-        if (typeof options.style === 'function') {            
-            this.style = options.style;
-        }
-        this.label = false;
-        if (typeof options.label === 'function') {
-            this.label = options.label;
-        }
-        
-        this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
-        this.vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
-        this.visibleTiles = {}; // tiles currently in the viewport 
-        this._selectedFeatures = []; // list of selected features        
-        this._pendingUrls = [];
-
-        this.map.addListener("zoom_changed", () => {
-            self.clearAtNonVisibleZoom();
-        });
-    }
-
-    getTile(coord, zoom, ownerDocument) {
-        const canvas = ownerDocument.createElement("canvas");
-        canvas.width = this._tileSize;
-        canvas.height = this._tileSize;
-        this.drawTile(canvas, coord, zoom);
-        return canvas;
-    }
-
-    releaseTile(canvas) {
-        delete this.visibleTiles[canvas.id];
-        this.deleteTile(canvas.id);
-    }
-
-    deleteTile(id) {
-        for (var key in this.mVTLayers) {
-            this.mVTLayers[key].deleteTile(id);
-        }
-    }
-
-    clearAtNonVisibleZoom() {
-        for (var key in this.mVTLayers) {
-            this.mVTLayers[key].clearFeaturesAtNonVisibleZoom();
-        }
-    }
-
-    style(feature) {
-        var style = {};
-        var type = feature.type;
-        switch (type) {
-            case 1: //'Point'
-                style.fillStyle = 'rgba(49,79,79,1)';
-                style.radio = 5;
-                style.selected = {
-                    fillStyle: 'rgba(255,255,0,0.5)',
-                    radio: 6
-                }
-                break;
-            case 2: //'LineString'
-                style.strokeStyle = 'rgba(161,217,155,0.8)';
-                style.lineWidth = 3;
-                style.selected = {
-                    strokeStyle: 'rgba(255,25,0,0.5)',
-                    lineWidth: 4
-                }
-                break;
-            case 3: //'Polygon'
-                style.fillStyle = 'rgba(49,79,79, 0.4)';
-                style.strokeStyle = 'rgba(161,217,155,0.8)';
-                style.lineWidth = 1;
-                style.selected = {
-                    fillStyle: 'rgba(255,140,0,0.3)',
-                    strokeStyle: 'rgba(255,140,0,1)',
-                    lineWidth: 2
-                }
-                break;
-        }
-        return style;
-    }
-
-
-    drawTile(canvas, coord, zoom) {
-        var self = this;
-        var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);
-        var tileContext = {
-            id: id,
-            canvas: canvas,
-            zoom: zoom,
-            tileSize: this._tileSize
-        };
-
-        var vectorTile = this.vectorTilesProcessed[tileContext.id];
-        if (vectorTile) {
-            return this._drawVectorTile(vectorTile, tileContext);
-        }
-
-        var src = this._url
-            .replace("{z}", zoom)
-            .replace("{x}", coord.x)
-            .replace("{y}", coord.y);
-
-        //this._pendingUrls.push(src);
-        var xmlHttpRequest = new XMLHttpRequest();
-        xmlHttpRequest.onload = function () {
-            if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
-                self._xhrResponseOk(tileContext, xmlHttpRequest.response)
-            }
-            //var index = self._pendingUrls.indexOf(src);
-            //self._pendingUrls.splice(index, 1);
-            //if (self._pendingUrls.length === 0) {
-            //    self._allTilesLoaded();
-            //}
-        };
-        xmlHttpRequest.open('GET', src, true);
-        for (var header in this._xhrHeaders) {
-            xmlHttpRequest.setRequestHeader(header, headers[header])
-        }
-        xmlHttpRequest.responseType = 'arraybuffer';
-        xmlHttpRequest.send();
-    }
-
-    //_allTilesLoaded() {
-    //    if (!this.label) {
-    //        return;
-    //    }
-    //    for (var key in this.mVTLayers) {
-    //        this.mVTLayers[key].CalculateCentroids();
-    //    }
-    //    this.redrawAllTiles();
-    //}
-
-    _getTileId(zoom, x, y) {
-        return [zoom, x, y].join(":");
-    }
-
-    _getTile(id) {
-        var values = id.split(":");
-        return {
-            zoom: values[0],
-            x: values[1],
-            y: values[2]
-        }
-    }
-
-    _xhrResponseOk = function (tileContext, response) {
-        if (this.map && this.map.getZoom() != tileContext.zoom) {
-            return;
-        }
-        var uint8Array = new Uint8Array(response);
-        var pbf = new Pbf(uint8Array);
-        var vectorTile = new VectorTile(pbf);
-        if (this._cache) {
-            this.vectorTilesProcessed[tileContext.id] = vectorTile;
-        }
-        this._drawVectorTile(vectorTile, tileContext);
-    }
-
-    _drawVectorTile(vectorTile, tileContext) {
-        if (this._visibleLayers && this._visibleLayers.length > 0) {
-            for (var i = 0; i < this._visibleLayers.length; i++) {
-                var key = this._visibleLayers[i];
-                if (vectorTile.layers[key]) {
-                    var vectorTileLayer = vectorTile.layers[key];
-                    this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
-                }
-            }
-        } else {
-            for (var key in vectorTile.layers) {
-                var vectorTileLayer = vectorTile.layers[key];
-                this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
-            }
-        }
-
-        this._setTileAsVisible(vectorTile, tileContext);
-        this._drawDebugInfo(tileContext);
-    }
-
-    _drawVectorTileLayer(vectorTileLayer, key, tileContext) {
-        if (!this.mVTLayers[key]) {
-            this.mVTLayers[key] = this._createMVTLayer(key);
-        }
-        var mVTLayer = this.mVTLayers[key];
-        mVTLayer.parseVectorTileLayer(vectorTileLayer.parsedFeatures, tileContext);
-    }
-
-    _createMVTLayer(key) {
-        var options = {
-            getIDForLayerFeature: this.getIDForLayerFeature,
-            filter: this._filter,
-            layerOrdering: this.layerOrdering,
-            style: this.style,
-            label: this.label,
-            name: key
-        };        
-        return new MVTLayer(this, options);
-    }
-
-    _drawDebugInfo(tileContext) {
-        if (!this._debug) {
-            return;
-        };
-        var tile = this._getTile(tileContext.id)
-        var width = this._tileSize;
-        var height = this._tileSize;
-        var context2d = tileContext.canvas.getContext('2d');
-        context2d.strokeStyle = '#000000';
-        context2d.fillStyle = '#FFFF00';
-        context2d.strokeRect(0, 0, width, height);
-        context2d.font = "12px Arial";
-        context2d.fillRect(0, 0, 5, 5);
-        context2d.fillRect(0, height - 5, 5, 5);
-        context2d.fillRect(width - 5, 0, 5, 5);
-        context2d.fillRect(width - 5, height - 5, 5, 5);
-        context2d.fillRect(width / 2 - 5, height / 2 - 5, 10, 10);
-        context2d.strokeText(tileContext.zoom + ' ' + tile.x + ' ' + tile.y, width / 2 - 30, height / 2 - 10);
-    }
-
-    _setTileAsVisible(vectorTile, tileContext) {
-        tileContext.vectorTile = vectorTile;
-        this.visibleTiles[tileContext.id] = tileContext;
-    }
-
-    getLayers() {
-        return this.mVTLayers;
-    }
-
-    onClick(event, callbackFunction, clickOptions) {
-        this._multipleSelection = (clickOptions && clickOptions.multipleSelection) || false;
-        callbackFunction = callbackFunction || function () { };
-        var zoom = this.map.getZoom();
-        var tile = MERCATOR.getTileAtLatLng(event.latLng, zoom);
-        event.id = this._getTileId(tile.z, tile.x, tile.y);
-        event.tilePoint = MERCATOR.fromLatLngToTilePoint(map, event, zoom);
-
-        var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers);
-        if (clickableLayers) {
-            for (var i = 0; i < clickableLayers.length; i++) {
-                var key = clickableLayers[i];
-                var layer = this.mVTLayers[key];
-                if (layer) {
-                    layer.handleClickEvent(event, function (event) {
-                        callbackFunction(event);
-                    });
-                }
-            }
-        }
-        else {
-            callbackFunction(event);
-        }
-    }
-
-    deselectAllFeatures() {
-        for (var i = this._selectedFeatures.length - 1; i >= 0; i--) {
-            this._selectedFeatures[i].deselect();
-        }
-        this._selectedFeatures = [];
-    }
-
-    featureSelected(mvtFeature) {
-        if (!this._multipleSelection) {
-            this.deselectAllFeatures();
-        }
-        this._selectedFeatures.push(mvtFeature);
-    }
-
-    featureDeselected(mvtFeature) {
-        const index = this._selectedFeatures.indexOf(mvtFeature);
-        if (index > -1) {
-            this._selectedFeatures.splice(index, 1);
-        }
-    }
-
-    getSelectedFeatures() {
-        return this._selectedFeatures;
-    }
-
-    setFilter(filterFunction) {
-        for (var key in this.mVTLayers) {
-            this.mVTLayers[key].setFilter(filterFunction);
-        }
-        this.redrawAllTiles();
-    }
-
-    setStyle(styleFunction) {
-        this.style = styleFunction
-        for (var key in this.mVTLayers) {
-            this.mVTLayers[key].setStyle(styleFunction);
-        }
-        this.redrawAllTiles();
-    }
-
-    setLabel(labelFunction) {
-        this.label = labelFunction
-        for (var key in this.mVTLayers) {
-            this.mVTLayers[key].setLabel(labelFunction);
-        }
-        this.redrawAllTiles();
-    }
-
-    setVisibleLayers(visibleLayers) {
-        this._visibleLayers = visibleLayers;
-        this.redrawAllTiles();
-    }
-
-    redrawAllTiles() {
-        this.redrawTiles(this.visibleTiles);
-    }
-
-    redrawTiles(tiles) {
-        for (var tile in tiles) {
-            this.redrawTile(tile);
-        }
-    }
-
-    redrawTile(id) {
-        var tileContext = this.visibleTiles[id];
-        if (!tileContext) return;
-        this.clearTile(tileContext);
-        this._drawVectorTile(tileContext.vectorTile, tileContext);
-    }
-
-    clearTile(tileContext) {
-        var canvas = tileContext.canvas;
-        var context = canvas.getContext('2d');
-        context.clearRect(0, 0, canvas.width, canvas.height);
-    }
-}
 MERCATOR = {
     fromLatLngToPoint: function (latLng) {
         var siny = Math.min(Math.max(Math.sin(latLng.lat() * (Math.PI / 180)),
@@ -1163,7 +455,8 @@ MERCATOR = {
         return new google.maps.Point((worldPoint.x - bottomLeft.x) * scale, (worldPoint.y - topRight.y) * scale);
     },
 
-    fromLatLngToTilePoint: function (map, evt, zoom) {
+    fromLatLngToTilePoint: function (map, evt) {
+        var zoom = map.getZoom();
         var tile = this.getTileAtLatLng(evt.latLng, zoom);
         var tileBounds = this.getTileBounds(tile);
         var tileSwLatLng = new google.maps.LatLng(tileBounds.sw);
@@ -1177,7 +470,7 @@ MERCATOR = {
     },
 
     // todo: sometimes it does not work properly
-    isPointInPolygon(point, polygon) {
+    isPointInPolygon: function(point, polygon) {
         if (polygon && polygon.length) {
             for (var c = false, i = -1, l = polygon.length, j = l - 1; ++i < l; j = i) {
                 ((polygon[i].y <= point.y && point.y < polygon[j].y) || (polygon[j].y <= point.y && point.y < polygon[i].y))
@@ -1188,75 +481,663 @@ MERCATOR = {
         }
     },
 
-    in_circle(center_x, center_y, radius, x, y) {
+    in_circle: function (center_x, center_y, radius, x, y) {
         var square_dist = Math.pow((center_x - x), 2) + Math.pow((center_y - y), 2);
         return square_dist <= Math.pow(radius, 2);
     },
 
-    // TODO: not tested
-    getDistanceFromLine(point, line) {
-        var min = Number.POSITIVE_INFINITY;
-        if (line && line.length > 1) {
-            point = L.point(point.x, point.y);
+    getDistanceFromLine: function (point, line) {
+        var minDistance = Number.POSITIVE_INFINITY;
+        if (line && line.length > 1) {            
             for (var i = 0, l = line.length - 1; i < l; i++) {
-                var test = this.projectPointOnLineSegment(point, line[i], line[i + 1]);
-                if (test.distance <= min) {
-                    min = test.distance;
+                var distance = this.projectPointOnLineSegment(point, line[i], line[i + 1]);
+                if (distance  <= minDistance) {
+                    minDistance = distance;
+                }
+            }
+        }        
+        return minDistance;
+    },
+
+    projectPointOnLineSegment: function (point, r0, r1) {
+        var x = point.x;
+        var y = point.y; 
+        var x1 = r0.x;
+        var y1 = r0.y;
+        var x2 = r1.x; 
+        var y2 = r1.y;
+
+        var A = x - x1;
+        var B = y - y1;
+        var C = x2 - x1;
+        var D = y2 - y1;
+
+        var dot = A * C + B * D;
+        var len_sq = C * C + D * D;
+        var param = -1;
+        if (len_sq != 0) //in case of 0 length line
+            param = dot / len_sq;
+
+        var xx, yy;
+
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        }
+        else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        }
+        else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        var dx = x - xx;
+        var dy = y - yy;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+}
+
+class MVTFeature {
+    constructor(mVTLayer, vectorTileFeature, tileContext, style) {
+        this.mVTLayer = mVTLayer;
+        this.selected = false;
+        this.divisor = vectorTileFeature.extent / tileContext.tileSize;
+        this.tiles = {};
+        this.style = style;
+        for (var key in vectorTileFeature) {
+            this[key] = vectorTileFeature[key];
+        }
+        this.addTileFeature(vectorTileFeature, tileContext);
+    }
+
+    addTileFeature(vectorTileFeature, tileContext) {
+        this.tiles[tileContext.id] = {
+            vectorTileFeature: vectorTileFeature,
+            paths: []
+        };
+    }
+
+    setStyle(styleFunction) {
+        this.style = styleFunction(this, null);
+    }
+
+    draw(tileContext) {
+        var vectorTileFeature = this.tiles[tileContext.id].vectorTileFeature;
+        var style = this.style;
+        if (this.selected) {
+            var style = this.style.selected || this.style;
+        }
+        switch (vectorTileFeature.type) {
+            case 1: //Point
+                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);
+                break;
+            case 2: //LineString
+                this._drawLineString(tileContext, vectorTileFeature.coordinates, style);
+                break;
+
+            case 3: //Polygon
+                this._drawPolygon(tileContext, vectorTileFeature.coordinates, style);
+                break;
+        }
+    }
+
+    getPathsForTile(id) {
+        return this.tiles[id].paths;
+    }
+
+    clearTiles(zoom) {
+        for (var key in this.tiles) {
+            if (key.split(":")[0] != zoom) {
+                delete this.tiles[key];
+            }
+        }
+    }
+
+    redrawTiles() {
+        for (var id in this.tiles) {
+            this.mVTLayer.mVTSource.redrawTile(id);
+        }
+    }
+
+    toggle() {
+        if (this.selected) {
+            this.deselect();
+        } else {
+            this.select();
+        }
+    }
+
+    select() {
+        this.selected = true;
+        this.mVTLayer.mVTSource.featureSelected(this);
+        this.redrawTiles();
+    }
+
+    deselect() {
+        this.selected = false;
+        this.mVTLayer.mVTSource.featureDeselected(this);
+        this.redrawTiles();
+    }
+
+    _drawPoint(tileContext, coordinates, style) {
+        var context2d = this._getContext2d(tileContext.canvas, style);
+        var radio = style.radio || 3;
+        context2d.beginPath();
+        var point = this._getPoint(coordinates[0][0]);
+        context2d.arc(point.x, point.y, radio, 0, Math.PI * 2);
+        context2d.closePath();
+        context2d.fill();
+        context2d.stroke();
+        this.tiles[tileContext.id].paths.push([point]);
+    }
+
+    _drawLineString(tileContext, coordinates, style) {
+        var context2d = this._getContext2d(tileContext.canvas, style);
+        var projCoords = this._drawCoordinates(context2d, coordinates);
+        context2d.stroke();
+
+        this.tiles[tileContext.id].paths.push(projCoords);
+    }
+
+    _drawPolygon(tileContext, coordinates, style) {
+        var context2d = this._getContext2d(tileContext.canvas, style);
+        var projCoords = this._drawCoordinates(context2d, coordinates);
+        context2d.closePath();
+        if (style.fillStyle) {
+            context2d.fill();
+        }
+
+        if (style.strokeStyle) {
+            context2d.stroke();
+        }
+
+        this.tiles[tileContext.id].paths.push(projCoords);
+    }
+
+    _drawCoordinates(context2d, coordinates) {
+        var projCoords = [];
+        context2d.beginPath();
+        for (var i = 0; i < coordinates.length; i++) {
+            var coordinate = coordinates[i];
+            for (var j = 0; j < coordinate.length; j++) {
+                var method = (j === 0 ? 'move' : 'line') + 'To';
+                var point = this._getPoint(coordinate[j]);
+                projCoords.push(point);
+                context2d[method](point.x, point.y);
+            }
+        }
+        return projCoords;
+    }
+
+    _getContext2d(canvas, style) {
+        var context2d = canvas.getContext('2d');
+        for (var key in style) {
+            if (key === 'selected') {
+                continue;
+            }
+            context2d[key] = style[key];
+        }
+        return context2d;
+    }
+
+    _getPoint(coords) {
+        return {
+            x: coords.x / this.divisor,
+            y: coords.y / this.divisor
+        };
+    }
+}
+class MVTLayer {
+    constructor(mVTSource, options) {
+        this.mVTSource = mVTSource;        
+        this._lineClickTolerance = 2;
+        this._getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
+            return feature.properties.id;
+        };
+        this.style = options.style;
+        this.name = options.name;
+        this._filter = options.filter || false;
+        this._mVTFeatures = {};
+        this._tileCanvas = [];
+        this._features = {};
+    }
+
+    parseVectorTileLayer(vectorTileFeatures, tileContext) {
+        this._tileCanvas[tileContext.id] = tileContext.canvas;
+        this._mVTFeatures[tileContext.id] = [];
+        for (var i = 0, len = vectorTileFeatures.length; i < len; i++) {
+            var vectorTileFeature = vectorTileFeatures[i];
+            this._parseVectorTileFeature(vectorTileFeature, tileContext, i);
+        }
+        this.drawTile(tileContext);
+    }
+
+    _parseVectorTileFeature(vectorTileFeature, tileContext, i) {
+        if (this._filter && typeof this._filter === 'function') {
+            if (this._filter(vectorTileFeature, tileContext) === false) {
+                return;
+            }
+        }
+
+        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
+        var mVTFeature = this._features[featureId];
+        if (!mVTFeature) {
+            var style = this.style(vectorTileFeature);
+            mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style);
+            this._features[featureId] = mVTFeature;
+        } else {
+            mVTFeature.addTileFeature(vectorTileFeature, tileContext);
+        }
+
+        this._mVTFeatures[tileContext.id].push(mVTFeature);
+    }
+
+    drawTile(tileContext) {
+        var features = this._mVTFeatures[tileContext.id];
+        if (!features) return;
+        var selectedFeatures = [];
+        for (var i = 0; i < features.length; i++) {
+            var feature = features[i];
+            if (feature.selected) {
+                selectedFeatures.push(feature);
+            } else {
+                feature.draw(tileContext);
+            }
+        }
+        for (var i = 0; i < selectedFeatures.length; i++) {
+            selectedFeatures[i].draw(tileContext);
+        }
+    }
+
+    deleteTile(id) {
+        delete this._mVTFeatures[id];
+        delete this._tileCanvas[id];
+    }
+
+    clearFeaturesAtNonVisibleZoom() {
+        var zoom = this.mVTSource.map.getZoom();
+        for (var featureId in this._features) {
+            var mVTFeature = this._features[featureId];
+            mVTFeature.clearTiles(zoom);
+        }
+    }
+
+    getCanvas(id) {
+        return this._tileCanvas[id];
+    }
+
+    setStyle(styleFunction) {
+        this.style = styleFunction;
+        for (var id in this._features) {
+            var feature = this._features[id];
+            feature.setStyle(styleFunction);
+        }
+    }
+
+    setFilter(filterFunction) {
+        this._filter = filterFunction
+    }
+
+    handleClickEvent(event, callbackFunction) {
+        var canvas = this._tileCanvas[event.id];
+        var features = this._mVTFeatures[event.id];
+        if (!canvas || !features) {
+            return callbackFunction(event);
+        }
+
+        var minDistance = Number.POSITIVE_INFINITY;
+        var selectedFeature = null;
+
+        for (var i = 0; i < features.length; i++) {
+            var feature = features[i];
+            var paths = feature.getPathsForTile(event.id);
+            for (var j = 0; j < paths.length; j++) {
+                var path = paths[j];
+                switch (feature.type) {
+                    case 1: // Point
+                        if (MERCATOR.in_circle(path[0].x, path[0].y, feature.style.radio, event.tilePoint.x, event.tilePoint.y)) {
+                            selectedFeature = feature;
+                            minDistance = 0;
+                        }
+                        break;
+                    case 2: // LineString
+                        var distance = MERCATOR.getDistanceFromLine(event.tilePoint, path);
+                        var thickness = (feature.selected && feature.style.selected ? feature.style.selected.lineWidth : feature.style.lineWidth);
+                        if (distance < thickness / 2 + this._lineClickTolerance && distance < minDistance) {
+                            selectedFeature = feature;
+                            minDistance = distance;
+                        }
+                        break;
+                    case 3: // Polygon
+                        if (MERCATOR.isPointInPolygon(event.tilePoint, path)) {
+                            selectedFeature = feature;
+                            minDistance = 0;
+                        }
+                        break;
+                }
+            }
+            if (minDistance == 0) {
+                break;
+            }
+        }
+
+        if (selectedFeature) {
+            selectedFeature.toggle();
+        }
+        event.feature = selectedFeature;
+        callbackFunction(event);
+    }
+};
+class MVTSource {
+    constructor(map, options) {
+        var self = this;
+        this.map = map;
+        this._url = options.url || ""; //Url TO Vector Tile Source,
+        this._debug = options.debug || false; // Draw tiles lines and ids
+        this.getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
+            return feature.properties.id;
+        };
+        this._visibleLayers = options.visibleLayers || [];  // List of visible layers
+        this._xhrHeaders = options.xhrHeaders || {}; // Headers added to every url request
+        this._clickableLayers = options.clickableLayers || false;   // List of layers that are clickable
+        this._filter = options.filter || false; // Filter features
+        this._cache = options.cache || false; // Load tiles in cache to avoid duplicated requests
+        this._tileSize = options.tileSize || 256; // Default tile size
+        this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);
+        if (typeof options.style === 'function') {
+            this.style = options.style;
+        }
+
+        this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
+        this.vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
+        this.visibleTiles = {}; // tiles currently in the viewport 
+        this._selectedFeatures = []; // list of selected features        
+        this._pendingUrls = [];
+
+        this.map.addListener("zoom_changed", () => {
+            self.clearAtNonVisibleZoom();
+        });
+    }
+
+    getTile(coord, zoom, ownerDocument) {
+        const canvas = ownerDocument.createElement("canvas");
+        canvas.width = this._tileSize;
+        canvas.height = this._tileSize;
+        this.drawTile(canvas, coord, zoom);
+        return canvas;
+    }
+
+    releaseTile(canvas) {
+        delete this.visibleTiles[canvas.id];
+        this.deleteTile(canvas.id);
+    }
+
+    deleteTile(id) {
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].deleteTile(id);
+        }
+    }
+
+    clearAtNonVisibleZoom() {
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].clearFeaturesAtNonVisibleZoom();
+        }
+    }
+
+    style(feature) {
+        var style = {};
+        var type = feature.type;
+        switch (type) {
+            case 1: //'Point'
+                style.fillStyle = 'rgba(49,79,79,1)';
+                style.radio = 5;
+                style.selected = {
+                    fillStyle: 'rgba(255,255,0,0.5)',
+                    radio: 6
+                }
+                break;
+            case 2: //'LineString'
+                style.strokeStyle = 'rgba(76,25,25,0.8)';
+                style.lineWidth = 3;
+                style.selected = {
+                    strokeStyle: 'rgba(255,25,0,0.5)',
+                    lineWidth: 4
+                }
+                break;
+            case 3: //'Polygon'
+                style.fillStyle = 'rgba(49,79,79, 0.4)';
+                style.strokeStyle = 'rgba(76,25,25, 0.8)';
+                style.lineWidth = 1;
+                style.selected = {
+                    fillStyle: 'rgba(255,140,0,0.3)',
+                    strokeStyle: 'rgba(255,140,0,1)',
+                    lineWidth: 2
+                }
+                break;
+        }
+        return style;
+    }
+
+    drawTile(canvas, coord, zoom) {
+        var self = this;
+        var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);
+        var tileContext = {
+            id: id,
+            canvas: canvas,
+            zoom: zoom,
+            tileSize: this._tileSize
+        };
+
+        var vectorTile = this.vectorTilesProcessed[tileContext.id];
+        if (vectorTile) {
+            return this._drawVectorTile(vectorTile, tileContext);
+        }
+
+        var src = this._url
+            .replace("{z}", zoom)
+            .replace("{x}", coord.x)
+            .replace("{y}", coord.y);
+
+        var xmlHttpRequest = new XMLHttpRequest();
+        xmlHttpRequest.onload = function () {
+            if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
+                self._xhrResponseOk(tileContext, xmlHttpRequest.response)
+            }
+        };
+        xmlHttpRequest.open('GET', src, true);
+        for (var header in this._xhrHeaders) {
+            xmlHttpRequest.setRequestHeader(header, headers[header])
+        }
+        xmlHttpRequest.responseType = 'arraybuffer';
+        xmlHttpRequest.send();
+    }
+
+    _getTileId(zoom, x, y) {
+        return [zoom, x, y].join(":");
+    }
+
+    _getTile(id) {
+        var values = id.split(":");
+        return {
+            zoom: values[0],
+            x: values[1],
+            y: values[2]
+        }
+    }
+
+    _xhrResponseOk = function (tileContext, response) {
+        if (this.map && this.map.getZoom() != tileContext.zoom) {
+            return;
+        }
+        var uint8Array = new Uint8Array(response);
+        var pbf = new Pbf(uint8Array);
+        var vectorTile = new VectorTile(pbf);
+        if (this._cache) {
+            this.vectorTilesProcessed[tileContext.id] = vectorTile;
+        }
+        this._drawVectorTile(vectorTile, tileContext);
+    }
+
+    _drawVectorTile(vectorTile, tileContext) {
+        if (this._visibleLayers && this._visibleLayers.length > 0) {
+            for (var i = 0; i < this._visibleLayers.length; i++) {
+                var key = this._visibleLayers[i];
+                if (vectorTile.layers[key]) {
+                    var vectorTileLayer = vectorTile.layers[key];
+                    this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
+                }
+            }
+        } else {
+            for (var key in vectorTile.layers) {
+                var vectorTileLayer = vectorTile.layers[key];
+                this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
+            }
+        }
+
+        this._setTileVisible(vectorTile, tileContext);
+        this._drawDebugInfo(tileContext);
+    }
+
+    _drawVectorTileLayer(vectorTileLayer, key, tileContext) {
+        if (!this.mVTLayers[key]) {
+            this.mVTLayers[key] = this._createMVTLayer(key);
+        }
+        var mVTLayer = this.mVTLayers[key];
+        mVTLayer.parseVectorTileLayer(vectorTileLayer.parsedFeatures, tileContext);
+    }
+
+    _createMVTLayer(key) {
+        var options = {
+            getIDForLayerFeature: this.getIDForLayerFeature,
+            filter: this._filter,
+            layerOrdering: this.layerOrdering,
+            style: this.style,
+            name: key
+        };
+        return new MVTLayer(this, options);
+    }
+
+    _drawDebugInfo(tileContext) {
+        if (!this._debug) return;
+        var tile = this._getTile(tileContext.id)
+        var width = this._tileSize;
+        var height = this._tileSize;
+        var context2d = tileContext.canvas.getContext('2d');
+        context2d.strokeStyle = '#000000';
+        context2d.fillStyle = '#FFFF00';
+        context2d.strokeRect(0, 0, width, height);
+        context2d.font = "12px Arial";
+        context2d.fillRect(0, 0, 5, 5);
+        context2d.fillRect(0, height - 5, 5, 5);
+        context2d.fillRect(width - 5, 0, 5, 5);
+        context2d.fillRect(width - 5, height - 5, 5, 5);
+        context2d.fillRect(width / 2 - 5, height / 2 - 5, 10, 10);
+        context2d.strokeText(tileContext.zoom + ' ' + tile.x + ' ' + tile.y, width / 2 - 30, height / 2 - 10);
+    }
+
+    _setTileVisible(vectorTile, tileContext) {
+        tileContext.vectorTile = vectorTile;
+        this.visibleTiles[tileContext.id] = tileContext;
+    }
+
+    getLayers() {
+        return this.mVTLayers;
+    }
+
+    onClick(event, callbackFunction, clickOptions) {
+        if (!event.latLng || !event.pixel) return;
+        this._multipleSelection = (clickOptions && clickOptions.multipleSelection) || false;
+        callbackFunction = callbackFunction || function () { };
+        var zoom = this.map.getZoom();
+        var tile = MERCATOR.getTileAtLatLng(event.latLng, zoom);
+        event.id = this._getTileId(tile.z, tile.x, tile.y);
+        event.tilePoint = MERCATOR.fromLatLngToTilePoint(this.map, event);
+
+        var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers);
+        if (clickableLayers) {
+            for (var i = 0; i < clickableLayers.length; i++) {
+                var key = clickableLayers[i];
+                var layer = this.mVTLayers[key];
+                if (layer) {
+                    layer.handleClickEvent(event, function (event) {
+                        callbackFunction(event);
+                    });
                 }
             }
         }
-        return min;
-    },
-
-    projectPointOnLineSegment(point, r0, r1) {
-        var lineLength = r0.distanceTo(r1);
-        if (lineLength < 1) {
-            return { distance: point.distanceTo(r0), coordinate: r0 };
+        else {
+            callbackFunction(event);
         }
-        var u = ((point.x - r0.x) * (r1.x - r0.x) + (point.y - r0.y) * (r1.y - r0.y)) / Math.pow(lineLength, 2);
-        if (u < 0.0000001) {
-            return { distance: point.distanceTo(r0), coordinate: r0 };
-        }
-        if (u > 0.9999999) {
-            return { distance: point.distanceTo(r1), coordinate: r1 };
-        }
-        var a = L.point(r0.x + u * (r1.x - r0.x), r0.y + u * (r1.y - r0.y));
-        return { distance: point.distanceTo(a), point: a };
-    },
-
-
-    get_centroid(points) {
-        var first = points[0], last = points[points.length - 1];
-        if (first.x != last.x || first.y != last.y) points.push(first);
-        var twicearea = 0,
-            x = 0, y = 0,
-            nPts = points.length,
-            p1, p2, f;
-        for (var i = 0, j = nPts - 1; i < nPts; j = i++) {
-            p1 = points[i]; p2 = points[j];
-            f = p1.x * p2.y - p2.x * p1.y;
-            twicearea += f;
-            x += (p1.x + p2.x) * f;
-            y += (p1.y + p2.y) * f;
-        }
-        f = twicearea * 3;
-        return { x: x / f, y: y / f };
     }
-    //get_centroid(pts) {
-    //    var first = pts[0], last = pts[pts.length - 1];
-    //    if (first.x != last.x || first.y != last.y) pts.push(first);
-    //    var twicearea = 0,
-    //        x = 0, y = 0,
-    //        nPts = pts.length,
-    //        p1, p2, f;
-    //    for (var i = 0, j = nPts - 1; i < nPts; j = i++) {
-    //        p1 = pts[i]; p2 = pts[j];
-    //        f = p1.x * p2.y - p2.x * p1.y;
-    //        twicearea += f;
-    //        x += (p1.x + p2.x) * f;
-    //        y += (p1.y + p2.y) * f;
-    //    }
-    //    f = twicearea * 3;
-    //    return { x: x / f, y: y / f };
-    //}
+
+    deselectAllFeatures() {
+        for (var i = this._selectedFeatures.length - 1; i >= 0; i--) {
+            this._selectedFeatures[i].deselect();
+        }
+        this._selectedFeatures = [];
+    }
+
+    featureSelected(mvtFeature) {
+        if (!this._multipleSelection) {
+            this.deselectAllFeatures();
+        }
+        this._selectedFeatures.push(mvtFeature);
+    }
+
+    featureDeselected(mvtFeature) {
+        const index = this._selectedFeatures.indexOf(mvtFeature);
+        if (index > -1) {
+            this._selectedFeatures.splice(index, 1);
+        }
+    }
+
+    getSelectedFeatures() {
+        return this._selectedFeatures;
+    }
+
+    setFilter(filterFunction) {
+        this._filter = filterFunction;
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].setFilter(filterFunction);
+        }
+        this.redrawAllTiles();
+    }
+
+    setStyle(styleFunction) {
+        this.style = styleFunction
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].setStyle(styleFunction);
+        }
+        this.redrawAllTiles();
+    }
+
+    setVisibleLayers(visibleLayers) {
+        this._visibleLayers = visibleLayers;
+        this.redrawAllTiles();
+    }
+
+    redrawAllTiles() {
+        this.redrawTiles(this.visibleTiles);
+    }
+
+    redrawTiles(tiles) {
+        for (var tile in tiles) {
+            this.redrawTile(tile);
+        }
+    }
+
+    redrawTile(id) {
+        var tileContext = this.visibleTiles[id];
+        if (!tileContext) return;
+        this.clearTile(tileContext);
+        this._drawVectorTile(tileContext.vectorTile, tileContext);
+    }
+
+    clearTile(tileContext) {
+        var canvas = tileContext.canvas;
+        var context = canvas.getContext('2d');
+        context.clearRect(0, 0, canvas.width, canvas.height);
+    }
 }

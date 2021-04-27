@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Basic</title>
+    <title>Catalunya</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">    
     <link rel="stylesheet" href="styles.css" />
@@ -10,64 +10,89 @@
     <div id="map"></div>
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
-        function InitMap() {            
-
-            var map = new google.maps.Map(document.getElementById("map"), {
+        var map;
+        function InitGoogleMap() {            
+            map = new google.maps.Map(document.getElementById("map"), {
                 center: { lat: 41.39, lng: 2.14 },
-                zoom: 12
-            });
-
-            // Links obtained from https://www.icgc.cat/es/Innovacion/Recursos-para-desarrolladores/Teselas-vectoriales-y-estilos-para-hacer-mapas-ligeros-y-apps
-
-            var mvtSource = new MVTSource(map, {
-                url: "https://betaserver.icgc.cat/tileserver3/tileserver.php/bt5m_stpropi/{z}/{x}/{y}.pbf",
-                style: function (feature) {
-                    var style = {};
-                    var type = feature.type;
-                    switch (type) {
-                        case 1: //'Point'
-                            style.color = 'rgba(49,79,79,1)';
-                            style.radius = 5;
-                            style.selected = {
-                                color: 'rgba(255,255,0,0.5)',
-                                radius: 6
-                            };
-                            break;
-                        case 2: //'LineString'
-                            style.color = 'rgba(161,217,155,0.8)';
-                            style.size = 3;
-                            style.selected = {
-                                color: 'rgba(255,25,0,0.5)',
-                                size: 4
-                            };
-                            break;
-                        case 3: //'Polygon'
-                            style.color = 'red';
-                            style.outline = {
-                                color: 'blue',
-                                size: 1
-                            };
-                            style.selected = {
-                                color: 'rgba(255,140,0,0.3)',
-                                outline: {
-                                    color: 'rgba(255,140,0,1)',
-                                    size: 2
-                                }
-                            };
-                            break;
+                zoom: 12,
+                styles: [
+                    {
+                        "stylers": [
+                            {
+                                "color": "#ffffff"
+                            },
+                            {
+                                "visibility": "simplified"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "transit",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
                     }
-                    return style;
-                }
-
-            });         
+                ]
+            });           
             
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
-                map.overlayMapTypes.insertAt(0, mvtSource);
-            });            
+                InitVectorTiles();
+            });
+        }
+
+        function InitVectorTiles() {
+            // Links obtained from https://www.icgc.cat/es/Innovacion/Recursos-para-desarrolladores/Teselas-vectoriales-y-estilos-para-hacer-mapas-ligeros-y-apps
+            var options = {
+                url: "https://betaserver.icgc.cat/tileserver3/tileserver.php/bt5m_stpropi/{z}/{x}/{y}.pbf",
+                visibleLayers: [
+                    "ILL01_pol",  // polygon                    
+                    "TOR02_poi", "CNS03_poi", "VER01_poi", // Point
+                    "EDI01_lin" // linestring
+                ],                
+                style: function (feature) {
+                    switch (feature.type) {
+                        case 1: { // Point
+                            return {
+                                fillStyle: 'rgba(115, 255, 0, 1)',
+                                strokeStyle: 'rgba(2, 0, 255, 1)',                                
+                                lineWidth: 3,
+                                radio: 10
+                            }
+                        } break;
+                        case 2: { //LineString
+                            return {
+                                strokeStyle: 'rgba(120, 47, 144, 1)',
+                                lineWidth: 1                                                                
+                            }
+                        } break;
+                        case 3: { // Polygon
+                            return {
+                                fillStyle: 'rgba(251, 251, 12, 1)',
+                                shadowColor: 'rgba(54, 54, 38, 1)'                                
+                            }
+                        } break;
+                    }                                        
+                }
+            };
+
+            var mvtSource = new MVTSource(map, options);         
+            map.overlayMapTypes.insertAt(0, mvtSource);
         }
 
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDnkD94apUwQA0gIWMoMxRuHQarhbBNrf0&callback=InitMap&libraries=&v=weekly"
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDnkD94apUwQA0gIWMoMxRuHQarhbBNrf0&callback=InitGoogleMap&libraries=&v=weekly"
             defer></script>
 
 </body>

@@ -14,14 +14,10 @@ class MVTSource {
         this._cache = options.cache || false; // Load tiles in cache to avoid duplicated requests
         this._tileSize = options.tileSize || 256; // Default tile size
         this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);
-        if (typeof options.style === 'function') {            
+        if (typeof options.style === 'function') {
             this.style = options.style;
         }
-        this.label = false;
-        if (typeof options.label === 'function') {
-            this.label = options.label;
-        }
-        
+
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
         this.vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
         this.visibleTiles = {}; // tiles currently in the viewport 
@@ -71,7 +67,7 @@ class MVTSource {
                 }
                 break;
             case 2: //'LineString'
-                style.strokeStyle = 'rgba(161,217,155,0.8)';
+                style.strokeStyle = 'rgba(76,25,25,0.8)';
                 style.lineWidth = 3;
                 style.selected = {
                     strokeStyle: 'rgba(255,25,0,0.5)',
@@ -80,7 +76,7 @@ class MVTSource {
                 break;
             case 3: //'Polygon'
                 style.fillStyle = 'rgba(49,79,79, 0.4)';
-                style.strokeStyle = 'rgba(161,217,155,0.8)';
+                style.strokeStyle = 'rgba(76,25,25, 0.8)';
                 style.lineWidth = 1;
                 style.selected = {
                     fillStyle: 'rgba(255,140,0,0.3)',
@@ -91,7 +87,6 @@ class MVTSource {
         }
         return style;
     }
-
 
     drawTile(canvas, coord, zoom) {
         var self = this;
@@ -113,17 +108,11 @@ class MVTSource {
             .replace("{x}", coord.x)
             .replace("{y}", coord.y);
 
-        //this._pendingUrls.push(src);
         var xmlHttpRequest = new XMLHttpRequest();
         xmlHttpRequest.onload = function () {
             if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
                 self._xhrResponseOk(tileContext, xmlHttpRequest.response)
             }
-            //var index = self._pendingUrls.indexOf(src);
-            //self._pendingUrls.splice(index, 1);
-            //if (self._pendingUrls.length === 0) {
-            //    self._allTilesLoaded();
-            //}
         };
         xmlHttpRequest.open('GET', src, true);
         for (var header in this._xhrHeaders) {
@@ -132,16 +121,6 @@ class MVTSource {
         xmlHttpRequest.responseType = 'arraybuffer';
         xmlHttpRequest.send();
     }
-
-    //_allTilesLoaded() {
-    //    if (!this.label) {
-    //        return;
-    //    }
-    //    for (var key in this.mVTLayers) {
-    //        this.mVTLayers[key].CalculateCentroids();
-    //    }
-    //    this.redrawAllTiles();
-    //}
 
     _getTileId(zoom, x, y) {
         return [zoom, x, y].join(":");
@@ -185,7 +164,7 @@ class MVTSource {
             }
         }
 
-        this._setTileAsVisible(vectorTile, tileContext);
+        this._setTileVisible(vectorTile, tileContext);
         this._drawDebugInfo(tileContext);
     }
 
@@ -203,16 +182,13 @@ class MVTSource {
             filter: this._filter,
             layerOrdering: this.layerOrdering,
             style: this.style,
-            label: this.label,
             name: key
-        };        
+        };
         return new MVTLayer(this, options);
     }
 
     _drawDebugInfo(tileContext) {
-        if (!this._debug) {
-            return;
-        };
+        if (!this._debug) return;
         var tile = this._getTile(tileContext.id)
         var width = this._tileSize;
         var height = this._tileSize;
@@ -229,7 +205,7 @@ class MVTSource {
         context2d.strokeText(tileContext.zoom + ' ' + tile.x + ' ' + tile.y, width / 2 - 30, height / 2 - 10);
     }
 
-    _setTileAsVisible(vectorTile, tileContext) {
+    _setTileVisible(vectorTile, tileContext) {
         tileContext.vectorTile = vectorTile;
         this.visibleTiles[tileContext.id] = tileContext;
     }
@@ -239,12 +215,13 @@ class MVTSource {
     }
 
     onClick(event, callbackFunction, clickOptions) {
+        if (!event.latLng || !event.pixel) return;
         this._multipleSelection = (clickOptions && clickOptions.multipleSelection) || false;
         callbackFunction = callbackFunction || function () { };
         var zoom = this.map.getZoom();
         var tile = MERCATOR.getTileAtLatLng(event.latLng, zoom);
         event.id = this._getTileId(tile.z, tile.x, tile.y);
-        event.tilePoint = MERCATOR.fromLatLngToTilePoint(map, event, zoom);
+        event.tilePoint = MERCATOR.fromLatLngToTilePoint(this.map, event);
 
         var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers);
         if (clickableLayers) {
@@ -289,6 +266,7 @@ class MVTSource {
     }
 
     setFilter(filterFunction) {
+        this._filter = filterFunction;
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].setFilter(filterFunction);
         }
@@ -299,14 +277,6 @@ class MVTSource {
         this.style = styleFunction
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].setStyle(styleFunction);
-        }
-        this.redrawAllTiles();
-    }
-
-    setLabel(labelFunction) {
-        this.label = labelFunction
-        for (var key in this.mVTLayers) {
-            this.mVTLayers[key].setLabel(labelFunction);
         }
         this.redrawAllTiles();
     }
