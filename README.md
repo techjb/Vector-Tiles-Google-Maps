@@ -20,9 +20,9 @@
     <li><a href="#usage">Usage</a></li>
         <ul>
             <li><a href="#options">Options</a></li>
+            <li><a href="#methods">Methods</a></li>
         </ul>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>    
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#acknowledgements">Acknowledgements</a></li>
@@ -71,11 +71,13 @@ To get a local copy up and running follow these simple steps.
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+Get your own API Key for the [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/get-api-key) 
+Replace it in the examples provided.
+
+```html
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=InitGoogleMap&libraries=&v=weekly"
+            defer></script>
+```
 
 ### Installation
 
@@ -92,21 +94,21 @@ This is an example of how to list things you need to use the software and how to
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-You create the `MVTSource` object and then insert to as a `overlayMapType`. 
-Provide the vector tiles server url throught the options parámeter.
+You create the `MVTSource` object and then insert it as a `overlayMapType`. 
+Provide the vector tiles server url in the options parámeter.
 
 
 ```js
 var options = {
-    url: "your_vector_tiles_url/{z}/{x}/{y}.pbf"
+    url: "http://your_vector_tiles_url/{z}/{x}/{y}.pbf"
 };
 
 var mvtSource = new MVTSource(map, options);
 map.overlayMapTypes.insertAt(0, mvtSource);
 ```
 
-It is reccomended to load the overlayMapType after tiles have been loaded for the first time 
-to avoid duplicate invocation to `GetTile()`. It has been documented in the [Issuetracker](https://issuetracker.google.com/issues/73335429).
+I reccomended to insert the MVTSource after tiles have been loaded for the first time 
+to avoid duplicate invocation to `GetTile()`. It is documented in the [Issuetracker](https://issuetracker.google.com/issues/73335429).
 
 ```js
  google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
@@ -116,17 +118,8 @@ to avoid duplicate invocation to `GetTile()`. It has been documented in the [Iss
 
 ### Options
 
+The following are properties that define a config object for the `MVTSource` object:
 
-The following are properties that define a config object for the `MVTSource` object used as follows:
-
-```js
-var options = {
-  ...
-};
-
-var mvtSource = new MVTSource(map, options);
-map.overlayMapTypes.insertAt(0, mvtSource);
-```
 
 * `url` - **{string}** The URL Endpoint that we fetch MVT Protocal Buffer tiles from. **Required**.
 
@@ -134,13 +127,13 @@ map.overlayMapTypes.insertAt(0, mvtSource);
 url: "https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf?",
 ```
 
-* `debug` - **{boolean}** Flagging debug as true provides a grid that shows the edge of the tiles and the z,x,y coordinate address of the tiles. **Default: `false`***.
+* `debug` - **{boolean}** Flagging debug as true provides a grid that shows the edge of the tiles and the z,x,y coordinate address of the tiles. **Default: `false`**.
 
 ```js
 debug: true,
 ```
 
-* `cache` - **{boolean}** Flagging cache as true stores in memory the vector tiles already loaded to avoid duplicate request to the server. **Default: `false`***.
+* `cache` - **{boolean}** Flagging cache as true stores in memory the vector tiles already loaded to avoid duplicate request to the server. **Default: `false`**.
 
 ```js
 cache: true,
@@ -217,30 +210,27 @@ style: function(feature) {
 }
 ```
 
+* 'xhrHeaders' - **{object}** The header and value to set on the XMLHttpRequest when fetching tiles.
+
+```json
+{
+  "Authorization": "xxxxxxxxxxx"
+}
+```
+
+### Methods
+
+
 <!-- ROADMAP -->
 ## Roadmap
 
 See the [open issues](https://github.com/techjb/Vector-Tiles-Google-Maps/issues) for a list of proposed features (and known issues).
 
 
-
-<!-- CONTRIBUTING -->
-## Contributing
-
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-
-
 <!-- LICENSE -->
 ## License
 
-See `LICENSE` for more information.
+See [LICENSE](https://github.com/techjb/Vector-Tiles-Google-Maps/blob/master/LICENSE.txt) for more information.
 
 
 
