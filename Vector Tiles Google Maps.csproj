@@ -87,6 +87,7 @@
     <Content Include="lib\vectortiles\VectorTile.js" />
     <Content Include="lib\vectortiles\VectorTileFeature.js" />
     <Content Include="lib\vectortiles\VectorTileLayer.js" />
+    <Content Include="DOCUMENTATION.md" />
     <None Include="README.md" />
     <Content Include="src\MVTFeature.js" />
     <Content Include="src\MVTLayer.js" />
