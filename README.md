@@ -18,6 +18,9 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
+        <ul>
+            <li><a href="#options">Options</a></li>
+        </ul>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -36,8 +39,8 @@
 
 A JavaScript library that render Vector Tiles in Google Maps.
 
-This library has been developed to render vector tiles in Google Maps. It has been used the library [Leaflet.MapboxVectorTile](https://github.com/SpatialServer/Leaflet.MapboxVectorTile)
-as a start point. The library contains funcionality to provide cache, feature filters, feature styles, onclick event, and show/hide layers.
+It has been started to develop with the code from the library [Leaflet.MapboxVectorTile](https://github.com/SpatialServer/Leaflet.MapboxVectorTile). 
+The library contains funcionality to provide cache, feature filters, feature styles, onclick event, and show/hide layers.
 
 Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox-gl-js/style-spec/) in Google Maps.
 
@@ -86,7 +89,6 @@ This is an example of how to list things you need to use the software and how to
    ```
 
 
-
 <!-- USAGE EXAMPLES -->
 ## Usage
 
@@ -110,6 +112,109 @@ to avoid duplicate invocation to `GetTile()`. It has been documented in the [Iss
  google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
     map.overlayMapTypes.insertAt(0, mvtSource);
 });
+```
+
+### Options
+
+
+The following are properties that define a config object for the `MVTSource` object used as follows:
+
+```js
+var options = {
+  ...
+};
+
+var mvtSource = new MVTSource(map, options);
+map.overlayMapTypes.insertAt(0, mvtSource);
+```
+
+* `url` - **{string}** The URL Endpoint that we fetch MVT Protocal Buffer tiles from. **Required**.
+
+```js
+url: "https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf?",
+```
+
+* `debug` - **{boolean}** Flagging debug as true provides a grid that shows the edge of the tiles and the z,x,y coordinate address of the tiles. **Default: `false`***.
+
+```js
+debug: true,
+```
+
+* `cache` - **{boolean}** Flagging cache as true stores in memory the vector tiles already loaded to avoid duplicate request to the server. **Default: `false`***.
+
+```js
+cache: true,
+```
+
+* `visibleLayers` - **[{string}, ...]** A list of vector tile layers that will be loaded. **Default: `all layers`**.
+
+```js
+visibleLayers: ['municipalities'],
+```
+
+
+* `clickableLayers` - **[{string}, ...]** A list of vector tile layers that will capture mouse click events and be selectable on the map. **Default: `null`**.
+
+```js
+clickableLayers: ['municipalities'],
+```
+
+* `getIDForLayerFeature` - **{function}** Each MVT Feature needs a unique ID. You can specify a specific function to create a unique ID that will be associated with a given feature. **Required for for onclick event**.
+
+```js
+getIDForLayerFeature: function(feature) {
+    return feature.id;
+},
+```
+
+
+* `filter` - **{function}** The filter function gets called when iterating though each vector tile feature (vtf). You have access to every property associated with a given feature (the feature, and the layer). You can also filter based of the context (each tile that the feature is drawn onto). Returning false skips over the feature and it is not drawn.   
+  * *@param feature* *@returns {boolean}*
+
+```js
+filter: function(feature, tileContext) {
+  return 100000 < parseInt(feature.properties.Value);
+},
+```
+
+
+* `style` - **{function}** This function sets properties that the HTML5 Canvas' context uses to draw on the map. If you do not specify this, default styling will be applied to your features. `style.selected` parameters specify how a feature looks when it is selected. **Optional**.
+  * *@returns {object}*
+
+```js
+style: function(feature) {
+    var style = {};
+    var type = feature.type;
+    switch (type) {
+        case 1: //'Point'
+            style.fillStyle = 'rgba(49,79,79,1)';
+            style.radio = 5;
+            style.selected = {
+                fillStyle: 'rgba(255,255,0,0.5)',
+                radio: 6
+            }
+            break;
+        case 2: //'LineString'
+            style.strokeStyle = 'rgba(136, 86, 167, 1)';
+            style.lineWidth = 3;
+            style.selected = {
+                strokeStyle: 'rgba(255,25,0,0.5)',
+                lineWidth: 4
+            }
+            break;
+        case 3: //'Polygon'
+            style.fillStyle = 'rgba(188, 189, 220, 0.5)';
+            style.strokeStyle = 'rgba(136, 86, 167, 1)';
+            style.lineWidth = 1;
+            style.selected = {
+                fillStyle: 'rgba(255,140,0,0.3)',
+                strokeStyle: 'rgba(255,140,0,1)',
+                lineWidth: 2
+            }
+            break;
+    }
+    return style;
+}
 ```
 
 <!-- ROADMAP -->
