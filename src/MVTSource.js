@@ -28,7 +28,7 @@ class MVTSource {
         this._selectedFeatures = []; // list of selected features        
         this._pendingUrls = [];
 
-        this.map.addListener("zoom_changed", () => {
+        this.map.addListener("zoom_changed", () => {            
             self.clearAtNonVisibleZoom();
         });
     }
@@ -172,7 +172,7 @@ class MVTSource {
         }
 
         this._setTileVisible(vectorTile, tileContext);
-        this._drawDebugInfo(tileContext);
+        this._drawDebugInfo(tileContext);        
     }
 
     _drawVectorTileLayer(vectorTileLayer, key, tileContext) {

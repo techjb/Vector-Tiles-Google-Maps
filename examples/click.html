@@ -17,7 +17,7 @@
                 Click to select single feature. Right click to select multiple features.
             </p>
             <p>
-                Features selected:
+                Inhabitants:
                 <ul id="listSelectedFeatures"></ul>
             </p>
         </div>
@@ -73,7 +73,7 @@
             for (var i = 0; i < features.length; i++) {
                 var li = document.createElement("li");
                 var feature = features[i];
-                li.innerHTML = JSON.stringify(feature.properties);
+                li.innerHTML = (feature.properties.Name + ": " + feature.properties.Value);
                 listSelectedFeatures.appendChild(li);
             }
         }
