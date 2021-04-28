@@ -83,7 +83,7 @@ Get your own API Key for the [Maps JavaScript API](https://developers.google.com
    ```
 3. Replace your API Key in all the provided examples
    ```html
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY" defer></script>
+  
    ```
 
 
