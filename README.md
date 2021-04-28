@@ -66,7 +66,7 @@
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>    
-    <li><a href="#demo-examples">Demo examples</a></li>
+    <li><a href="#examples">Examples</a></li>
     <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
@@ -91,6 +91,8 @@
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 
 
+A JavaScript library that render Vector Tiles in Google Maps.
+
 Here's a blank template to get started:
 **To avoid retyping too much info. Do a search and replace with your text editor for the following:**
 `github_username`, `repo_name`, `twitter_handle`, `email`, `project_title`, `project_description`
@@ -100,11 +102,12 @@ Here's a blank template to get started:
 
 * [Maps Javascript API](https://developers.google.com/maps/documentation/javascript/overview?)
 * [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-js)
-* [Protobuf](https://github.com/protocolbuffers/protobuf)
-* Javascript
+* [Protocol Buffers](https://github.com/protocolbuffers/protobuf)
+* JavaScript
+
 
 <!-- DEMO EXAMPLES -->
-## Demo examples
+## Examples
 
 * [Basic](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/basic.html)
 * [Cache](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/cache.html)
@@ -112,7 +115,7 @@ Here's a blank template to get started:
 * [Filter](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/filter.html)
 * [Layers](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/layers.html)
 * [Styles](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/styles.html)
-* [Catalunya](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/catalunya.html)
+* [Point, linestring and polygon](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/point-linestring-polygon.html)
 
 
 <!-- GETTING STARTED -->

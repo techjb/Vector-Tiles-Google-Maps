@@ -1,20 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Catalunya</title>
+    <title>Point, linestring and polygon</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">    
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <div id="map"></div>
+    <div class="container-left">
+        <div id="map"></div>
+    </div>
+    <div class="container-right">
+        <div>
+            <h2>Point, linestring and polygon</h2>
+            <p>
+                This example loads points, linestrings and polygons.
+            </p>
+        </div>
+    </div>
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
         var map;
-        function InitGoogleMap() {            
+        function InitGoogleMap() {
             map = new google.maps.Map(document.getElementById("map"), {
                 center: { lat: 41.39, lng: 2.14 },
-                zoom: 12,
+                zoom: 15,
                 styles: [
                     {
                         "featureType": "poi",
@@ -24,10 +34,10 @@
                                 "visibility": "off"
                             }
                         ]
-                    }                
+                    }
                 ]
-            });           
-            
+            });
+
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
                 InitVectorTiles();
             });
@@ -38,37 +48,37 @@
             var options = {
                 url: "https://betaserver.icgc.cat/tileserver3/tileserver.php/bt5m_stpropi/{z}/{x}/{y}.pbf",
                 visibleLayers: [
-                    "ILL01_pol",  // polygon                    
+                    "ILL01_pol",  // polygon
                     "EDI01_lin", // linestring
-                    "TOR02_poi", "CNS03_poi", "VER01_poi" // Point                    
-                ],                
+                    "TOR02_poi", "CNS03_poi", "VER01_poi" // Points
+                ],
                 style: function (feature) {
                     switch (feature.type) {
                         case 1: { // Point
                             return {
                                 fillStyle: 'rgba(115, 255, 0, 1)',
-                                strokeStyle: 'rgba(2, 0, 255, 1)',                                
+                                strokeStyle: 'rgba(2, 0, 255, 1)',
                                 lineWidth: 3,
-                                radio: 5
+                                radio: 10
                             }
                         } break;
                         case 2: { //LineString
                             return {
                                 strokeStyle: 'rgba(120, 47, 144, 1)',
-                                lineWidth: 1                                                                
+                                lineWidth: 1
                             }
                         } break;
                         case 3: { // Polygon
                             return {
                                 fillStyle: 'rgba(251, 251, 12, 1)',
-                                shadowColor: 'rgba(54, 54, 38, 1)'                                
+                                shadowColor: 'rgba(54, 54, 38, 1)'
                             }
                         } break;
-                    }                                        
+                    }
                 }
             };
 
-            var mvtSource = new MVTSource(map, options);         
+            var mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
         }
 

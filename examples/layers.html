@@ -17,12 +17,14 @@
                 Show / hide selected layers. Non selected layers, shows all.
             </p>
             <p>
-                <input type="checkbox" id="GAUL0" name="GAUL" value="GAUL0" checked="checked">
-                <label for="GAUL0">GAUL0</label><br>
-                <input type="checkbox" id="GAUL1" name="GAUL" value="GAUL1">
-                <label for="GAUL1">GAUL1</label><br>
-                <input type="checkbox" id="GAUL2" name="GAUL" value="GAUL2">
-                <label for="GAUL2">GAUL2</label><br>
+                <input type="checkbox" id="country" name="census" value="country">
+                <label for="country">country</label><br>
+                <input type="checkbox" id="provinces" name="census" value="provinces" checked="checked">
+                <label for="provinces">provinces</label><br>
+                <input type="checkbox" id="municipalities" name="census" value="municipalities">
+                <label for="municipalities">municipalities</label><br>
+                <input type="checkbox" id="sections" name="census" value="sections">
+                <label for="sections">sections</label><br>
             </p>
         </div>
     </div>
@@ -31,11 +33,11 @@
     <script type="text/javascript">
         var map;
         var mvtSource;
-        var input = document.getElementsByName("GAUL");
+        var input = document.getElementsByName("census");
 
         function InitGoogleMap() {
             map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: -5, lng: 27.4 },
+                center: { lat: 37.08, lng: -6.84 },
                 zoom: 5
             });
             // if tiles have not been loaded, GetTile will trigger twice.
@@ -56,7 +58,7 @@
 
         function InitVectorTiles() {
             var options = {
-                url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
+                url: "https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=pk.eyJ1IjoidGVjaGpiIiwiYSI6ImNqZnAxdGprYTB3a2EzM3JxN3ozazE1a3kifQ.WTzyyZbmKbyehCBm9HNhbg",
                 visibleLayers: CheckedLayers()
             };
 

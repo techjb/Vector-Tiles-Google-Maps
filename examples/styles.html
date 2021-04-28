@@ -59,7 +59,7 @@
 
         function InitGoogleMap() {
             map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: -5, lng: 27.4 },
+                center: { lat: 37.08, lng: -6.84 },
                 zoom: 5
             });
             // if tiles have not been loaded, GetTile will trigger twice.
@@ -86,8 +86,8 @@
 
         function InitVectorTiles() {
             var options = {
-                url: "http://spatialserver.spatialdev.com/services/vector-tiles/GAUL_FSP/{z}/{x}/{y}.pbf",
-                visibleLayers: ["GAUL1"],
+                url: "https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=pk.eyJ1IjoidGVjaGpiIiwiYSI6ImNqZnAxdGprYTB3a2EzM3JxN3ozazE1a3kifQ.WTzyyZbmKbyehCBm9HNhbg",
+                visibleLayers: ["provinces"],
                 style: GetStyle()
             };
 

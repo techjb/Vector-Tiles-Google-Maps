@@ -910,7 +910,7 @@ class MVTSource {
                 }
                 break;
             case 2: //'LineString'
-                style.strokeStyle = 'rgba(76,25,25,0.8)';
+                style.strokeStyle = 'rgba(136, 86, 167, 1)';
                 style.lineWidth = 3;
                 style.selected = {
                     strokeStyle: 'rgba(255,25,0,0.5)',
@@ -918,8 +918,8 @@ class MVTSource {
                 }
                 break;
             case 3: //'Polygon'
-                style.fillStyle = 'rgba(49,79,79, 0.4)';
-                style.strokeStyle = 'rgba(76,25,25, 0.8)';
+                style.fillStyle = 'rgba(188, 189, 220, 0.5)';
+                style.strokeStyle = 'rgba(136, 86, 167, 1)';
                 style.lineWidth = 1;
                 style.selected = {
                     fillStyle: 'rgba(255,140,0,0.3)',
@@ -955,6 +955,9 @@ class MVTSource {
         xmlHttpRequest.onload = function () {
             if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
                 self._xhrResponseOk(tileContext, xmlHttpRequest.response)
+            }
+            else {
+                self._drawDebugInfo(tileContext);
             }
         };
         xmlHttpRequest.open('GET', src, true);

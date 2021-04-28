@@ -76,7 +76,7 @@
     <Content Include="examples\filter.html" />
     <Content Include="examples\cache.html" />
     <Content Include="examples\click.html" />
-    <Content Include="examples\catalunya.html" />
+    <Content Include="examples\point-linestring-polygon.html" />
     <Content Include="examples\spanish-parcels.html" />
     <Content Include="examples\basic.html" />
     <Content Include="examples\styles.css" />
