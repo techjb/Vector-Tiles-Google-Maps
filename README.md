@@ -52,7 +52,7 @@ Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox
 <!-- DEMO EXAMPLES -->
 ## Examples
 
-* [Basic](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/basic.html) - Basic loading vector tiles. Debug enabled.
+* [Basic](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/basic.html) - Basic loading vector tiles with debug enabled.
 * [Cache](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/cache.html) - Cache enabled.
 * [Click](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/click.html) - Click to select and get one or multiple features.
 * [Filter](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/filter.html) - Filter features by it properties.
