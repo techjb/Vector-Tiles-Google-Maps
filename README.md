@@ -83,7 +83,7 @@ Get your own API Key for the [Maps JavaScript API](https://developers.google.com
    ```
 3. Replace your API Key in all the provided examples
    ```html
-  
+   <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY" defer></script>
    ```
 
 
@@ -114,7 +114,7 @@ to avoid duplicate invocation to `GetTile()`. It has benn documented in the [Iss
 <!-- DOCUMENTATION -->
 ## Documentation
 
-See [DOCUMENTATION](https://github.com/techjb/Vector-Tiles-Google-Maps/blob/master/DOCUMENTATION.md) for contructor options and methods.
+See [documentation](https://github.com/techjb/Vector-Tiles-Google-Maps/blob/master/DOCUMENTATION.md) for contructor options and methods.
 
 <!-- ROADMAP -->
 ## Roadmap
@@ -125,7 +125,7 @@ See the [open issues](https://github.com/techjb/Vector-Tiles-Google-Maps/issues)
 <!-- LICENSE -->
 ## License
 
-See [LICENSE](https://github.com/techjb/Vector-Tiles-Google-Maps/blob/master/LICENSE.txt) for more information.
+See [license](https://github.com/techjb/Vector-Tiles-Google-Maps/blob/master/LICENSE.txt) for more information.
 
 
 <!-- CONTACT -->

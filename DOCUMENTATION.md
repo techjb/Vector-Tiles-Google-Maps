@@ -1,5 +1,8 @@
-﻿
-### Options
+﻿#Documentation
+
+This document shows information about the constructor options and methods provided by the library. 
+
+## Options
 
 The following are properties that define a config object for the `MVTSource` object:
 
@@ -98,7 +101,7 @@ style: function(feature) {
 }
 ```
 
-### Methods
+## Methods
 
 The following are methods that updates the `MVTSource` object:
 
