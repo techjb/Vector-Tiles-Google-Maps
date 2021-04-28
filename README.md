@@ -68,7 +68,7 @@ To get a local copy up and running follow these simple steps.
 
 ### Prerequisites
 
-Get your own API Key for the [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/get-api-key) 
+Get your own API Key for the [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/get-api-key).
 
 
 ### Installation
