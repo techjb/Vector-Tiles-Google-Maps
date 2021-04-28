@@ -88,15 +88,14 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+[![Product Name Screen Shot][product-screenshot]](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/basic.html)
 
 
 A JavaScript library that render Vector Tiles in Google Maps.
 
-Here's a blank template to get started:
-**To avoid retyping too much info. Do a search and replace with your text editor for the following:**
-`github_username`, `repo_name`, `twitter_handle`, `email`, `project_title`, `project_description`
-
+This library has been developed to render vector tiles in Google Maps. It has been used the library [Leaflet.MapboxVectorTile](https://github.com/SpatialServer/Leaflet.MapboxVectorTile)
+as a start point. The library contains funcionality to provide cache, feature filters, feature styles, onclick event, and show/hide layers.
+Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox-gl-js/style-spec/) in Google Maps.
 
 ### Built With
 
@@ -135,7 +134,7 @@ This is an example of how to list things you need to use the software and how to
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/github_username/repo_name.git
+   git clone https://github.com/techjb/Vector-Tiles-Google-Maps.git
    ```
 2. Install NPM packages
    ```sh
@@ -147,11 +146,26 @@ This is an example of how to list things you need to use the software and how to
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+You create the `MVTSource` object and then insert to as a `overlayMapType`. 
+Provide the vector tiles server url throught the options parámeter.
 
-_For more examples, please refer to the [Documentation](https://example.com)_
 
+```js
+var options = {
+    url: "your_vector_tiles_url/{z}/{x}/{y}"
+};
 
+var mvtSource = new MVTSource(map, options);
+map.overlayMapTypes.insertAt(0, mvtSource);
+```
+It is reccomended to load the overlayMapType after tiles have been loaded for the first time 
+to avoid duplicate invocation to `GetTile()`. It has been documented in the [Issue tracker](https://issuetracker.google.com/issues/73335429).
+
+```
+ google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
+    map.overlayMapTypes.insertAt(0, mvtSource);
+});
+```
 
 <!-- ROADMAP -->
 ## Roadmap
