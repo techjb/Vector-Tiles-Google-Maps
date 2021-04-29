@@ -10,13 +10,13 @@
       </ul>
     </li>    
     <li><a href="#examples">Examples</a></li>
+    <li><a href="#installation">Installation</a></li>
     <li>
-        <a href="#installation">Installation</a>
+        <a href="#usage">Usage</a>
         <ul>
-        <li><a href="#reccomendatios">Reccomendations</a></li>
-      </ul>
+            <li><a href="#reccomendations">Reccomendations</a></li>
+        </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
     <li><a href="#documentation">Documentation</a></li>        
     <li><a href="#roadmap">Roadmap</a></li>   
     <li><a href="#contributing">Contributing</a></li>
@@ -36,7 +36,7 @@
 
 Vector Tiles Google Maps is a JavaScript library to render vector tiles in Google Maps.
 
-The library contains funcionality to provide cache, feature filters, feature styles, onclick event, and show/hide layers.
+The library provides funcionality to enable cache, filter features, apply styles, select features with onclick event, and show or hide layers.
 
 Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox-gl-js/style-spec/) in Google Maps.
 

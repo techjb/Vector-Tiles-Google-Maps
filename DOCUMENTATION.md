@@ -172,7 +172,6 @@ mVTSource.setFilter(filter);
 
 ```js
 var visibleLayers = ["provinces", "municipalities"];
-};
 
 mVTSource.setVisibleLayers(filter);
 ```
