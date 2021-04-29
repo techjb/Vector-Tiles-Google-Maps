@@ -976,9 +976,9 @@ class MVTSource {
         }
         var uint8Array = new Uint8Array(response);
         var pbf = new Pbf(uint8Array);
-        var vectorTile = new VectorTile(pbf);
+        var vectorTile = new VectorTile(pbf);        
         if (this._cache) {
-            this.vectorTilesProcessed[tileContext.id] = vectorTile;
+            this._vectorTilesProcessed[tileContext.id] = vectorTile;
         }
         this._drawVectorTile(vectorTile, tileContext);
     }
