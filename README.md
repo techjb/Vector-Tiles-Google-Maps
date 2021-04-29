@@ -10,12 +10,19 @@
       </ul>
     </li>    
     <li><a href="#examples">Examples</a></li>
-    <li><a href="#installation">Installation</a></li>
+    <li>
+        <a href="#installation">Installation</a>
+        <ul>
+        <li><a href="#reccomendatios">Reccomendations</a></li>
+      </ul>
+    </li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#documentation">Documentation</a></li>        
-    <li><a href="#roadmap">Roadmap</a></li>    
+    <li><a href="#roadmap">Roadmap</a></li>   
+    <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
+    <li><a href="#acknowledgements">Acknowledgements</a></li>
   </ol>
 </details>
 
@@ -27,9 +34,8 @@
 [![Product Name Screen Shot][product-screenshot]](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/styles-feature.html)
 
 
-A JavaScript library that render vector tiles in Google Maps.
+Vector Tiles Google Maps is a JavaScript library to render vector tiles in Google Maps.
 
-It has been started to develop with the code from the library [Leaflet.MapboxVectorTile](https://github.com/SpatialServer/Leaflet.MapboxVectorTile). 
 The library contains funcionality to provide cache, feature filters, feature styles, onclick event, and show/hide layers.
 
 Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox-gl-js/style-spec/) in Google Maps.
@@ -88,7 +94,9 @@ var mvtSource = new MVTSource(map, options);
 map.overlayMapTypes.insertAt(0, mvtSource);
 ```
 
-I reccomended to insert the MVTSource after tiles have been loaded for the first time 
+### Reccomendations
+
+Insert the MVTSource after tiles have been loaded for the first time 
 to avoid duplicate invocation to `GetTile()`. It has been documented in [this issue tracker](https://issuetracker.google.com/issues/73335429).
 
 ```js
@@ -96,6 +104,18 @@ to avoid duplicate invocation to `GetTile()`. It has been documented in [this is
     map.overlayMapTypes.insertAt(0, mvtSource);
 });
 ```
+
+If you need to set style based on feature property or trigger onClick event, set the property `getIDForLayerFeature` in the constructor with the function that returns the unique id for each feature.
+
+```js
+var options = {    
+    getIDForLayerFeature: function(feature) {
+        return feature.properties.id;
+    }
+};
+```
+
+
 <!-- DOCUMENTATION -->
 ## Documentation
 
@@ -106,6 +126,17 @@ See [documentation](https://github.com/techjb/Vector-Tiles-Google-Maps/blob/mast
 
 See the [open issues](https://github.com/techjb/Vector-Tiles-Google-Maps/issues) for a list of proposed features (and known issues).
 
+
+<!-- CONTRIBUTING -->
+## Contributing
+
+Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 <!-- LICENSE -->
 ## License
@@ -120,6 +151,11 @@ Jesús Barrio - [@techjb](https://twitter.com/techjb)
 
 Project Link: [https://github.com/techjb/Vector-Tiles-Google-Maps](https://github.com/techjb/Vector-Tiles-Google-Maps)
 
+
+<!-- ACKNOWLEDGEMENTS -->
+## Acknowledgements
+
+* The authors of the library [Leaflet.MapboxVectorTile](https://github.com/SpatialServer/Leaflet.MapboxVectorTile) witch has been used as a start point for this development.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->

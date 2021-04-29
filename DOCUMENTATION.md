@@ -1,4 +1,4 @@
-﻿##Documentation
+﻿## Documentation
 
 This document shows information about the constructor options and methods provided by the library. 
 
@@ -41,7 +41,7 @@ clickableLayers: ['municipalities'],
 
 ```js
 getIDForLayerFeature: function(feature) {
-    return feature.id;
+    return feature.properties.id;
 },
 ```
 
@@ -161,9 +161,7 @@ mVTSource.setStyle(style);
 
 ```js
 var filter = function (feature) {
-    function (feature) {
-        return value < parseInt(feature.properties.Value);
-    }
+    return value < parseInt(feature.properties.Value);
 };
 
 mVTSource.setFilter(filter);
