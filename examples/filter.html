@@ -9,7 +9,7 @@
 <body>
     <div class="container-left">
         <div id="map"></div>
-    </div>    
+    </div>
     <div class="container-right">
         <div>
             <h2>Filter</h2>
@@ -20,14 +20,14 @@
                 <input type="range" min="0" max="1000000" id="inputFilter" />
                 <label id="label" for="inputFilter"></label>
             </p>
-        </div>        
+        </div>
     </div>
 
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
         var map;
         var mvtSource;
-        var inputFiler = document.getElementById("inputFilter");        
+        var inputFiler = document.getElementById("inputFilter");
 
         function InitGoogleMap() {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -40,34 +40,31 @@
             });
         }
 
-
         function GetFilter() {
             var value = parseInt(document.getElementById("inputFilter").value);
-            document.getElementById("label").innerHTML = value;        
-            
+            document.getElementById("label").innerHTML = value;
+
             return function (feature) {
                 return value < parseInt(feature.properties.Value);
             }
         }
 
-        function InitVectorTiles() {           
+        function InitVectorTiles() {
             var options = {
                 url: "https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=pk.eyJ1IjoidGVjaGpiIiwiYSI6ImNrbzFuMDV6MzBhYXQycWxwaG4ydGozZTgifQ.hCgIvpwnfw93KFcWaR5WBA",
                 visibleLayers: ["provinces"],
-                filter: GetFilter()                
+                filter: GetFilter()
             };
             var mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
 
             inputFiler.addEventListener('change', function () {
-                var filter = GetFilter();                
+                var filter = GetFilter();
                 mvtSource.setFilter(filter);
             });
         }
-
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA_bDL3sglTy8HGoiAU9JsLtayEkQakE7c&callback=InitGoogleMap&libraries=&v=weekly"
             defer></script>
-
 </body>
 </html>

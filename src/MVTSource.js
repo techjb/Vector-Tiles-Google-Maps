@@ -24,10 +24,10 @@ class MVTSource {
 
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
         this._vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
-        this._visibleTiles = {}; // tiles currently in the viewport 
-        this._selectedFeatures = []; // list of selected features                
+        this._visibleTiles = {}; // tiles currently in the viewport
+        this._selectedFeatures = []; // list of selected features
 
-        this.map.addListener("zoom_changed", () => {            
+        this.map.addListener("zoom_changed", () => {
             self.clearAtNonVisibleZoom();
         });
     }
@@ -93,7 +93,7 @@ class MVTSource {
 
     drawTile(canvas, coord, zoom) {
         var self = this;
-        var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);        
+        var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);
         var tileContext = {
             id: id,
             canvas: canvas,
@@ -147,7 +147,7 @@ class MVTSource {
         }
         var uint8Array = new Uint8Array(response);
         var pbf = new Pbf(uint8Array);
-        var vectorTile = new VectorTile(pbf);        
+        var vectorTile = new VectorTile(pbf);
         if (this._cache) {
             this.vectorTilesProcessed[tileContext.id] = vectorTile;
         }
@@ -159,7 +159,7 @@ class MVTSource {
             for (var i = 0; i < this._visibleLayers.length; i++) {
                 var key = this._visibleLayers[i];
                 if (vectorTile.layers[key]) {
-                    var vectorTileLayer = vectorTile.layers[key];                    
+                    var vectorTileLayer = vectorTile.layers[key];
                     this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
                 }
             }
@@ -171,7 +171,7 @@ class MVTSource {
         }
 
         this._setTileVisible(vectorTile, tileContext);
-        this._drawDebugInfo(tileContext);        
+        this._drawDebugInfo(tileContext);
     }
 
     _drawVectorTileLayer(vectorTileLayer, key, tileContext) {
@@ -230,7 +230,7 @@ class MVTSource {
                 var key = clickableLayers[i];
                 var layer = this.mVTLayers[key];
                 if (layer) {
-                    layer.handleClickEvent(event, function (event) {                        
+                    layer.handleClickEvent(event, function (event) {
                         callbackFunction(event);
                     });
                 }

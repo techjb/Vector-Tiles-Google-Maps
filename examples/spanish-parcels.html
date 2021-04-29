@@ -3,7 +3,7 @@
 <head>
     <title>Spanish Parcels</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -11,11 +11,11 @@
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
         var map;
-        function InitGoogleMap() {            
+        function InitGoogleMap() {
 
             map = new google.maps.Map(document.getElementById("map"), {
                 center: { lat: 40.50, lng: -3.89 },
-                zoom: 16,                
+                zoom: 16,
                 styles: [
                     {
                         featureType: "poi",
@@ -28,7 +28,7 @@
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
                 InitVectorTiles();
             });
-            
+
         }
 
         function InitVectorTiles() {
@@ -37,7 +37,7 @@
                 url: "https://api.mapbox.com/v4/techjb.9o01nh3m/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=pk.eyJ1IjoidGVjaGpiIiwiYSI6ImNqZnAxdGprYTB3a2EzM3JxN3ozazE1a3kifQ.WTzyyZbmKbyehCBm9HNhbg",
                 //debug: true,
                 //getIDForLayerFeature: function (feature) {  // Unique identifier for each feature
-                //    return feature.properties.id 
+                //    return feature.properties.id
                 //},
                 style: function (feature) {
                     return {
@@ -53,7 +53,7 @@
                 }
             };
 
-            var mvtSource = new MVTSource(map, options);           
+            var mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
 
             map.addListener("click", function (event) {
@@ -65,10 +65,8 @@
                 });
             });
         }
-
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA_bDL3sglTy8HGoiAU9JsLtayEkQakE7c&callback=InitGoogleMap&libraries=&v=weekly"
             defer></script>
-
 </body>
 </html>

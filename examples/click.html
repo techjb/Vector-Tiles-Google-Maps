@@ -66,7 +66,7 @@
         function ShowSelectedFeatures(event) {
             if (!event.feature) {
                 mvtSource.deselectAllFeatures();
-            }            
+            }
             var features = mvtSource.getSelectedFeatures();
             var listSelectedFeatures = document.getElementById("listSelectedFeatures");
             listSelectedFeatures.innerHTML = '';
@@ -77,10 +77,8 @@
                 listSelectedFeatures.appendChild(li);
             }
         }
-
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA_bDL3sglTy8HGoiAU9JsLtayEkQakE7c&callback=InitGoogleMap&libraries=&v=weekly"
             defer></script>
-
 </body>
 </html>

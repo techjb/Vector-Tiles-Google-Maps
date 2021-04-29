@@ -4,7 +4,7 @@
 
 class MVTLayer {
     constructor(mVTSource, options) {
-        this.mVTSource = mVTSource;        
+        this.mVTSource = mVTSource;
         this._lineClickTolerance = 2;
         this._getIDForLayerFeature = options.getIDForLayerFeature;
         this.style = options.style;
@@ -19,7 +19,7 @@ class MVTLayer {
         this._tileCanvas[tileContext.id] = tileContext.canvas;
         this._mVTFeatures[tileContext.id] = [];
         for (var i = 0; i < vectorTileFeatures.length; i++) {
-            var vectorTileFeature = vectorTileFeatures[i];            
+            var vectorTileFeature = vectorTileFeatures[i];
             this._parseVectorTileFeature(vectorTileFeature, tileContext, i);
         }
         this.drawTile(tileContext);
@@ -32,9 +32,9 @@ class MVTLayer {
             }
         }
 
-        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;        
+        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
         var mVTFeature = this._features[featureId];
-        if (!mVTFeature) {            
+        if (!mVTFeature) {
             var style = this.style(vectorTileFeature);
             mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style);
             this._features[featureId] = mVTFeature;
@@ -80,7 +80,7 @@ class MVTLayer {
 
     setStyle(styleFunction) {
         this.style = styleFunction;
-        for (var featureId in this._features) {            
+        for (var featureId in this._features) {
             this._features[featureId].setStyle(styleFunction);
         }
     }

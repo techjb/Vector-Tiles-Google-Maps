@@ -43,7 +43,6 @@ VectorTile.prototype.parseGeometries = function () {
     }
 }
 function VectorTileFeature(buffer, end, extent, keys, values) {
-
     this.properties = {};
 
     // Public
@@ -62,7 +61,6 @@ function VectorTileFeature(buffer, end, extent, keys, values) {
 
         if (tag == 1) {
             this._id = buffer.readVarint();
-
         } else if (tag == 2) {
             var tagLen = buffer.readVarint(),
                 tagEnd = buffer.pos + tagLen;
@@ -72,14 +70,11 @@ function VectorTileFeature(buffer, end, extent, keys, values) {
                 var value = values[buffer.readVarint()];
                 this.properties[key] = value;
             }
-
         } else if (tag == 3) {
             this.type = buffer.readVarint();
-
         } else if (tag == 4) {
             this._geometry = buffer.pos;
             buffer.skip(val);
-
         } else {
             buffer.skip(val);
         }
@@ -168,7 +163,6 @@ VectorTileFeature.prototype.bbox = function () {
             if (x > x2) x2 = x;
             if (y < y1) y1 = y;
             if (y > y2) y2 = y;
-
         } else if (cmd !== 7) {
             throw new Error('unknown command ' + cmd);
         }
@@ -176,7 +170,6 @@ VectorTileFeature.prototype.bbox = function () {
 
     return [x1, y1, x2, y2];
 };
-
 function VectorTileLayer(buffer, end) {
     // Public
     this.version = 1;
@@ -208,7 +201,6 @@ function VectorTileLayer(buffer, end) {
             this.length++;
             this._features.push(buffer.pos);
             buffer.skip(val);
-
         } else if (tag === 3) {
             this._keys.push(buffer.readString());
         } else if (tag === 4) {
@@ -410,7 +402,7 @@ MERCATOR = {
     getTileAtLatLng: function (latLng, zoom) {
         var t = Math.pow(2, zoom),
             s = 256 / t,
-            p = this.fromLatLngToPoint(latLng);        
+            p = this.fromLatLngToPoint(latLng);
         return {
             x: Math.floor(p.x / s),
             y: Math.floor(p.y / s),
@@ -463,8 +455,8 @@ MERCATOR = {
         var tileBounds = this.getTileBounds(tile);
         var tileSwLatLng = new google.maps.LatLng(tileBounds.sw);
         var tileNeLatLng = new google.maps.LatLng(tileBounds.ne);
-        var tileSwPixels = this.fromLatLngToPixels(map, tileSwLatLng);        
-        var tileNePixels = this.fromLatLngToPixels(map, tileNeLatLng);         
+        var tileSwPixels = this.fromLatLngToPixels(map, tileSwLatLng);
+        var tileNePixels = this.fromLatLngToPixels(map, tileNeLatLng);
         return {
             x: evt.pixel.x - tileSwPixels.x,
             y: evt.pixel.y - tileNePixels.y
@@ -472,7 +464,7 @@ MERCATOR = {
     },
 
     // todo: sometimes it does not work properly
-    isPointInPolygon: function(point, polygon) {
+    isPointInPolygon: function (point, polygon) {
         if (polygon && polygon.length) {
             for (var c = false, i = -1, l = polygon.length, j = l - 1; ++i < l; j = i) {
                 ((polygon[i].y <= point.y && point.y < polygon[j].y) || (polygon[j].y <= point.y && point.y < polygon[i].y))
@@ -490,23 +482,23 @@ MERCATOR = {
 
     getDistanceFromLine: function (point, line) {
         var minDistance = Number.POSITIVE_INFINITY;
-        if (line && line.length > 1) {            
+        if (line && line.length > 1) {
             for (var i = 0, l = line.length - 1; i < l; i++) {
                 var distance = this.projectPointOnLineSegment(point, line[i], line[i + 1]);
-                if (distance  <= minDistance) {
+                if (distance <= minDistance) {
                     minDistance = distance;
                 }
             }
-        }        
+        }
         return minDistance;
     },
 
     projectPointOnLineSegment: function (point, r0, r1) {
         var x = point.x;
-        var y = point.y; 
+        var y = point.y;
         var x1 = r0.x;
         var y1 = r0.y;
-        var x2 = r1.x; 
+        var x2 = r1.x;
         var y2 = r1.y;
 
         var A = x - x1;
@@ -540,7 +532,6 @@ MERCATOR = {
         return Math.sqrt(dx * dx + dy * dy);
     }
 }
-
 /*
  *  Created by Jes�s Barrio on 04/2021
  */
@@ -701,7 +692,7 @@ class MVTFeature {
 
 class MVTLayer {
     constructor(mVTSource, options) {
-        this.mVTSource = mVTSource;        
+        this.mVTSource = mVTSource;
         this._lineClickTolerance = 2;
         this._getIDForLayerFeature = options.getIDForLayerFeature;
         this.style = options.style;
@@ -716,7 +707,7 @@ class MVTLayer {
         this._tileCanvas[tileContext.id] = tileContext.canvas;
         this._mVTFeatures[tileContext.id] = [];
         for (var i = 0; i < vectorTileFeatures.length; i++) {
-            var vectorTileFeature = vectorTileFeatures[i];            
+            var vectorTileFeature = vectorTileFeatures[i];
             this._parseVectorTileFeature(vectorTileFeature, tileContext, i);
         }
         this.drawTile(tileContext);
@@ -729,9 +720,9 @@ class MVTLayer {
             }
         }
 
-        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;        
+        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
         var mVTFeature = this._features[featureId];
-        if (!mVTFeature) {            
+        if (!mVTFeature) {
             var style = this.style(vectorTileFeature);
             mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style);
             this._features[featureId] = mVTFeature;
@@ -777,7 +768,7 @@ class MVTLayer {
 
     setStyle(styleFunction) {
         this.style = styleFunction;
-        for (var featureId in this._features) {            
+        for (var featureId in this._features) {
             this._features[featureId].setStyle(styleFunction);
         }
     }
@@ -862,10 +853,10 @@ class MVTSource {
 
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
         this._vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
-        this._visibleTiles = {}; // tiles currently in the viewport 
-        this._selectedFeatures = []; // list of selected features                
+        this._visibleTiles = {}; // tiles currently in the viewport
+        this._selectedFeatures = []; // list of selected features
 
-        this.map.addListener("zoom_changed", () => {            
+        this.map.addListener("zoom_changed", () => {
             self.clearAtNonVisibleZoom();
         });
     }
@@ -931,7 +922,7 @@ class MVTSource {
 
     drawTile(canvas, coord, zoom) {
         var self = this;
-        var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);        
+        var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);
         var tileContext = {
             id: id,
             canvas: canvas,
@@ -985,7 +976,7 @@ class MVTSource {
         }
         var uint8Array = new Uint8Array(response);
         var pbf = new Pbf(uint8Array);
-        var vectorTile = new VectorTile(pbf);        
+        var vectorTile = new VectorTile(pbf);
         if (this._cache) {
             this.vectorTilesProcessed[tileContext.id] = vectorTile;
         }
@@ -997,7 +988,7 @@ class MVTSource {
             for (var i = 0; i < this._visibleLayers.length; i++) {
                 var key = this._visibleLayers[i];
                 if (vectorTile.layers[key]) {
-                    var vectorTileLayer = vectorTile.layers[key];                    
+                    var vectorTileLayer = vectorTile.layers[key];
                     this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
                 }
             }
@@ -1009,7 +1000,7 @@ class MVTSource {
         }
 
         this._setTileVisible(vectorTile, tileContext);
-        this._drawDebugInfo(tileContext);        
+        this._drawDebugInfo(tileContext);
     }
 
     _drawVectorTileLayer(vectorTileLayer, key, tileContext) {
@@ -1068,7 +1059,7 @@ class MVTSource {
                 var key = clickableLayers[i];
                 var layer = this.mVTLayers[key];
                 if (layer) {
-                    layer.handleClickEvent(event, function (event) {                        
+                    layer.handleClickEvent(event, function (event) {
                         callbackFunction(event);
                     });
                 }
