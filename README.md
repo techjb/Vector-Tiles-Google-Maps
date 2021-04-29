@@ -12,11 +12,10 @@
     <li><a href="#examples">Examples</a></li>
     <li><a href="#installation">Installation</a></li>
     <li><a href="#usage">Usage</a></li>
-    <li><a href="#usage">Documentation</a></li>        
+    <li><a href="#documentation">Documentation</a></li>        
     <li><a href="#roadmap">Roadmap</a></li>    
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgements">Acknowledgements</a></li>
   </ol>
 </details>
 
