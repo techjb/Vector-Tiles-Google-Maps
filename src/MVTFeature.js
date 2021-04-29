@@ -26,26 +26,6 @@ class MVTFeature {
         this.style = styleFunction(this);
     }
 
-    draw(tileContext) {
-        var vectorTileFeature = this.tiles[tileContext.id].vectorTileFeature;
-        var style = this.style;
-        if (this.selected) {
-            var style = this.style.selected || this.style;
-        }
-        switch (vectorTileFeature.type) {
-            case 1: //Point
-                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);
-                break;
-            case 2: //LineString
-                this._drawLineString(tileContext, vectorTileFeature.coordinates, style);
-                break;
-
-            case 3: //Polygon
-                this._drawPolygon(tileContext, vectorTileFeature.coordinates, style);
-                break;
-        }
-    }
-
     getPathsForTile(id) {
         return this.tiles[id].paths;
     }
@@ -82,6 +62,27 @@ class MVTFeature {
         this.selected = false;
         this.mVTLayer.mVTSource.featureDeselected(this);
         this.redrawTiles();
+    }
+
+    draw(tileContext) {
+        var vectorTileFeature = this.tiles[tileContext.id].vectorTileFeature;
+        var style = this.style;
+        if (this.selected && this.style.selected) {
+            style = this.style.selected;
+        }
+        switch (vectorTileFeature.type) {
+            case 1: //Point
+                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);
+                break;
+
+            case 2: //LineString
+                this._drawLineString(tileContext, vectorTileFeature.coordinates, style);
+                break;
+
+            case 3: //Polygon
+                this._drawPolygon(tileContext, vectorTileFeature.coordinates, style);
+                break;
+        }
     }
 
     _drawPoint(tileContext, coordinates, style) {

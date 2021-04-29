@@ -23,10 +23,9 @@ class MVTSource {
         }
 
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
-        this.vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
-        this.visibleTiles = {}; // tiles currently in the viewport 
-        this._selectedFeatures = []; // list of selected features        
-        this._pendingUrls = [];
+        this._vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
+        this._visibleTiles = {}; // tiles currently in the viewport 
+        this._selectedFeatures = []; // list of selected features                
 
         this.map.addListener("zoom_changed", () => {            
             self.clearAtNonVisibleZoom();
@@ -42,7 +41,7 @@ class MVTSource {
     }
 
     releaseTile(canvas) {
-        delete this.visibleTiles[canvas.id];
+        delete this._visibleTiles[canvas.id];
         this.deleteTile(canvas.id);
     }
 
@@ -94,8 +93,7 @@ class MVTSource {
 
     drawTile(canvas, coord, zoom) {
         var self = this;
-        var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);
-        //if(id != '5:15:11') return;
+        var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);        
         var tileContext = {
             id: id,
             canvas: canvas,
@@ -103,7 +101,7 @@ class MVTSource {
             tileSize: this._tileSize
         };
 
-        var vectorTile = this.vectorTilesProcessed[tileContext.id];
+        var vectorTile = this._vectorTilesProcessed[tileContext.id];
         if (vectorTile) {
             return this._drawVectorTile(vectorTile, tileContext);
         }
@@ -214,7 +212,7 @@ class MVTSource {
 
     _setTileVisible(vectorTile, tileContext) {
         tileContext.vectorTile = vectorTile;
-        this.visibleTiles[tileContext.id] = tileContext;
+        this._visibleTiles[tileContext.id] = tileContext;
     }
 
     onClick(event, callbackFunction, clickOptions) {
@@ -290,7 +288,7 @@ class MVTSource {
     }
 
     redrawAllTiles() {
-        this.redrawTiles(this.visibleTiles);
+        this.redrawTiles(this._visibleTiles);
     }
 
     redrawTiles(tiles) {
@@ -300,7 +298,7 @@ class MVTSource {
     }
 
     redrawTile(id) {
-        var tileContext = this.visibleTiles[id];
+        var tileContext = this._visibleTiles[id];
         if (!tileContext) return;
         this.clearTile(tileContext);
         this._drawVectorTile(tileContext.vectorTile, tileContext);
