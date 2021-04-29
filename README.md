@@ -42,7 +42,7 @@ Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox
 
 ### Built With
 
-* [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/overview?)
+* [Google Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/overview?)
 * [Mapbox vector tiles](https://github.com/mapbox/vector-tile-js)
 * [Protocol Buffers](https://github.com/protocolbuffers/protobuf)
 * JavaScript
