@@ -9,7 +9,7 @@ class MVTSource {
         this._url = options.url || ""; //Url TO Vector Tile Source,
         this._debug = options.debug || false; // Draw tiles lines and ids
         this.getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
-            return feature.properties.id;
+            return feature.properties.id || feature.properties.Id || feature.properties.ID;
         };
         this._visibleLayers = options.visibleLayers || [];  // List of visible layers
         this._xhrHeaders = options.xhrHeaders || {}; // Headers added to every url request
@@ -95,6 +95,7 @@ class MVTSource {
     drawTile(canvas, coord, zoom) {
         var self = this;
         var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);
+        //if(id != '5:15:11') return;
         var tileContext = {
             id: id,
             canvas: canvas,
@@ -148,7 +149,7 @@ class MVTSource {
         }
         var uint8Array = new Uint8Array(response);
         var pbf = new Pbf(uint8Array);
-        var vectorTile = new VectorTile(pbf);
+        var vectorTile = new VectorTile(pbf);        
         if (this._cache) {
             this.vectorTilesProcessed[tileContext.id] = vectorTile;
         }
@@ -160,7 +161,7 @@ class MVTSource {
             for (var i = 0; i < this._visibleLayers.length; i++) {
                 var key = this._visibleLayers[i];
                 if (vectorTile.layers[key]) {
-                    var vectorTileLayer = vectorTile.layers[key];
+                    var vectorTileLayer = vectorTile.layers[key];                    
                     this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
                 }
             }
@@ -187,7 +188,6 @@ class MVTSource {
         var options = {
             getIDForLayerFeature: this.getIDForLayerFeature,
             filter: this._filter,
-            layerOrdering: this.layerOrdering,
             style: this.style,
             name: key
         };

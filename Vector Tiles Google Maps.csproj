@@ -71,6 +71,7 @@
     <Content Include="dist\vector-tiles-google-maps.min.js">
       <DependentUpon>vector-tiles-google-maps.js</DependentUpon>
     </Content>
+    <Content Include="examples\styles-feature.html" />
     <Content Include="examples\styles.html" />
     <Content Include="examples\layers.html" />
     <Content Include="examples\filter.html" />

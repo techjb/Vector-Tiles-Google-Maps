@@ -10,13 +10,7 @@
       </ul>
     </li>    
     <li><a href="#examples">Examples</a></li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
+    <li><a href="#installation">Installation</a></li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#usage">Documentation</a></li>        
     <li><a href="#roadmap">Roadmap</a></li>    
@@ -34,7 +28,7 @@
 [![Product Name Screen Shot][product-screenshot]](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/basic.html)
 
 
-A JavaScript library that render Vector Tiles in Google Maps.
+A JavaScript library that render vector tiles in Google Maps.
 
 It has been started to develop with the code from the library [Leaflet.MapboxVectorTile](https://github.com/SpatialServer/Leaflet.MapboxVectorTile). 
 The library contains funcionality to provide cache, feature filters, feature styles, onclick event, and show/hide layers.
@@ -44,7 +38,7 @@ Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox
 ### Built With
 
 * [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/overview?)
-* [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-js)
+* [Mapbox vector tiles](https://github.com/mapbox/vector-tile-js)
 * [Protocol Buffers](https://github.com/protocolbuffers/protobuf)
 * JavaScript
 
@@ -58,20 +52,12 @@ Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox
 * [Filter](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/filter.html) - Filter features by it properties.
 * [Layers](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/layers.html) - Add remove vector tiles layers.
 * [Styles](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/styles.html) - Change style dynamically.
+* [Styles feature](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/styles-feature.html) - Style based on feature properties.
 * [Point, linestring and polygon](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/point-linestring-polygon.html) - Show all type of geometries.
 
 
-<!-- GETTING STARTED -->
-## Getting Started
-
-To get a local copy up and running follow these simple steps.
-
-### Prerequisites
-
-Get your own API Key for the [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/get-api-key).
-
-
-### Installation
+<!-- INSTALATION -->
+## Installation
 
 1. Clone the repo
    ```sh
@@ -81,7 +67,7 @@ Get your own API Key for the [Maps JavaScript API](https://developers.google.com
    ```sh
    npm install
    ```
-3. Replace your API Key in all the provided examples
+3. Get your own API Key for the [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/get-api-key) and replace it in all the provided examples
    ```html
    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY" defer></script>
    ```
@@ -90,7 +76,7 @@ Get your own API Key for the [Maps JavaScript API](https://developers.google.com
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-You create the `MVTSource` object and then insert it as a `overlayMapType`. 
+Create the `MVTSource` object and then insert it as a `overlayMapType`. 
 Provide the vector tiles server url in the options parámeter.
 
 
@@ -104,7 +90,7 @@ map.overlayMapTypes.insertAt(0, mvtSource);
 ```
 
 I reccomended to insert the MVTSource after tiles have been loaded for the first time 
-to avoid duplicate invocation to `GetTile()`. It has benn documented in the [Issuetracker](https://issuetracker.google.com/issues/73335429).
+to avoid duplicate invocation to `GetTile()`. It has been documented in [this issue tracker](https://issuetracker.google.com/issues/73335429).
 
 ```js
  google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
@@ -114,7 +100,7 @@ to avoid duplicate invocation to `GetTile()`. It has benn documented in the [Iss
 <!-- DOCUMENTATION -->
 ## Documentation
 
-See [documentation](https://github.com/techjb/Vector-Tiles-Google-Maps/blob/master/DOCUMENTATION.md) for contructor options and methods.
+See [documentation](https://github.com/techjb/Vector-Tiles-Google-Maps/blob/master/DOCUMENTATION.md) for the contructor options and public methods.
 
 <!-- ROADMAP -->
 ## Roadmap
