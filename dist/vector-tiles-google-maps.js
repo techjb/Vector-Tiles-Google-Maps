@@ -586,7 +586,7 @@ class MVTFeature {
         }
     }
 
-    select() {
+    select() {        
         this.selected = true;
         this.mVTLayer.mVTSource.featureSelected(this);
         this.redrawTiles();
@@ -773,7 +773,6 @@ class MVTLayer {
         return this.style;
     }
 
-
     setStyle(style) {
         this.style = style;
         for (var featureId in this._features) {
@@ -785,11 +784,11 @@ class MVTLayer {
         this._filter = filter;
     }
 
-    handleClickEvent(event, callbackFunction) {
+    handleClickEvent(event) {
         var canvas = this._tileCanvas[event.id];
         var features = this._mVTFeatures[event.id];
         if (!canvas || !features) {
-            return callbackFunction(event);
+            return event;
         }
 
         var minDistance = Number.POSITIVE_INFINITY;
@@ -827,12 +826,8 @@ class MVTLayer {
                 break;
             }
         }
-
-        if (selectedFeature) {
-            selectedFeature.toggle();
-        }
         event.feature = selectedFeature;
-        callbackFunction(event);
+        return event;
     }
 };
 /*
@@ -854,7 +849,7 @@ class MVTSource {
         this._filter = options.filter || false; // Filter features
         this._cache = options.cache || false; // Load tiles in cache to avoid duplicated requests
         this._tileSize = options.tileSize || 256; // Default tile size
-        this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);        
+        this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);
         this.style = options.style || function (feature) {
             var style = {};
             switch (feature.type) {
@@ -922,13 +917,13 @@ class MVTSource {
     }
 
     drawTile(coord, zoom, ownerDocument) {
-        var id = this._getTileId(zoom, coord.x, coord.y);        
+        var id = this._getTileId(zoom, coord.x, coord.y);
         var tileContext = this._tilesDrawn[id];
         if (tileContext) {
             this._setTileVisible(tileContext);
             return tileContext;
         }
-        var canvas = this._createCanvas(ownerDocument, id);        
+        var canvas = this._createCanvas(ownerDocument, id);
         tileContext = {
             id: id,
             canvas: canvas,
@@ -936,15 +931,15 @@ class MVTSource {
             tileSize: this._tileSize
         };
 
-        var vectorTile = this._tilesProcessed[tileContext.id];        
-        if (vectorTile !== undefined) {            
+        var vectorTile = this._tilesProcessed[tileContext.id];
+        if (vectorTile !== undefined) {
             if (vectorTile) {
                 this._drawVectorTile(vectorTile, tileContext);
-            }            
+            }
         }
         else {
             this._xhrRequest(tileContext, coord, zoom);
-        }                
+        }
         return tileContext;
     }
 
@@ -999,7 +994,7 @@ class MVTSource {
         var uint8Array = new Uint8Array(response);
         var pbf = new Pbf(uint8Array);
         var vectorTile = new VectorTile(pbf);
-        this._tileProcessed(tileContext.id, vectorTile);        
+        this._tileProcessed(tileContext.id, vectorTile);
         this._drawVectorTile(vectorTile, tileContext);
     }
 
@@ -1028,10 +1023,10 @@ class MVTSource {
                 this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
             }
         }
-        tileContext.vectorTile = vectorTile;        
+        tileContext.vectorTile = vectorTile;
         this._setTileVisible(tileContext);
         this._drawDebugInfo(tileContext);
-        this._tileDrawn(tileContext);        
+        this._tileDrawn(tileContext);
     }
 
     _drawVectorTileLayer(vectorTileLayer, key, tileContext) {
@@ -1070,13 +1065,29 @@ class MVTSource {
         context2d.strokeText(tileContext.zoom + ' ' + tile.x + ' ' + tile.y, width / 2 - 30, height / 2 - 10);
     }
 
-    _setTileVisible(tileContext) {        
+    _setTileVisible(tileContext) {
         this._visibleTiles[tileContext.id] = tileContext;
     }
 
-    onClick(event, callbackFunction, clickOptions) {
-        if (!event.latLng || !event.pixel) return;
-        this._multipleSelection = (clickOptions && clickOptions.multipleSelection) || false;
+    onClick(event, callbackFunction, options) {
+        this._multipleSelection = (options && options.multipleSelection) || false;
+        var options = {
+            mouseHover: false,
+            setSelected: options.setSelected || false
+        }
+        this._mouseEvent(event, callbackFunction, options);
+    }
+
+    onMouseHover(event, callbackFunction, options) {
+        this._multipleSelection = false;
+        var options = {
+            mouseHover: true,
+            setSelected: options.setSelected || false
+        }
+        this._mouseEvent(event, callbackFunction, options);
+    }
+
+    _mouseEvent(event, callbackFunction, options) {
         callbackFunction = callbackFunction || function () { };
         var zoom = this.map.getZoom();
         var tile = MERCATOR.getTileAtLatLng(event.latLng, zoom);
@@ -1089,15 +1100,35 @@ class MVTSource {
                 var key = clickableLayers[i];
                 var layer = this.mVTLayers[key];
                 if (layer) {
-                    layer.handleClickEvent(event, function (event) {
-                        callbackFunction(event);
-                    });
+                    var event = layer.handleClickEvent(event);
+                    this._handleFeatureSelected(event, callbackFunction, options);
                 }
             }
         }
         else {
             callbackFunction(event);
         }
+    }
+
+    _handleFeatureSelected(event, callbackFunction, options) {
+        if (options.setSelected) {
+            if (event.feature) {
+                if (options.mouseHover) {
+                    if (!event.feature.selected) {
+                        event.feature.select();
+                    }
+                }
+                else {
+                    event.feature.toggle();
+                }
+            }
+            else {
+                if (options.mouseHover) {
+                    this.deselectAllFeatures();
+                }
+            }
+        }
+        callbackFunction(event);
     }
 
     deselectAllFeatures() {
@@ -1159,7 +1190,7 @@ class MVTSource {
 
     redrawTile(id) {
         delete this._tilesDrawn[id];
-        var tileContext = this._visibleTiles[id];        
+        var tileContext = this._visibleTiles[id];
         if (!tileContext) return;
         this.clearTile(tileContext);
         this._drawVectorTile(tileContext.vectorTile, tileContext);

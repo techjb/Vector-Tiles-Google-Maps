@@ -104,21 +104,39 @@ style: function(feature) {
 
 The following are methods that updates the `MVTSource` object:
 
-* `onClick(event, callbackFunction, clickOptions)` - Trigger click event and returns the selected features.
+* `onClick(event, callbackFunction, options)` - Trigger click event and returns the selected features.
 
 ```js
- var clickOptions = {
-    multipleSelection: true // Allow multiple features selected
+ var options = {
+    multipleSelection: true, // Multiple feature selection
+    setSelected: true // set feature as selected
 }
 
 map.addListener("rightclick", function (event) {
-    mvtSource.onClick(event, ShowSelectedFeatures, clickOptions);
+    mvtSource.onClick(event, ShowSelectedFeatures, options);
 });
 
 function ShowSelectedFeatures(event) {
     if (event.feature) {
         console.log(event.feature);
     }                        
+}
+```
+
+* `onMouseHover(event, callbackFunction, options)` - Selected feature on hover mouse.
+
+```js
+var options = {
+    setSelected: false // set feature as selected
+}
+
+map.addListener("mousemove", function (event) {
+    mvtSource.onMouseHover(event, ShowFeature, options);
+});
+
+
+function ShowFeature(event) {
+    console.log(event.feature);
 }
 ```
 

@@ -85,7 +85,6 @@ class MVTLayer {
         return this.style;
     }
 
-
     setStyle(style) {
         this.style = style;
         for (var featureId in this._features) {
@@ -97,11 +96,11 @@ class MVTLayer {
         this._filter = filter;
     }
 
-    handleClickEvent(event, callbackFunction) {
+    handleClickEvent(event) {
         var canvas = this._tileCanvas[event.id];
         var features = this._mVTFeatures[event.id];
         if (!canvas || !features) {
-            return callbackFunction(event);
+            return event;
         }
 
         var minDistance = Number.POSITIVE_INFINITY;
@@ -139,11 +138,7 @@ class MVTLayer {
                 break;
             }
         }
-
-        if (selectedFeature) {
-            selectedFeature.toggle();
-        }
         event.feature = selectedFeature;
-        callbackFunction(event);
+        return event;
     }
 };
