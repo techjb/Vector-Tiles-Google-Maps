@@ -52,10 +52,10 @@ class MVTSource {
         };
 
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
-        this._tilesProcessed = {}; //List of tiles that have been processed (when cache enabled) 
+        this._tilesProcessed = {}; //List of tiles that have been processed (when cache enabled)
         this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
         this._visibleTiles = {}; // tiles currently in the viewport
-        this._selectedFeatures = []; // list of selected features        
+        this._selectedFeatures = []; // list of selected features
 
         this.map.addListener("zoom_changed", () => {
             self.clearAtNonVisibleZoom();

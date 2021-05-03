@@ -22,7 +22,7 @@ class MVTFeature {
         };
     }
 
-    setStyle(style) {        
+    setStyle(style) {
         this.style = style;
     }
 
@@ -52,7 +52,7 @@ class MVTFeature {
         }
     }
 
-    select() {        
+    select() {
         this.selected = true;
         this.mVTLayer.mVTSource.featureSelected(this);
         this.redrawTiles();
