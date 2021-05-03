@@ -22,8 +22,8 @@ class MVTFeature {
         };
     }
 
-    setStyle(styleFunction) {
-        this.style = styleFunction(this);
+    setStyle(style) {        
+        this.style = style;
     }
 
     getPathsForTile(id) {

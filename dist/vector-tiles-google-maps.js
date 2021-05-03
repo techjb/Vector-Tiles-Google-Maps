@@ -556,8 +556,8 @@ class MVTFeature {
         };
     }
 
-    setStyle(styleFunction) {
-        this.style = styleFunction(this);
+    setStyle(style) {        
+        this.style = style;
     }
 
     getPathsForTile(id) {
@@ -707,27 +707,27 @@ class MVTLayer {
         this._tileCanvas[tileContext.id] = tileContext.canvas;
         this._mVTFeatures[tileContext.id] = [];
         for (var i = 0; i < vectorTileFeatures.length; i++) {
-            var vectorTileFeature = vectorTileFeatures[i];
-            this._parseVectorTileFeature(vectorTileFeature, tileContext, i);
+            var feature = vectorTileFeatures[i];
+            this._parseVectorTileFeature(feature, tileContext, i);
         }
         this.drawTile(tileContext);
     }
 
-    _parseVectorTileFeature(vectorTileFeature, tileContext, i) {
+    _parseVectorTileFeature(feature, tileContext, i) {
         if (this._filter && typeof this._filter === 'function') {
-            if (this._filter(vectorTileFeature, tileContext) === false) {
+            if (this._filter(feature, tileContext) === false) {
                 return;
             }
         }
 
-        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
+        var featureId = this._getIDForLayerFeature(feature) || i;
         var mVTFeature = this._features[featureId];
         if (!mVTFeature) {
-            var style = this.style(vectorTileFeature);
-            mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style);
+            var style = this.getStyle(feature);
+            mVTFeature = new MVTFeature(this, feature, tileContext, style);
             this._features[featureId] = mVTFeature;
         } else {
-            mVTFeature.addTileFeature(vectorTileFeature, tileContext);
+            mVTFeature.addTileFeature(feature, tileContext);
         }
 
         this._mVTFeatures[tileContext.id].push(mVTFeature);
@@ -766,15 +766,23 @@ class MVTLayer {
         return this._tileCanvas[id];
     }
 
-    setStyle(styleFunction) {
-        this.style = styleFunction;
+    getStyle(feature) {
+        if (typeof this.style === 'function') {
+            return this.style(feature);
+        }
+        return this.style;
+    }
+
+
+    setStyle(style) {
+        this.style = style;
         for (var featureId in this._features) {
-            this._features[featureId].setStyle(styleFunction);
+            this._features[featureId].setStyle(style);
         }
     }
 
-    setFilter(filterFunction) {
-        this._filter = filterFunction;
+    setFilter(filter) {
+        this._filter = filter;
     }
 
     handleClickEvent(event, callbackFunction) {
@@ -846,10 +854,39 @@ class MVTSource {
         this._filter = options.filter || false; // Filter features
         this._cache = options.cache || false; // Load tiles in cache to avoid duplicated requests
         this._tileSize = options.tileSize || 256; // Default tile size
-        this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);
-        if (typeof options.style === 'function') {
-            this.style = options.style;
-        }
+        this.tileSize = new google.maps.Size(this._tileSize, this._tileSize);        
+        this.style = options.style || function (feature) {
+            var style = {};
+            switch (feature.type) {
+                case 1: //'Point'
+                    style.fillStyle = 'rgba(49,79,79,1)';
+                    style.radio = 5;
+                    style.selected = {
+                        fillStyle: 'rgba(255,255,0,0.5)',
+                        radio: 6
+                    }
+                    break;
+                case 2: //'LineString'
+                    style.strokeStyle = 'rgba(136, 86, 167, 1)';
+                    style.lineWidth = 3;
+                    style.selected = {
+                        strokeStyle: 'rgba(255,25,0,0.5)',
+                        lineWidth: 4
+                    }
+                    break;
+                case 3: //'Polygon'
+                    style.fillStyle = 'rgba(188, 189, 220, 0.5)';
+                    style.strokeStyle = 'rgba(136, 86, 167, 1)';
+                    style.lineWidth = 1;
+                    style.selected = {
+                        fillStyle: 'rgba(255,140,0,0.3)',
+                        strokeStyle: 'rgba(255,140,0,1)',
+                        lineWidth: 2
+                    }
+                    break;
+            }
+            return style;
+        };
 
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
         this._vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
@@ -884,40 +921,6 @@ class MVTSource {
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].clearFeaturesAtNonVisibleZoom();
         }
-    }
-
-    style(feature) {
-        var style = {};
-        var type = feature.type;
-        switch (type) {
-            case 1: //'Point'
-                style.fillStyle = 'rgba(49,79,79,1)';
-                style.radio = 5;
-                style.selected = {
-                    fillStyle: 'rgba(255,255,0,0.5)',
-                    radio: 6
-                }
-                break;
-            case 2: //'LineString'
-                style.strokeStyle = 'rgba(136, 86, 167, 1)';
-                style.lineWidth = 3;
-                style.selected = {
-                    strokeStyle: 'rgba(255,25,0,0.5)',
-                    lineWidth: 4
-                }
-                break;
-            case 3: //'Polygon'
-                style.fillStyle = 'rgba(188, 189, 220, 0.5)';
-                style.strokeStyle = 'rgba(136, 86, 167, 1)';
-                style.lineWidth = 1;
-                style.selected = {
-                    fillStyle: 'rgba(255,140,0,0.3)',
-                    strokeStyle: 'rgba(255,140,0,1)',
-                    lineWidth: 2
-                }
-                break;
-        }
-        return style;
     }
 
     drawTile(canvas, coord, zoom) {
@@ -1095,18 +1098,18 @@ class MVTSource {
         return this._selectedFeatures;
     }
 
-    setFilter(filterFunction) {
-        this._filter = filterFunction;
+    setFilter(filter) {
+        this._filter = filter;
         for (var key in this.mVTLayers) {
-            this.mVTLayers[key].setFilter(filterFunction);
+            this.mVTLayers[key].setFilter(filter);
         }
         this.redrawAllTiles();
     }
 
-    setStyle(styleFunction) {
-        this.style = styleFunction
+    setStyle(style) {
+        this.style = style
         for (var key in this.mVTLayers) {
-            this.mVTLayers[key].setStyle(styleFunction);
+            this.mVTLayers[key].setStyle(style);
         }
         this.redrawAllTiles();
     }

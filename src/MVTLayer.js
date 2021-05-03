@@ -19,27 +19,27 @@ class MVTLayer {
         this._tileCanvas[tileContext.id] = tileContext.canvas;
         this._mVTFeatures[tileContext.id] = [];
         for (var i = 0; i < vectorTileFeatures.length; i++) {
-            var vectorTileFeature = vectorTileFeatures[i];
-            this._parseVectorTileFeature(vectorTileFeature, tileContext, i);
+            var feature = vectorTileFeatures[i];
+            this._parseVectorTileFeature(feature, tileContext, i);
         }
         this.drawTile(tileContext);
     }
 
-    _parseVectorTileFeature(vectorTileFeature, tileContext, i) {
+    _parseVectorTileFeature(feature, tileContext, i) {
         if (this._filter && typeof this._filter === 'function') {
-            if (this._filter(vectorTileFeature, tileContext) === false) {
+            if (this._filter(feature, tileContext) === false) {
                 return;
             }
         }
 
-        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
+        var featureId = this._getIDForLayerFeature(feature) || i;
         var mVTFeature = this._features[featureId];
         if (!mVTFeature) {
-            var style = this.style(vectorTileFeature);
-            mVTFeature = new MVTFeature(this, vectorTileFeature, tileContext, style);
+            var style = this.getStyle(feature);
+            mVTFeature = new MVTFeature(this, feature, tileContext, style);
             this._features[featureId] = mVTFeature;
         } else {
-            mVTFeature.addTileFeature(vectorTileFeature, tileContext);
+            mVTFeature.addTileFeature(feature, tileContext);
         }
 
         this._mVTFeatures[tileContext.id].push(mVTFeature);
@@ -78,15 +78,23 @@ class MVTLayer {
         return this._tileCanvas[id];
     }
 
-    setStyle(styleFunction) {
-        this.style = styleFunction;
+    getStyle(feature) {
+        if (typeof this.style === 'function') {
+            return this.style(feature);
+        }
+        return this.style;
+    }
+
+
+    setStyle(style) {
+        this.style = style;
         for (var featureId in this._features) {
-            this._features[featureId].setStyle(styleFunction);
+            this._features[featureId].setStyle(style);
         }
     }
 
-    setFilter(filterFunction) {
-        this._filter = filterFunction;
+    setFilter(filter) {
+        this._filter = filter;
     }
 
     handleClickEvent(event, callbackFunction) {

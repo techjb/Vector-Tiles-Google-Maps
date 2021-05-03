@@ -54,14 +54,13 @@ filter: function(feature, tileContext) {
 },
 ```
 
-* `style` - **{function}** This function sets properties that the HTML5 Canvas' context uses to draw on the map. If you do not specify this, default styling will be applied to your features. `style.selected` parameters specify how a feature looks when it is selected. **Optional**.
+* `style` - **{function}** or **{object}** Sets properties that the HTML5 Canvas' context uses to draw on the map. If you do not specify this, default styling will be applied to your features. `style.selected` parameters specify how a feature looks when it is selected. **Optional**.
   * *@returns {object}*
 
 ```js
 style: function(feature) {
     var style = {};
-    var type = feature.type;
-    switch (type) {
+    switch (feature.type) {
         case 1: //'Point'
             style.fillStyle = 'rgba(49,79,79,1)';
             style.radio = 5;

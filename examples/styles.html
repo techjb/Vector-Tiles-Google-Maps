@@ -69,17 +69,15 @@
         }
 
         function GetStyle() {
-            return function (feature) {
-                return {
-                    fillStyle: document.getElementById("fillStyle").value,
-                    strokeStyle: document.getElementById("strokeStyle").value,
-                    lineWidth: document.getElementById("lineWidth").value,
-                    shadowColor: document.getElementById("shadowColor").value,
-                    shadowBlur: document.getElementById("shadowBlur").value,
-                    globalAlpha: document.getElementById("globalAlpha").value,
-                    lineCap: document.getElementById("lineCap").value,
-                    lineJoin: document.getElementById("lineJoin").value
-                };
+            return {
+                fillStyle: document.getElementById("fillStyle").value,
+                strokeStyle: document.getElementById("strokeStyle").value,
+                lineWidth: document.getElementById("lineWidth").value,
+                shadowColor: document.getElementById("shadowColor").value,
+                shadowBlur: document.getElementById("shadowBlur").value,
+                globalAlpha: document.getElementById("globalAlpha").value,
+                lineCap: document.getElementById("lineCap").value,
+                lineJoin: document.getElementById("lineJoin").value
             };
         }
 
