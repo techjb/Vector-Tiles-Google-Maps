@@ -361,10 +361,3 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-
-# Set by me
-*.sln
-*.csproj
-*.config
-*.config
-Properties/

@@ -115,6 +115,13 @@ var options = {
 };
 ```
 
+Despite the increase of the memory use, it is recommended to enable cache for better performance and smooth flow.
+```js
+var options = {    
+    cache: true
+};
+```
+
 
 <!-- DOCUMENTATION -->
 ## Documentation
