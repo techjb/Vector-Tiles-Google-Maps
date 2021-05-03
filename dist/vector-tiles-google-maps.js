@@ -889,9 +889,10 @@ class MVTSource {
         };
 
         this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
-        this._vectorTilesProcessed = {}; //Keep a list of tiles that have been processed already
+        this._tilesProcessed = {}; //List of tiles that have been processed (when cache enabled) 
+        this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
         this._visibleTiles = {}; // tiles currently in the viewport
-        this._selectedFeatures = []; // list of selected features
+        this._selectedFeatures = []; // list of selected features        
 
         this.map.addListener("zoom_changed", () => {
             self.clearAtNonVisibleZoom();
@@ -899,11 +900,8 @@ class MVTSource {
     }
 
     getTile(coord, zoom, ownerDocument) {
-        const canvas = ownerDocument.createElement("canvas");
-        canvas.width = this._tileSize;
-        canvas.height = this._tileSize;
-        this.drawTile(canvas, coord, zoom);
-        return canvas;
+        var tileContext = this.drawTile(coord, zoom, ownerDocument);
+        return tileContext.canvas;
     }
 
     releaseTile(canvas) {
@@ -923,41 +921,39 @@ class MVTSource {
         }
     }
 
-    drawTile(canvas, coord, zoom) {
-        var self = this;
-        var id = canvas.id = this._getTileId(zoom, coord.x, coord.y);
-        var tileContext = {
+    drawTile(coord, zoom, ownerDocument) {
+        var id = this._getTileId(zoom, coord.x, coord.y);        
+        var tileContext = this._tilesDrawn[id];
+        if (tileContext) {
+            this._setTileVisible(tileContext);
+            return tileContext;
+        }
+        var canvas = this._createCanvas(ownerDocument, id);        
+        tileContext = {
             id: id,
             canvas: canvas,
             zoom: zoom,
             tileSize: this._tileSize
         };
 
-        var vectorTile = this._vectorTilesProcessed[tileContext.id];
-        if (vectorTile) {
-            return this._drawVectorTile(vectorTile, tileContext);
+        var vectorTile = this._tilesProcessed[tileContext.id];        
+        if (vectorTile !== undefined) {            
+            if (vectorTile) {
+                this._drawVectorTile(vectorTile, tileContext);
+            }            
         }
+        else {
+            this._xhrRequest(tileContext, coord, zoom);
+        }                
+        return tileContext;
+    }
 
-        var src = this._url
-            .replace("{z}", zoom)
-            .replace("{x}", coord.x)
-            .replace("{y}", coord.y);
-
-        var xmlHttpRequest = new XMLHttpRequest();
-        xmlHttpRequest.onload = function () {
-            if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
-                self._xhrResponseOk(tileContext, xmlHttpRequest.response)
-            }
-            else {
-                self._drawDebugInfo(tileContext);
-            }
-        };
-        xmlHttpRequest.open('GET', src, true);
-        for (var header in this._xhrHeaders) {
-            xmlHttpRequest.setRequestHeader(header, headers[header])
-        }
-        xmlHttpRequest.responseType = 'arraybuffer';
-        xmlHttpRequest.send();
+    _createCanvas(ownerDocument, id) {
+        const canvas = ownerDocument.createElement("canvas");
+        canvas.width = this._tileSize;
+        canvas.height = this._tileSize;
+        canvas.id = id;
+        return canvas;
     }
 
     _getTileId(zoom, x, y) {
@@ -973,17 +969,48 @@ class MVTSource {
         }
     }
 
+    _xhrRequest = function (tileContext, coord, zoom) {
+        var self = this;
+        var src = this._url
+            .replace("{z}", zoom)
+            .replace("{x}", coord.x)
+            .replace("{y}", coord.y);
+
+        var xmlHttpRequest = new XMLHttpRequest();
+        xmlHttpRequest.onload = function () {
+            if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
+                return self._xhrResponseOk(tileContext, xmlHttpRequest.response)
+            }
+            self._drawDebugInfo(tileContext);
+            self._tileProcessed(tileContext.id, false);
+        };
+        xmlHttpRequest.open('GET', src, true);
+        for (var header in this._xhrHeaders) {
+            xmlHttpRequest.setRequestHeader(header, headers[header])
+        }
+        xmlHttpRequest.responseType = 'arraybuffer';
+        xmlHttpRequest.send();
+    }
+
     _xhrResponseOk = function (tileContext, response) {
         if (this.map && this.map.getZoom() != tileContext.zoom) {
             return;
         }
         var uint8Array = new Uint8Array(response);
         var pbf = new Pbf(uint8Array);
-        var vectorTile = new VectorTile(pbf);        
-        if (this._cache) {
-            this._vectorTilesProcessed[tileContext.id] = vectorTile;
-        }
+        var vectorTile = new VectorTile(pbf);
+        this._tileProcessed(tileContext.id, vectorTile);        
         this._drawVectorTile(vectorTile, tileContext);
+    }
+
+    _tileProcessed = function (id, vectorTile) {
+        if (!this._cache) return;
+        this._tilesProcessed[id] = vectorTile;
+    }
+
+    _tileDrawn = function (tileContext) {
+        if (!this._cache) return;
+        this._tilesDrawn[tileContext.id] = tileContext;
     }
 
     _drawVectorTile(vectorTile, tileContext) {
@@ -1001,9 +1028,10 @@ class MVTSource {
                 this._drawVectorTileLayer(vectorTileLayer, key, tileContext);
             }
         }
-
-        this._setTileVisible(vectorTile, tileContext);
+        tileContext.vectorTile = vectorTile;        
+        this._setTileVisible(tileContext);
         this._drawDebugInfo(tileContext);
+        this._tileDrawn(tileContext);        
     }
 
     _drawVectorTileLayer(vectorTileLayer, key, tileContext) {
@@ -1042,8 +1070,7 @@ class MVTSource {
         context2d.strokeText(tileContext.zoom + ' ' + tile.x + ' ' + tile.y, width / 2 - 30, height / 2 - 10);
     }
 
-    _setTileVisible(vectorTile, tileContext) {
-        tileContext.vectorTile = vectorTile;
+    _setTileVisible(tileContext) {        
         this._visibleTiles[tileContext.id] = tileContext;
     }
 
@@ -1120,6 +1147,7 @@ class MVTSource {
     }
 
     redrawAllTiles() {
+        this._tilesDrawn = [];
         this.redrawTiles(this._visibleTiles);
     }
 
@@ -1130,7 +1158,8 @@ class MVTSource {
     }
 
     redrawTile(id) {
-        var tileContext = this._visibleTiles[id];
+        delete this._tilesDrawn[id];
+        var tileContext = this._visibleTiles[id];        
         if (!tileContext) return;
         this.clearTile(tileContext);
         this._drawVectorTile(tileContext.vectorTile, tileContext);
