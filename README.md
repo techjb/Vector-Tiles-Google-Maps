@@ -98,7 +98,7 @@ map.overlayMapTypes.insertAt(0, mvtSource);
 
 ### Reccomendations
 
-* Insert the MVTSource after tiles have been loaded for the first time 
+* Insert the `MVTSource` after tiles have been loaded for the first time 
 to avoid duplicate invocation to `GetTile()`. It is documented in [this issue tracker](https://issuetracker.google.com/issues/73335429).
 
 ```js
@@ -107,7 +107,7 @@ to avoid duplicate invocation to `GetTile()`. It is documented in [this issue tr
 });
 ```
 
-* If you need to set style based on feature property or trigger onClick or onMouseHover event, 
+* If you need to set style based on feature property or trigger `onClick` or `onMouseHover` event, 
 set the property `getIDForLayerFeature` option with the function that returns the unique id for each feature.
 
 ```js
