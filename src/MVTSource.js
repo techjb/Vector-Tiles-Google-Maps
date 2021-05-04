@@ -11,7 +11,7 @@ class MVTSource {
         this.getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
             return feature.properties.id || feature.properties.Id || feature.properties.ID;
         };
-        this._visibleLayers = options.visibleLayers || [];  // List of visible layers
+        this._visibleLayers = options.visibleLayers || false;  // List of visible layers
         this._xhrHeaders = options.xhrHeaders || {}; // Headers added to every url request
         this._clickableLayers = options.clickableLayers || false;   // List of layers that are clickable
         this._filter = options.filter || false; // Filter features
@@ -177,7 +177,7 @@ class MVTSource {
     }
 
     _drawVectorTile(vectorTile, tileContext) {
-        if (this._visibleLayers && this._visibleLayers.length > 0) {
+        if (this._visibleLayers) {
             for (var i = 0; i < this._visibleLayers.length; i++) {
                 var key = this._visibleLayers[i];
                 if (vectorTile.layers[key]) {
@@ -262,23 +262,18 @@ class MVTSource {
         event.id = this._getTileId(tile.z, tile.x, tile.y);
         event.tilePoint = MERCATOR.fromLatLngToTilePoint(this.map, event);
 
-        var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers);
-        if (clickableLayers && clickableLayers.length > 0) {
-            for (var i = 0; i < clickableLayers.length; i++) {
-                var key = clickableLayers[i];
-                var layer = this.mVTLayers[key];
-                if (layer) {
-                    var event = layer.handleClickEvent(event);
-                    this._handleFeatureSelected(event, callbackFunction, options);
-                }
+        var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers) || [];
+        for (var i = 0; i < clickableLayers.length; i++) {
+            var key = clickableLayers[i];
+            var layer = this.mVTLayers[key];
+            if (layer) {
+                var event = layer.handleClickEvent(event);
+                this._mouseSelectedFeature(event, callbackFunction, options);
             }
-        }
-        else {
-            callbackFunction(event);
         }
     }
 
-    _handleFeatureSelected(event, callbackFunction, options) {
+    _mouseSelectedFeature(event, callbackFunction, options) {
         if (options.setSelected) {
             if (event.feature) {
                 if (options.mouseHover) {
@@ -324,28 +319,34 @@ class MVTSource {
         return this._selectedFeatures;
     }
 
-    setFilter(filter) {
+    setFilter(filter, redrawTiles) {
         this._filter = filter;
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].setFilter(filter);
         }
-        this.redrawAllTiles();
+        if (redrawTiles === undefined || redrawTiles) {            
+            this.redrawAllTiles();
+        }        
     }
 
-    setStyle(style) {
+    setStyle(style, redrawTiles) {
         this.style = style
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].setStyle(style);
         }
-        this.redrawAllTiles();
+        if (redrawTiles === undefined || redrawTiles) {
+            this.redrawAllTiles();
+        }        
     }
 
-    setVisibleLayers(visibleLayers) {
+    setVisibleLayers(visibleLayers, redrawTiles) {
         this._visibleLayers = visibleLayers;
-        this.redrawAllTiles();
+        if (redrawTiles === undefined || redrawTiles) {
+            this.redrawAllTiles();
+        }
     }
 
-    redrawAllTiles() {
+    redrawAllTiles() {        
         this._tilesDrawn = [];
         this.redrawTiles(this._visibleTiles);
     }

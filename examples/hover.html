@@ -18,7 +18,7 @@
             </p>
             <p>
                 Inhabitants:
-                <ul id="listSelectedFeatures"></ul>
+                <div id="selectedFeature"></div>
             </p>
         </div>
     </div>
@@ -62,12 +62,12 @@
         }
 
         function ShowFeature(event) {
-            var listSelectedFeatures = document.getElementById("listSelectedFeatures");
+            var selectedFeature = document.getElementById("selectedFeature");
             var text = '';
             if (event.feature) {
-                text = '<li>' + (event.feature.properties.Name + ": " + event.feature.properties.Value) + '</li>';
+                text = (event.feature.properties.Name + ": " + event.feature.properties.Value);
             }
-            listSelectedFeatures.innerHTML = text;
+            selectedFeature.innerHTML = text;
         }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA_bDL3sglTy8HGoiAU9JsLtayEkQakE7c&callback=InitGoogleMap&libraries=&v=weekly"

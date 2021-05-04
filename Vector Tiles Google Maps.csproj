@@ -72,6 +72,7 @@
       <DependentUpon>vector-tiles-google-maps.js</DependentUpon>
     </Content>
     <Content Include="examples\hover.html" />
+    <Content Include="examples\style-filter-layer.html" />
     <Content Include="examples\styles-feature.html" />
     <Content Include="examples\styles.html" />
     <Content Include="examples\layers.html" />

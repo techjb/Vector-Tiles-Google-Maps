@@ -36,7 +36,7 @@
 
 Vector Tiles Google Maps is a JavaScript library to render vector tiles in Google Maps.
 
-The library provides funcionality to enable cache, filter features, apply styles, select features with onclick event, and show or hide layers.
+The library provides funcionality to enable cache, filter features, apply styles, onclick event, mouse hover, and show/hide layers.
 
 Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox-gl-js/style-spec/) in Google Maps.
 
@@ -59,6 +59,7 @@ Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox
 * [Layers](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/layers.html) - Add remove vector tiles layers.
 * [Styles](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/styles.html) - Change style dynamically.
 * [Styles feature](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/styles-feature.html) - Style based on feature properties.
+* [Style filter and layer](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/style-filter-layer.html) - Update the style, filter and visible layers simultaneously.
 * [Point, linestring and polygon](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/point-linestring-polygon.html) - Show all type of geometries.
 
 
@@ -97,8 +98,8 @@ map.overlayMapTypes.insertAt(0, mvtSource);
 
 ### Reccomendations
 
-Insert the MVTSource after tiles have been loaded for the first time 
-to avoid duplicate invocation to `GetTile()`. It has been documented in [this issue tracker](https://issuetracker.google.com/issues/73335429).
+* Insert the MVTSource after tiles have been loaded for the first time 
+to avoid duplicate invocation to `GetTile()`. It is documented in [this issue tracker](https://issuetracker.google.com/issues/73335429).
 
 ```js
  google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
@@ -106,7 +107,8 @@ to avoid duplicate invocation to `GetTile()`. It has been documented in [this is
 });
 ```
 
-If you need to set style based on feature property or trigger onClick event, set the property `getIDForLayerFeature` in the constructor with the function that returns the unique id for each feature.
+* If you need to set style based on feature property or trigger onClick or onMouseHover event, 
+set the property `getIDForLayerFeature` option with the function that returns the unique id for each feature.
 
 ```js
 var options = {    
@@ -116,7 +118,7 @@ var options = {
 };
 ```
 
-Despite the increase of the memory use, it is recommended to enable cache for better performance and smooth flow.
+* Enable cache for better performance and smooth flow.
 ```js
 var options = {    
     cache: true

@@ -24,7 +24,7 @@ debug: true,
 cache: true,
 ```
 
-* `visibleLayers` - **[{string}, ...]** List of vector tile layers that will be loaded. **Default: `all layers`**.
+* `visibleLayers` - **[{string}, ...]** List of vector tile layers that will be loaded. **Default: `false`** (all tiles are visible).
 
 ```js
 visibleLayers: ['municipalities'],
@@ -37,7 +37,7 @@ visibleLayers: ['municipalities'],
 clickableLayers: ['municipalities'],
 ```
 
-* `getIDForLayerFeature` - **{function}** Each MVT Feature needs a unique ID. You can specify a specific function to create a unique ID that will be associated with a given feature. **Required for for onclick event**.
+* `getIDForLayerFeature` - **{function}** Each MVT Feature needs a unique ID. You can specify a specific function to create a unique ID that will be associated with a given feature. **Required when onclick and onMouseHover**.
 
 ```js
 getIDForLayerFeature: function(feature) {
@@ -55,8 +55,7 @@ filter: function(feature, tileContext) {
 ```
 
 * `style` - **{function}** or **{object}** Sets properties that the HTML5 Canvas' context uses to draw on the map. If you do not specify this, default styling will be applied to your features. `style.selected` parameters specify how a feature looks when it is selected. **Optional**.
-  * *@returns {object}*
-
+  
 ```js
 style: function(feature) {
     var style = {};
@@ -155,10 +154,12 @@ mVTSource.deselectAllFeatures();
 ```
 
 
-* `setStyle(styleFunction)` - Update the styles and redraw all tiles. The style object can provide all the canvas methods as for example `shadowColor`, `lineCap`, `lineJoin`, etc. 
+* `setStyle(style, redrawTiles)` - Update the style and redraw all tiles. 
+ * *@param style* *{object}* or *{function}* - The style object can provide all the canvas methods as for example `shadowColor`, `lineCap`, `lineJoin`, etc. 
+ * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
 
 ```js
-var sytle = function (feature) {
+var style = function (feature) {
     return {
         fillStyle: 'gba(188, 189, 220, 0.5)',
         strokeStyle: 'rgba(136, 86, 167, 1)',
@@ -174,7 +175,9 @@ var sytle = function (feature) {
 mVTSource.setStyle(style);
 ```
 
-* `setFilter(filterFunction)` - Update the filter and redraw all tiles. 
+* `setFilter(filter, redrawTiles)` - Update the filter and redraw all tiles. 
+ * *@param filter* *{function}* - Filter function for each feature. 
+ * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
 
 ```js
 var filter = function (feature) {
@@ -185,7 +188,9 @@ mVTSource.setFilter(filter);
 ```
 
 
-* `setVisibleLayers(visibleLayers)` - Update the visible layers and redraw all tiles. 
+* `setVisibleLayers(visibleLayers, redrawTiles)` - Update the visible layers and redraw all tiles. 
+ * *@param visibleLayers* *[{string}, ...]* - List of visible layers. Set to `false` to draw al layers. 
+ * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
 
 ```js
 var visibleLayers = ["provinces", "municipalities"];
