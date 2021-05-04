@@ -1156,9 +1156,9 @@ class MVTSource {
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].setFilter(filter);
         }
-        if (redrawTiles === undefined || redrawTiles) {            
+        if (redrawTiles === undefined || redrawTiles) {
             this.redrawAllTiles();
-        }        
+        }
     }
 
     setStyle(style, redrawTiles) {
@@ -1168,7 +1168,7 @@ class MVTSource {
         }
         if (redrawTiles === undefined || redrawTiles) {
             this.redrawAllTiles();
-        }        
+        }
     }
 
     setVisibleLayers(visibleLayers, redrawTiles) {
@@ -1178,7 +1178,7 @@ class MVTSource {
         }
     }
 
-    redrawAllTiles() {        
+    redrawAllTiles() {
         this._tilesDrawn = [];
         this.redrawTiles(this._visibleTiles);
     }

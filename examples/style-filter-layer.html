@@ -19,9 +19,9 @@
             <p>
                 <input type="radio" id="status1" name="status" value="status1" onclick="handleClick(this)">
                 <label for="status1">status1</label><br>
-                <input type="radio" id="status2" name="status" value="status2"  onclick="handleClick(this)">
+                <input type="radio" id="status2" name="status" value="status2" onclick="handleClick(this)">
                 <label for="status2">status2</label><br>
-                <input type="radio" id="status3" name="status" value="status3"  onclick="handleClick(this)">
+                <input type="radio" id="status3" name="status" value="status3" onclick="handleClick(this)">
                 <label for="status3">status3</label><br>
             </p>
         </div>
@@ -56,8 +56,8 @@
                     style.fillStyle = '#ff00bf';
                     mvtSource.setStyle(style); // redrawTiles at the end (true by default)
                     break;
-                case 'status2':                    
-                    mvtSource.setFilter(function (feature) {                        
+                case 'status2':
+                    mvtSource.setFilter(function (feature) {
                         return parseInt(feature.properties.Id) > 20;
                     }, false);
                     style.fillStyle = '#bfff00';
@@ -65,7 +65,7 @@
                     mvtSource.setVisibleLayers(["provinces"]); // redrawTiles at the end (true by default)
                     break;
                 case 'status3':
-                    mvtSource.setVisibleLayers(["municipalities"], false);                    
+                    mvtSource.setVisibleLayers(["municipalities"], false);
                     style.fillStyle = '#4F86F7';
                     mvtSource.setStyle(style, false);
                     mvtSource.setFilter(function (feature) {
