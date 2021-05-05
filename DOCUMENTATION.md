@@ -155,8 +155,8 @@ mVTSource.deselectAllFeatures();
 
 
 * `setStyle(style, redrawTiles)` - Update the style and redraw all tiles. 
- * *@param style* *{object}* or *{function}* - The style object can provide all the canvas methods as for example `shadowColor`, `lineCap`, `lineJoin`, etc. 
- * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
+  * *@param style* *{object}* or *{function}* - The style object can provide all the canvas methods as for example `shadowColor`, `lineCap`, `lineJoin`, etc. 
+  * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
 
 ```js
 var style = function (feature) {
@@ -176,8 +176,8 @@ mVTSource.setStyle(style);
 ```
 
 * `setFilter(filter, redrawTiles)` - Update the filter and redraw all tiles. 
- * *@param filter* *{function}* - Filter function for each feature. 
- * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
+  * *@param filter* *{function}* - Filter function for each feature. 
+  * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
 
 ```js
 var filter = function (feature) {
@@ -189,8 +189,8 @@ mVTSource.setFilter(filter);
 
 
 * `setVisibleLayers(visibleLayers, redrawTiles)` - Update the visible layers and redraw all tiles. 
- * *@param visibleLayers* *[{string}, ...]* - List of visible layers. Set to `false` to draw al layers. 
- * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
+  * *@param visibleLayers* *[{string}, ...]* - List of visible layers. Set to `false` to draw al layers. 
+  * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
 
 ```js
 var visibleLayers = ["provinces", "municipalities"];
