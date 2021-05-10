@@ -24,6 +24,12 @@ debug: true,
 cache: true,
 ```
 
+* `sourceMaxZoom` - **{int}** Setting this parámeter, will enable overzoom. As an example, if the tileset contains tiles until zoom level 14 and the map request a tile in the zoom level 15, then it will take the tile in the zoom level 14 to create the tile in the zoom level 15. **Default: `false`**.
+
+```js
+sourceMaxZoom: 14,
+```
+
 * `visibleLayers` - **[{string}, ...]** List of vector tile layers that will be loaded. **Default: `false`** (all tiles are visible).
 
 ```js

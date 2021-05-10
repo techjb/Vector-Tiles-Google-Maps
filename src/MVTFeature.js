@@ -91,7 +91,7 @@ class MVTFeature {
         var context2d = this._getContext2d(tileContext.canvas, style);
         var radio = style.radio || 3;
         context2d.beginPath();
-        var point = this._getPoint(coordinates[0][0]);
+        var point = this._getPoint(coordinates[0][0], tileContext);
         context2d.arc(point.x, point.y, radio, 0, Math.PI * 2);
         context2d.closePath();
         context2d.fill();
@@ -128,36 +128,14 @@ class MVTFeature {
             var coordinate = coordinates[i];
             for (var j = 0; j < coordinate.length; j++) {
                 var method = (j === 0 ? 'move' : 'line') + 'To';
-                var point = this._getPoint(coordinate[j]);
-                var point = this._overzoom(tileContext, point);
+                var point = this._getPoint(coordinate[j], tileContext);                
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
         }
         return projCoords;
     }
-
-    _overzoom(tileContext, point) {
-        if (!tileContext.parentId) {
-            return point;
-        }
-        var parentTile = this.mVTLayer.mVTSource._getTile(tileContext.parentId);
-        var currentTile = this.mVTLayer.mVTSource._getTile(tileContext.id);
-        var zoomDistance = currentTile.zoom - parentTile.zoom;
-        const scale = Math.pow(2, zoomDistance);        
-
-        let xScale = point.x * scale;
-        let yScale = point.y * scale;
-
-        let xtileOffset = currentTile.x % scale;
-        let ytileOffset = currentTile.y % scale;
-
-        point.x = xScale - (xtileOffset * this.tileContext.tileSize);
-        point.y = yScale - (ytileOffset * this.tileContext.tileSize);
-
-        return point;
-    }
-
+    
     _getContext2d(canvas, style) {
         var context2d = canvas.getContext('2d');
         for (var key in style) {
@@ -169,10 +147,28 @@ class MVTFeature {
         return context2d;
     }
 
-    _getPoint(coords) {
-        return {
+    _getPoint(coords, tileContext) {
+        var point =  {
             x: coords.x / this.divisor,
             y: coords.y / this.divisor
         };
+
+        if (tileContext.parentId) {
+            var parentTile = this.mVTLayer.mVTSource._getTile(tileContext.parentId);
+            var currentTile = this.mVTLayer.mVTSource._getTile(tileContext.id);
+            var zoomDistance = currentTile.zoom - parentTile.zoom;
+
+            const scale = Math.pow(2, zoomDistance);
+
+            let xScale = point.x * scale;
+            let yScale = point.y * scale;
+
+            let xtileOffset = currentTile.x % scale;
+            let ytileOffset = currentTile.y % scale;
+
+            point.x = xScale - (xtileOffset * this.tileContext.tileSize);
+            point.y = yScale - (ytileOffset * this.tileContext.tileSize);
+        }
+        return point;
     }
 }

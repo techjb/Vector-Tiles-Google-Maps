@@ -7,7 +7,7 @@ class MVTSource {
         var self = this;
         this.map = map;
         this._url = options.url || ""; //Url TO Vector Tile Source,
-        this._sourceMaxZoom = options.sourceMaxZoom || false; // Inform the source maxzoom to enable overzoom
+        this._sourceMaxZoom = options.sourceMaxZoom || false; // Source maxzoom to enable overzoom
         this._debug = options.debug || false; // Draw tiles lines and ids
         this.getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
             return feature.properties.id || feature.properties.Id || feature.properties.ID;
@@ -93,7 +93,7 @@ class MVTSource {
             return tileContext;
         }
         var canvas = this._createCanvas(ownerDocument, id);
-        var parentId = this._GetParentId(id);       
+        var parentId = this._getParentId(id);       
 
         tileContext = {
             id: id,
@@ -108,7 +108,7 @@ class MVTSource {
         if (vectorTile !== undefined) {
             if (vectorTile) {
                 this._drawVectorTile(vectorTile, tileContext);
-            }
+            }            
         }
         else {
             this._xhrRequest(tileContext);
@@ -116,7 +116,7 @@ class MVTSource {
         return tileContext;
     }
 
-    _GetParentId(id) {
+    _getParentId(id) {
         var parentId = false;        
         if (this._sourceMaxZoom) {
             var tile = this._getTile(id);
@@ -180,7 +180,7 @@ class MVTSource {
     }
 
     _xhrResponseOk = function (tileContext, response) {
-        if (this.map && this.map.getZoom() != tileContext.zoom) {
+        if (this.map.getZoom() != tileContext.zoom) {
             return;
         }
         var uint8Array = new Uint8Array(response);

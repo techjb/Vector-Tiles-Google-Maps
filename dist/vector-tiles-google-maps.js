@@ -625,7 +625,7 @@ class MVTFeature {
         var context2d = this._getContext2d(tileContext.canvas, style);
         var radio = style.radio || 3;
         context2d.beginPath();
-        var point = this._getPoint(coordinates[0][0]);
+        var point = this._getPoint(coordinates[0][0], tileContext);
         context2d.arc(point.x, point.y, radio, 0, Math.PI * 2);
         context2d.closePath();
         context2d.fill();
@@ -662,36 +662,14 @@ class MVTFeature {
             var coordinate = coordinates[i];
             for (var j = 0; j < coordinate.length; j++) {
                 var method = (j === 0 ? 'move' : 'line') + 'To';
-                var point = this._getPoint(coordinate[j]);
-                var point = this._overzoom(tileContext, point);
+                var point = this._getPoint(coordinate[j], tileContext);                
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
         }
         return projCoords;
     }
-
-    _overzoom(tileContext, point) {
-        if (!tileContext.parentId) {
-            return point;
-        }
-        var parentTile = this.mVTLayer.mVTSource._getTile(tileContext.parentId);
-        var currentTile = this.mVTLayer.mVTSource._getTile(tileContext.id);
-        var zoomDistance = currentTile.zoom - parentTile.zoom;
-        const scale = Math.pow(2, zoomDistance);        
-
-        let xScale = point.x * scale;
-        let yScale = point.y * scale;
-
-        let xtileOffset = currentTile.x % scale;
-        let ytileOffset = currentTile.y % scale;
-
-        point.x = xScale - (xtileOffset * this.tileContext.tileSize);
-        point.y = yScale - (ytileOffset * this.tileContext.tileSize);
-
-        return point;
-    }
-
+    
     _getContext2d(canvas, style) {
         var context2d = canvas.getContext('2d');
         for (var key in style) {
@@ -703,11 +681,29 @@ class MVTFeature {
         return context2d;
     }
 
-    _getPoint(coords) {
-        return {
+    _getPoint(coords, tileContext) {
+        var point =  {
             x: coords.x / this.divisor,
             y: coords.y / this.divisor
         };
+
+        if (tileContext.parentId) {
+            var parentTile = this.mVTLayer.mVTSource._getTile(tileContext.parentId);
+            var currentTile = this.mVTLayer.mVTSource._getTile(tileContext.id);
+            var zoomDistance = currentTile.zoom - parentTile.zoom;
+
+            const scale = Math.pow(2, zoomDistance);
+
+            let xScale = point.x * scale;
+            let yScale = point.y * scale;
+
+            let xtileOffset = currentTile.x % scale;
+            let ytileOffset = currentTile.y % scale;
+
+            point.x = xScale - (xtileOffset * this.tileContext.tileSize);
+            point.y = yScale - (ytileOffset * this.tileContext.tileSize);
+        }
+        return point;
     }
 }
 /*
@@ -863,7 +859,7 @@ class MVTSource {
         var self = this;
         this.map = map;
         this._url = options.url || ""; //Url TO Vector Tile Source,
-        this._sourceMaxZoom = options.sourceMaxZoom || false; // Inform the source maxzoom to enable overzoom
+        this._sourceMaxZoom = options.sourceMaxZoom || false; // Source maxzoom to enable overzoom
         this._debug = options.debug || false; // Draw tiles lines and ids
         this.getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
             return feature.properties.id || feature.properties.Id || feature.properties.ID;
@@ -949,7 +945,7 @@ class MVTSource {
             return tileContext;
         }
         var canvas = this._createCanvas(ownerDocument, id);
-        var parentId = this._GetParentId(id);       
+        var parentId = this._getParentId(id);       
 
         tileContext = {
             id: id,
@@ -972,7 +968,7 @@ class MVTSource {
         return tileContext;
     }
 
-    _GetParentId(id) {
+    _getParentId(id) {
         var parentId = false;        
         if (this._sourceMaxZoom) {
             var tile = this._getTile(id);
@@ -1036,7 +1032,7 @@ class MVTSource {
     }
 
     _xhrResponseOk = function (tileContext, response) {
-        if (this.map && this.map.getZoom() != tileContext.zoom) {
+        if (this.map.getZoom() != tileContext.zoom) {
             return;
         }
         var uint8Array = new Uint8Array(response);

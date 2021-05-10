@@ -125,6 +125,13 @@ var options = {
 };
 ```
 
+* Set the `sourceMaxZoom` parámeter to enable [overzoom](https://docs.mapbox.com/help/glossary/overzoom/). It will reduce the number of request to the server.
+```js
+var options = {    
+    sourceMaxZoom: 14
+};
+```
+
 
 <!-- DOCUMENTATION -->
 ## Documentation
