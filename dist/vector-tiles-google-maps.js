@@ -960,7 +960,7 @@ class MVTSource {
         if (vectorTile !== undefined) {
             if (vectorTile) {
                 this._drawVectorTile(vectorTile, tileContext);
-            }
+            }            
         }
         else {
             this._xhrRequest(tileContext);
