@@ -4,15 +4,17 @@
 
 class MVTFeature {
     constructor(mVTLayer, vectorTileFeature, tileContext, style) {
+        this.tileContext = tileContext;
         this.mVTLayer = mVTLayer;
-        this.selected = false;
-        this.divisor = vectorTileFeature.extent / tileContext.tileSize;
+        this.selected = false;       
+        this.extent = vectorTileFeature.extent;        
+        this.divisor = this.extent / this.tileContext.tileSize;
         this.tiles = {};
         this.style = style;
         for (var key in vectorTileFeature) {
             this[key] = vectorTileFeature[key];
         }
-        this.addTileFeature(vectorTileFeature, tileContext);
+        this.addTileFeature(vectorTileFeature, this.tileContext);
     }
 
     addTileFeature(vectorTileFeature, tileContext) {
@@ -99,14 +101,14 @@ class MVTFeature {
 
     _drawLineString(tileContext, coordinates, style) {
         var context2d = this._getContext2d(tileContext.canvas, style);
-        var projCoords = this._drawCoordinates(context2d, coordinates);
+        var projCoords = this._drawCoordinates(tileContext, context2d, coordinates);
         context2d.stroke();
         this.tiles[tileContext.id].paths.push(projCoords);
     }
 
     _drawPolygon(tileContext, coordinates, style) {
         var context2d = this._getContext2d(tileContext.canvas, style);
-        var projCoords = this._drawCoordinates(context2d, coordinates);
+        var projCoords = this._drawCoordinates(tileContext, context2d, coordinates);
         context2d.closePath();
         if (style.fillStyle) {
             context2d.fill();
@@ -119,7 +121,7 @@ class MVTFeature {
         this.tiles[tileContext.id].paths.push(projCoords);
     }
 
-    _drawCoordinates(context2d, coordinates) {
+    _drawCoordinates(tileContext, context2d, coordinates) {
         var projCoords = [];
         context2d.beginPath();
         for (var i = 0; i < coordinates.length; i++) {
@@ -127,11 +129,33 @@ class MVTFeature {
             for (var j = 0; j < coordinate.length; j++) {
                 var method = (j === 0 ? 'move' : 'line') + 'To';
                 var point = this._getPoint(coordinate[j]);
+                var point = this._overzoom(tileContext, point);
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
         }
         return projCoords;
+    }
+
+    _overzoom(tileContext, point) {
+        if (!tileContext.parentId) {
+            return point;
+        }
+        var parentTile = this.mVTLayer.mVTSource._getTile(tileContext.parentId);
+        var currentTile = this.mVTLayer.mVTSource._getTile(tileContext.id);
+        var zoomDistance = currentTile.zoom - parentTile.zoom;
+        const scale = Math.pow(2, zoomDistance);        
+
+        let xScale = point.x * scale;
+        let yScale = point.y * scale;
+
+        let xtileOffset = currentTile.x % scale;
+        let ytileOffset = currentTile.y % scale;
+
+        point.x = xScale - (xtileOffset * this.tileContext.tileSize);
+        point.y = yScale - (ytileOffset * this.tileContext.tileSize);
+
+        return point;
     }
 
     _getContext2d(canvas, style) {

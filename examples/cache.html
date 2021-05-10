@@ -36,7 +36,9 @@
         function InitVectorTiles() {
             var options = {
                 url: "https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=pk.eyJ1IjoidGVjaGpiIiwiYSI6ImNrbzFuMDV6MzBhYXQycWxwaG4ydGozZTgifQ.hCgIvpwnfw93KFcWaR5WBA",
-                cache: true
+                cache: true,
+                sourceMaxZoom: 14,                
+                visibleLayers : ["provinces"]
             };
             var mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
