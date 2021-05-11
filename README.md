@@ -14,7 +14,7 @@
     <li>
         <a href="#usage">Usage</a>
         <ul>
-            <li><a href="#reccomendations">Reccomendations</a></li>
+            <li><a href="#recommendations">Recommendations</a></li>
         </ul>
     </li>
     <li><a href="#documentation">Documentation</a></li>        
@@ -96,7 +96,7 @@ var mvtSource = new MVTSource(map, options);
 map.overlayMapTypes.insertAt(0, mvtSource);
 ```
 
-### Reccomendations
+### Recommendations
 
 * Insert the `MVTSource` after tiles have been loaded for the first time 
 to avoid duplicate invocation to `GetTile()`. It is documented in [this issue tracker](https://issuetracker.google.com/issues/73335429).
@@ -125,7 +125,7 @@ var options = {
 };
 ```
 
-* Set the `sourceMaxZoom` parámeter to enable [overzoom](https://docs.mapbox.com/help/glossary/overzoom/).
+* Set the `sourceMaxZoom` option to enable [overzoom](https://docs.mapbox.com/help/glossary/overzoom/).
 ```js
 var options = {    
     sourceMaxZoom: 14
