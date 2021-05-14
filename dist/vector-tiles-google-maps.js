@@ -741,12 +741,13 @@ class MVTLayer {
         }
 
         var featureId = this._getIDForLayerFeature(feature) || i;
+        var style = this.getStyle(feature);
         var mVTFeature = this._features[featureId];
-        if (!mVTFeature) {
-            var style = this.getStyle(feature);
+        if (!mVTFeature) {            
             mVTFeature = new MVTFeature(this, feature, tileContext, style);
             this._features[featureId] = mVTFeature;
         } else {
+            mVTFeature.setStyle(style);
             mVTFeature.addTileFeature(feature, tileContext);
         }
 
