@@ -34,7 +34,7 @@ class MVTLayer {
 
         var featureId = this._getIDForLayerFeature(feature) || i;
         var style = this.getStyle(feature);
-        var mVTFeature = this._features[featureId];
+        var mVTFeature = this._features[featureId];        
         if (!mVTFeature) {            
             mVTFeature = new MVTFeature(this, feature, tileContext, style);
             this._features[featureId] = mVTFeature;

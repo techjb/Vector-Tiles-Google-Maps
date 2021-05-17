@@ -541,8 +541,8 @@ class MVTFeature {
         this.tileContext = tileContext;
         this.mVTLayer = mVTLayer;
         this.selected = false;       
-        this.extent = vectorTileFeature.extent;        
-        this.divisor = this.extent / this.tileContext.tileSize;
+        //this.extent = vectorTileFeature.extent;        
+        //this.divisor = this.extent / this.tileContext.tileSize;
         this.tiles = {};
         this.style = style;
         for (var key in vectorTileFeature) {
@@ -554,7 +554,8 @@ class MVTFeature {
     addTileFeature(vectorTileFeature, tileContext) {
         this.tiles[tileContext.id] = {
             vectorTileFeature: vectorTileFeature,
-            paths: []
+            paths: [],
+            divisor: vectorTileFeature.extent / tileContext.tileSize
         };
     }
 
@@ -601,31 +602,32 @@ class MVTFeature {
     }
 
     draw(tileContext) {
-        var vectorTileFeature = this.tiles[tileContext.id].vectorTileFeature;
+        var tile = this.tiles[tileContext.id];
+        var vectorTileFeature = tile.vectorTileFeature;
         var style = this.style;
         if (this.selected && this.style.selected) {
             style = this.style.selected;
         }
         switch (vectorTileFeature.type) {
             case 1: //Point
-                this._drawPoint(tileContext, vectorTileFeature.coordinates, style);
+                this._drawPoint(tileContext, tile, style);
                 break;
 
             case 2: //LineString
-                this._drawLineString(tileContext, vectorTileFeature.coordinates, style);
+                this._drawLineString(tileContext, tile, style);
                 break;
 
             case 3: //Polygon
-                this._drawPolygon(tileContext, vectorTileFeature.coordinates, style);
+                this._drawPolygon(tileContext, tile, style);
                 break;
         }
     }
 
-    _drawPoint(tileContext, coordinates, style) {
+    _drawPoint(tileContext, tile, style) {
         var context2d = this._getContext2d(tileContext.canvas, style);
         var radio = style.radio || 3;
         context2d.beginPath();
-        var point = this._getPoint(coordinates[0][0], tileContext);
+        var point = this._getPoint(tile.vectorTileFeature.coordinates[0][0], tileContext, tile.divisor);
         context2d.arc(point.x, point.y, radio, 0, Math.PI * 2);
         context2d.closePath();
         context2d.fill();
@@ -633,16 +635,16 @@ class MVTFeature {
         this.tiles[tileContext.id].paths.push([point]);
     }
 
-    _drawLineString(tileContext, coordinates, style) {
+    _drawLineString(tileContext, tile, style) {
         var context2d = this._getContext2d(tileContext.canvas, style);
-        var projCoords = this._drawCoordinates(tileContext, context2d, coordinates);
+        var projCoords = this._drawCoordinates(tileContext, context2d, tile);
         context2d.stroke();
         this.tiles[tileContext.id].paths.push(projCoords);
     }
 
-    _drawPolygon(tileContext, coordinates, style) {
+    _drawPolygon(tileContext, tile, style) {
         var context2d = this._getContext2d(tileContext.canvas, style);
-        var projCoords = this._drawCoordinates(tileContext, context2d, coordinates);
+        var projCoords = this._drawCoordinates(tileContext, context2d, tile);
         context2d.closePath();
         if (style.fillStyle) {
             context2d.fill();
@@ -655,14 +657,15 @@ class MVTFeature {
         this.tiles[tileContext.id].paths.push(projCoords);
     }
 
-    _drawCoordinates(tileContext, context2d, coordinates) {
+    _drawCoordinates(tileContext, context2d, tile) {
         var projCoords = [];
         context2d.beginPath();
+        var coordinates = tile.vectorTileFeature.coordinates;
         for (var i = 0; i < coordinates.length; i++) {
             var coordinate = coordinates[i];
             for (var j = 0; j < coordinate.length; j++) {
                 var method = (j === 0 ? 'move' : 'line') + 'To';
-                var point = this._getPoint(coordinate[j], tileContext);                
+                var point = this._getPoint(coordinate[j], tileContext, tile.divisor);                
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
@@ -681,10 +684,10 @@ class MVTFeature {
         return context2d;
     }
 
-    _getPoint(coords, tileContext) {
+    _getPoint(coords, tileContext, divisor) {
         var point =  {
-            x: coords.x / this.divisor,
-            y: coords.y / this.divisor
+            x: coords.x / divisor,
+            y: coords.y / divisor
         };
 
         if (tileContext.parentId) {
@@ -742,7 +745,7 @@ class MVTLayer {
 
         var featureId = this._getIDForLayerFeature(feature) || i;
         var style = this.getStyle(feature);
-        var mVTFeature = this._features[featureId];
+        var mVTFeature = this._features[featureId];        
         if (!mVTFeature) {            
             mVTFeature = new MVTFeature(this, feature, tileContext, style);
             this._features[featureId] = mVTFeature;
