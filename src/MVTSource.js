@@ -59,7 +59,7 @@ class MVTSource {
         this._selectedFeatures = []; // list of selected features
 
         this.map.addListener("zoom_changed", () => {
-            self.clearAtNonVisibleZoom();
+            self.resetVisibleTiles();            
         });
     }
 
@@ -69,20 +69,14 @@ class MVTSource {
     }
 
     releaseTile(canvas) {
-        delete this._visibleTiles[canvas.id];
-        this.deleteTile(canvas.id);
-    }
-
-    deleteTile(id) {
-        for (var key in this.mVTLayers) {
-            this.mVTLayers[key].deleteTile(id);
+        var tile = this._getTile(canvas.id);
+        if (this.map.getZoom() != tile.zoom) {            
+            delete this._visibleTiles[canvas.id];
         }
     }
 
-    clearAtNonVisibleZoom() {
-        for (var key in this.mVTLayers) {
-            this.mVTLayers[key].clearFeaturesAtNonVisibleZoom();
-        }
+    resetVisibleTiles() {
+        this._visibleTiles = [];
     }
 
     drawTile(coord, zoom, ownerDocument) {
@@ -180,7 +174,7 @@ class MVTSource {
     }
 
     _xhrResponseOk = function (tileContext, response) {
-        if (this.map.getZoom() != tileContext.zoom) {
+        if (this.map.getZoom() != tileContext.zoom) {            
             return;
         }
         var uint8Array = new Uint8Array(response);
@@ -281,6 +275,7 @@ class MVTSource {
     }
 
     _mouseEvent(event, callbackFunction, options) {
+        if (!event.pixel || !event.latLng) return;
         callbackFunction = callbackFunction || function () { };
         var zoom = this.map.getZoom();
         var tile = MERCATOR.getTileAtLatLng(event.latLng, zoom);
@@ -292,7 +287,7 @@ class MVTSource {
             var key = clickableLayers[i];
             var layer = this.mVTLayers[key];
             if (layer) {
-                var event = layer.handleClickEvent(event);
+                var event = layer.handleClickEvent(event);                
                 this._mouseSelectedFeature(event, callbackFunction, options);
             }
         }
@@ -383,11 +378,15 @@ class MVTSource {
     }
 
     redrawTile(id) {
-        delete this._tilesDrawn[id];
+        this.deleteTileDrawn(id);
         var tileContext = this._visibleTiles[id];
         if (!tileContext) return;
         this.clearTile(tileContext);
         this._drawVectorTile(tileContext.vectorTile, tileContext);
+    }
+
+    deleteTileDrawn(id) {
+        delete this._tilesDrawn[id];
     }
 
     clearTile(tileContext) {

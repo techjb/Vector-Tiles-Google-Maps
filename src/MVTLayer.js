@@ -63,18 +63,6 @@ class MVTLayer {
         }
     }
 
-    deleteTile(id) {
-        delete this._mVTFeatures[id];
-        delete this._tileCanvas[id];
-    }
-
-    clearFeaturesAtNonVisibleZoom() {
-        var zoom = this.mVTSource.map.getZoom();
-        for (var featureId in this._features) {
-            this._features[featureId].clearTiles(zoom);
-        }
-    }
-
     getCanvas(id) {
         return this._tileCanvas[id];
     }
@@ -99,8 +87,9 @@ class MVTLayer {
 
     handleClickEvent(event) {
         var canvas = this._tileCanvas[event.id];
-        var features = this._mVTFeatures[event.id];
-        if (!canvas || !features) {
+        var features = this._mVTFeatures[event.id];        
+
+        if (!canvas || !features) {            
             return event;
         }
 

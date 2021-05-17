@@ -6,9 +6,7 @@ class MVTFeature {
     constructor(mVTLayer, vectorTileFeature, tileContext, style) {
         this.tileContext = tileContext;
         this.mVTLayer = mVTLayer;
-        this.selected = false;       
-        //this.extent = vectorTileFeature.extent;        
-        //this.divisor = this.extent / this.tileContext.tileSize;
+        this.selected = false;               
         this.tiles = {};
         this.style = style;
         for (var key in vectorTileFeature) {
@@ -33,20 +31,16 @@ class MVTFeature {
         return this.tiles[id].paths;
     }
 
-    clearTiles(zoom) {
-        for (var key in this.tiles) {
-            if (key.split(":")[0] != zoom) {
-                delete this.tiles[key];
-            }
-        }
-    }
-
     redrawTiles() {
+        var zoom = this.mVTLayer.mVTSource.map.getZoom();
         for (var id in this.tiles) {
-            this.mVTLayer.mVTSource.redrawTile(id);
+            this.mVTLayer.mVTSource.deleteTileDrawn(id);
+            if (id.split(":")[0] == zoom) {
+                this.mVTLayer.mVTSource.redrawTile(id);
+            }            
         }
     }
-
+   
     toggle() {
         if (this.selected) {
             this.deselect();
