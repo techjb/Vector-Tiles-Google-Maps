@@ -19,28 +19,36 @@ class MVTLayer {
         this._tileCanvas[tileContext.id] = tileContext.canvas;
         this._mVTFeatures[tileContext.id] = [];
         for (var i = 0; i < vectorTileFeatures.length; i++) {
-            var feature = vectorTileFeatures[i];
-            this._parseVectorTileFeature(feature, tileContext, i);
+            var vectorTileFeature = vectorTileFeatures[i];
+            this._parseVectorTileFeature(vectorTileFeature, tileContext, i);
         }
         this.drawTile(tileContext);
     }
 
-    _parseVectorTileFeature(feature, tileContext, i) {
+    _parseVectorTileFeature(vectorTileFeature, tileContext, i) {
         if (this._filter && typeof this._filter === 'function') {
-            if (this._filter(feature, tileContext) === false) {
+            if (this._filter(vectorTileFeature, tileContext) === false) {
                 return;
             }
         }
 
-        var featureId = this._getIDForLayerFeature(feature) || i;
-        var style = this.getStyle(feature);
-        var mVTFeature = this._features[featureId];        
+        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
+        var style = this.getStyle(vectorTileFeature);
+        var mVTFeature = this._features[featureId];
+        var selected = this.mVTSource.isPreselectedFeature(featureId);        
         if (!mVTFeature) {            
-            mVTFeature = new MVTFeature(this, feature, tileContext, style);
+            var options = {
+                mVTLayer: this,
+                vectorTileFeature: vectorTileFeature,
+                tileContext: tileContext,
+                style: style,
+                selected: selected
+            }
+            mVTFeature = new MVTFeature(options);
             this._features[featureId] = mVTFeature;
-        } else {
-            mVTFeature.setStyle(style);
-            mVTFeature.addTileFeature(feature, tileContext);
+        } else {            
+            mVTFeature.setStyle(style);            
+            mVTFeature.addTileFeature(vectorTileFeature, tileContext);
         }
 
         this._mVTFeatures[tileContext.id].push(mVTFeature);
@@ -78,6 +86,14 @@ class MVTLayer {
         this.style = style;
         for (var featureId in this._features) {
             this._features[featureId].setStyle(style);
+        }
+    }
+
+    setSelected(featureId) {
+        for (var feature in this._features) {
+            if (feature == featureId) {
+                this._features[feature].select();
+            }
         }
     }
 

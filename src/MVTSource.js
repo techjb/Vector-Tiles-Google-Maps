@@ -57,6 +57,7 @@ class MVTSource {
         this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
         this._visibleTiles = {}; // tiles currently in the viewport
         this._selectedFeatures = []; // list of selected features
+        this._preselectedFeatures = []; // features to select after loading
 
         this.map.addListener("zoom_changed", () => {
             self.resetVisibleTiles();            
@@ -319,6 +320,7 @@ class MVTSource {
             this._selectedFeatures[i].deselect();
         }
         this._selectedFeatures = [];
+        this._preselectedFeatures = [];
     }
 
     featureSelected(mvtFeature) {
@@ -326,6 +328,7 @@ class MVTSource {
             this.deselectAllFeatures();
         }
         this._selectedFeatures.push(mvtFeature);
+        this._preselectedFeatures = [];
     }
 
     featureDeselected(mvtFeature) {
@@ -333,6 +336,18 @@ class MVTSource {
         if (index > -1) {
             this._selectedFeatures.splice(index, 1);
         }
+        this._preselectedFeatures = [];
+    }
+
+    setPreselectedFeature(featureId) {
+        this._preselectedFeatures[featureId] = true;
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].setSelected(featureId);
+        }
+    }
+
+    isPreselectedFeature(featureId) {
+        return this._preselectedFeatures[featureId] != undefined;
     }
 
     getSelectedFeatures() {

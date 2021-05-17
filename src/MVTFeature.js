@@ -3,16 +3,20 @@
  */
 
 class MVTFeature {
-    constructor(mVTLayer, vectorTileFeature, tileContext, style) {
-        this.tileContext = tileContext;
-        this.mVTLayer = mVTLayer;
-        this.selected = false;               
+    constructor(options) {
+        this.tileContext = options.tileContext;
+        this.mVTLayer = options.mVTLayer;
+        this.vectorTileFeature = options.vectorTileFeature;
+        this.selected = options.selected;
         this.tiles = {};
-        this.style = style;
-        for (var key in vectorTileFeature) {
-            this[key] = vectorTileFeature[key];
+        this.style = options.style;
+        for (var key in this.vectorTileFeature) {
+            this[key] = this.vectorTileFeature[key];
         }
-        this.addTileFeature(vectorTileFeature, this.tileContext);
+        this.addTileFeature(this.vectorTileFeature, this.tileContext);
+        if (this.selected) {
+            this.select();
+        }
     }
 
     addTileFeature(vectorTileFeature, tileContext) {
@@ -24,7 +28,11 @@ class MVTFeature {
     }
 
     setStyle(style) {
-        this.style = style;
+        this.style = style;        
+    }
+
+    setSelected(selected) {
+        this.selected = selected;        
     }
 
     getPathsForTile(id) {
