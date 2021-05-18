@@ -149,7 +149,7 @@ class MVTSource {
         }
     }
 
-    _xhrRequest = function (tileContext) {
+    _xhrRequest(tileContext) {
         var self = this;
 
         var id = tileContext.parentId || tileContext.id;
@@ -170,13 +170,13 @@ class MVTSource {
         };
         xmlHttpRequest.open('GET', src, true);
         for (var header in this._xhrHeaders) {
-            xmlHttpRequest.setRequestHeader(header, headers[header])
+            xmlHttpRequest.setRequestHeader(header, headers[header]);
         }
         xmlHttpRequest.responseType = 'arraybuffer';
         xmlHttpRequest.send();
     }
 
-    _xhrResponseOk = function (tileContext, response) {
+    _xhrResponseOk(tileContext, response) {
         if (this.map.getZoom() != tileContext.zoom) {
             return;
         }
@@ -188,12 +188,12 @@ class MVTSource {
         this._drawVectorTile(vectorTile, tileContext);
     }
 
-    _tileProcessed = function (id, vectorTile) {
+    _tileProcessed(id, vectorTile) {
         if (!this._cache) return;
         this._tilesProcessed[id] = vectorTile;
     }
 
-    _tileDrawn = function (tileContext) {
+    _tileDrawn(tileContext) {
         if (!this._cache) return;
         this._tilesDrawn[tileContext.id] = tileContext;
     }
