@@ -542,6 +542,7 @@ class MVTFeature {
         this.mVTLayer = options.mVTLayer;
         this.vectorTileFeature = options.vectorTileFeature;
         this.selected = options.selected;
+        this.featureId = options.featureId;
         this.tiles = {};
         this.style = options.style;
         for (var key in this.vectorTileFeature) {
@@ -562,11 +563,11 @@ class MVTFeature {
     }
 
     setStyle(style) {
-        this.style = style;        
+        this.style = style;
     }
 
     setSelected(selected) {
-        this.selected = selected;        
+        this.selected = selected;
     }
 
     getPathsForTile(id) {
@@ -579,10 +580,10 @@ class MVTFeature {
             this.mVTLayer.mVTSource.deleteTileDrawn(id);
             if (id.split(":")[0] == zoom) {
                 this.mVTLayer.mVTSource.redrawTile(id);
-            }            
+            }
         }
     }
-   
+
     toggle() {
         if (this.selected) {
             this.deselect();
@@ -667,14 +668,14 @@ class MVTFeature {
             var coordinate = coordinates[i];
             for (var j = 0; j < coordinate.length; j++) {
                 var method = (j === 0 ? 'move' : 'line') + 'To';
-                var point = this._getPoint(coordinate[j], tileContext, tile.divisor);                
+                var point = this._getPoint(coordinate[j], tileContext, tile.divisor);
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
         }
         return projCoords;
     }
-    
+
     _getContext2d(canvas, style) {
         var context2d = canvas.getContext('2d');
         for (var key in style) {
@@ -687,7 +688,7 @@ class MVTFeature {
     }
 
     _getPoint(coords, tileContext, divisor) {
-        var point =  {
+        var point = {
             x: coords.x / divisor,
             y: coords.y / divisor
         };
@@ -745,22 +746,23 @@ class MVTLayer {
             }
         }
 
-        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
         var style = this.getStyle(vectorTileFeature);
+        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
         var mVTFeature = this._features[featureId];
-        var selected = this.mVTSource.isPreselectedFeature(featureId);        
-        if (!mVTFeature) {            
+        if (!mVTFeature) {
+            var selected = this.mVTSource.isFeatureSelected(featureId);
             var options = {
                 mVTLayer: this,
                 vectorTileFeature: vectorTileFeature,
                 tileContext: tileContext,
                 style: style,
-                selected: selected
+                selected: selected,
+                featureId: featureId
             }
             mVTFeature = new MVTFeature(options);
             this._features[featureId] = mVTFeature;
-        } else {            
-            mVTFeature.setStyle(style);            
+        } else {
+            mVTFeature.setStyle(style);
             mVTFeature.addTileFeature(vectorTileFeature, tileContext);
         }
 
@@ -816,9 +818,9 @@ class MVTLayer {
 
     handleClickEvent(event) {
         var canvas = this._tileCanvas[event.id];
-        var features = this._mVTFeatures[event.id];        
+        var features = this._mVTFeatures[event.id];
 
-        if (!canvas || !features) {            
+        if (!canvas || !features) {
             return event;
         }
 
@@ -919,11 +921,13 @@ class MVTSource {
         this._tilesProcessed = {}; //List of tiles that have been processed (when cache enabled)
         this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
         this._visibleTiles = {}; // tiles currently in the viewport
-        this._selectedFeatures = []; // list of selected features
-        this._preselectedFeatures = []; // features to select after loading
+        this._selectedFeatures = {}; // list of selected features
+        if (options.selectedFeatures) {
+            this.setSelectedFeatures(options.selectedFeatures);
+        }
 
         this.map.addListener("zoom_changed", () => {
-            self.resetVisibleTiles();            
+            self.resetVisibleTiles();
         });
     }
 
@@ -934,7 +938,7 @@ class MVTSource {
 
     releaseTile(canvas) {
         var tile = this._getTile(canvas.id);
-        if (this.map.getZoom() != tile.zoom) {            
+        if (this.map.getZoom() != tile.zoom) {
             delete this._visibleTiles[canvas.id];
         }
     }
@@ -951,7 +955,7 @@ class MVTSource {
             return tileContext;
         }
         var canvas = this._createCanvas(ownerDocument, id);
-        var parentId = this._getParentId(id);       
+        var parentId = this._getParentId(id);
 
         tileContext = {
             id: id,
@@ -966,7 +970,7 @@ class MVTSource {
         if (vectorTile !== undefined) {
             if (vectorTile) {
                 this._drawVectorTile(vectorTile, tileContext);
-            }            
+            }
         }
         else {
             this._xhrRequest(tileContext);
@@ -975,7 +979,7 @@ class MVTSource {
     }
 
     _getParentId(id) {
-        var parentId = false;        
+        var parentId = false;
         if (this._sourceMaxZoom) {
             var tile = this._getTile(id);
             if (tile.zoom > this._sourceMaxZoom) {
@@ -984,7 +988,7 @@ class MVTSource {
                 var x = tile.x >> zoomDistance;
                 var y = tile.y >> zoomDistance;
                 parentId = this._getTileId(zoom, x, y);
-            }            
+            }
         }
         return parentId;
     }
@@ -1038,7 +1042,7 @@ class MVTSource {
     }
 
     _xhrResponseOk = function (tileContext, response) {
-        if (this.map.getZoom() != tileContext.zoom) {            
+        if (this.map.getZoom() != tileContext.zoom) {
             return;
         }
         var uint8Array = new Uint8Array(response);
@@ -1151,7 +1155,7 @@ class MVTSource {
             var key = clickableLayers[i];
             var layer = this.mVTLayers[key];
             if (layer) {
-                var event = layer.handleClickEvent(event);                
+                var event = layer.handleClickEvent(event);
                 this._mouseSelectedFeature(event, callbackFunction, options);
             }
         }
@@ -1179,42 +1183,50 @@ class MVTSource {
     }
 
     deselectAllFeatures() {
-        for (var i = this._selectedFeatures.length - 1; i >= 0; i--) {
-            this._selectedFeatures[i].deselect();
+        for (var featureId in this._selectedFeatures) {
+            var mVTFeature = this._selectedFeatures[featureId];
+            if (mVTFeature) {
+                mVTFeature.deselect();
+            }
         }
-        this._selectedFeatures = [];
-        this._preselectedFeatures = [];
+        this._selectedFeatures = {};
     }
 
-    featureSelected(mvtFeature) {
+    featureSelected(mVTFeature) {
         if (!this._multipleSelection) {
             this.deselectAllFeatures();
         }
-        this._selectedFeatures.push(mvtFeature);
-        this._preselectedFeatures = [];
+        this._selectedFeatures[mVTFeature.featureId] = mVTFeature;
     }
 
     featureDeselected(mvtFeature) {
-        const index = this._selectedFeatures.indexOf(mvtFeature);
-        if (index > -1) {
-            this._selectedFeatures.splice(index, 1);
-        }
-        this._preselectedFeatures = [];
+        delete this._selectedFeatures[mvtFeature.featureId];
     }
 
-    setPreselectedFeature(featureId) {
-        this._preselectedFeatures[featureId] = true;
-        for (var key in this.mVTLayers) {
-            this.mVTLayers[key].setSelected(featureId);
+    setSelectedFeatures(featuresIds) {
+        if (featuresIds.length > 1) {
+            this._multipleSelection = true;
+        }
+        this.deselectAllFeatures();
+        for (var i = 0; i < featuresIds.length; i++) {
+            var featureId = featuresIds[i];
+            this._selectedFeatures[featureId] = false;
+            for (var key in this.mVTLayers) {
+                this.mVTLayers[key].setSelected(featureId);
+            }
         }
     }
 
-    isPreselectedFeature(featureId) {
-        return this._preselectedFeatures[featureId] != undefined;
+    isFeatureSelected(featureId) {
+        return this._selectedFeatures[featureId] != undefined;
     }
 
     getSelectedFeatures() {
-        return this._selectedFeatures;
+        var selectedFeatures = [];
+        for (var featureId in this._selectedFeatures) {
+            selectedFeatures.push(this._selectedFeatures[featureId]);
+        }
+        return selectedFeatures;
     }
 
     setFilter(filter, redrawTiles) {

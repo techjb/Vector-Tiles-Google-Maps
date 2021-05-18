@@ -8,6 +8,7 @@ class MVTFeature {
         this.mVTLayer = options.mVTLayer;
         this.vectorTileFeature = options.vectorTileFeature;
         this.selected = options.selected;
+        this.featureId = options.featureId;
         this.tiles = {};
         this.style = options.style;
         for (var key in this.vectorTileFeature) {
@@ -28,11 +29,11 @@ class MVTFeature {
     }
 
     setStyle(style) {
-        this.style = style;        
+        this.style = style;
     }
 
     setSelected(selected) {
-        this.selected = selected;        
+        this.selected = selected;
     }
 
     getPathsForTile(id) {
@@ -45,10 +46,10 @@ class MVTFeature {
             this.mVTLayer.mVTSource.deleteTileDrawn(id);
             if (id.split(":")[0] == zoom) {
                 this.mVTLayer.mVTSource.redrawTile(id);
-            }            
+            }
         }
     }
-   
+
     toggle() {
         if (this.selected) {
             this.deselect();
@@ -133,14 +134,14 @@ class MVTFeature {
             var coordinate = coordinates[i];
             for (var j = 0; j < coordinate.length; j++) {
                 var method = (j === 0 ? 'move' : 'line') + 'To';
-                var point = this._getPoint(coordinate[j], tileContext, tile.divisor);                
+                var point = this._getPoint(coordinate[j], tileContext, tile.divisor);
                 projCoords.push(point);
                 context2d[method](point.x, point.y);
             }
         }
         return projCoords;
     }
-    
+
     _getContext2d(canvas, style) {
         var context2d = canvas.getContext('2d');
         for (var key in style) {
@@ -153,7 +154,7 @@ class MVTFeature {
     }
 
     _getPoint(coords, tileContext, divisor) {
-        var point =  {
+        var point = {
             x: coords.x / divisor,
             y: coords.y / divisor
         };

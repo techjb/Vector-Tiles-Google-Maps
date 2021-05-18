@@ -24,7 +24,7 @@ debug: true,
 cache: true,
 ```
 
-* `sourceMaxZoom` - **{int}** Setting this parámeter, will enable overzoom. As an example, if the tileset contains tiles until zoom level 14 and the map request a tile in the zoom level 15, then it will take the tile in the zoom level 14 to create the tile in the zoom level 15. **Default: `false`**.
+* `sourceMaxZoom` - **{int}** Setting this option, will enable overzoom. As an example, if the tileset contains tiles until zoom level 14 and the map request a tile in the zoom level 15, then it will take the tile in the zoom level 14 to create the tile in the zoom level 15. **Default: `false`**.
 
 ```js
 sourceMaxZoom: 14,
@@ -51,6 +51,12 @@ getIDForLayerFeature: function(feature) {
 },
 ```
 
+* `selectedFeatures` - **[{string}, ...]** A list of feature IDs that will be marked as selected features. **Default: `none`**.
+
+```js
+selectedFeatures: ['29', '39', '38'],
+```
+
 * `filter` - **{function}** The filter function gets called when iterating though each vector tile feature (vtf). You have access to every property associated with a given feature (the feature, and the layer). You can also filter based of the context (each tile that the feature is drawn onto). Returning false skips over the feature and it is not drawn.   
   * *@param feature* *@returns {boolean}*
 
@@ -60,7 +66,7 @@ filter: function(feature, tileContext) {
 },
 ```
 
-* `style` - **{function}** or **{object}** Sets properties that the HTML5 Canvas' context uses to draw on the map. If you do not specify this, default styling will be applied to your features. `style.selected` parameters specify how a feature looks when it is selected. **Optional**.
+* `style` - **{function}** or **{object}** Sets properties that the HTML5 Canvas' context uses to draw on the map. If you do not specify this, default styling will be applied to your features. `style.selected` option specify how a feature looks when it is selected. **Optional**.
   
 ```js
 style: function(feature) {
@@ -202,4 +208,14 @@ mVTSource.setFilter(filter);
 var visibleLayers = ["provinces", "municipalities"];
 
 mVTSource.setVisibleLayers(filter);
+```
+
+
+* `setSelectedFeatures(featuresIds)` - Set a list of features IDs as selected.
+  * *@param featuresIds* *[{string}, ...]* - List of features IDs.
+
+```js
+var featureIds = ['29', '39', '38'];
+
+mVTSource.setSelectedFeatures(featureIds);
 ```

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Click</title>
+    <title>Preselected features</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css" />
@@ -12,13 +12,9 @@
     </div>
     <div class="container-right">
         <div>
-            <h2>Click</h2>
+            <h2>Preselected features</h2>
             <p>
-                Click to select single feature. Right click to select multiple features.
-            </p>
-            <p>
-                Inhabitants:
-                <ul id="listSelectedFeatures"></ul>
+                Set features as selected before loading.
             </p>
         </div>
     </div>
@@ -42,46 +38,15 @@
             var options = {
                 url: "https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=pk.eyJ1IjoidGVjaGpiIiwiYSI6ImNrbzFuMDV6MzBhYXQycWxwaG4ydGozZTgifQ.hCgIvpwnfw93KFcWaR5WBA",
                 sourceMaxZoom: 14,
-                clickableLayers: ["provinces"], // Trigger click event to some layers
                 visibleLayers: ["provinces"],
                 getIDForLayerFeature: function (feature) {  // Unique identifier for each feature
                     return feature.properties.Id;
-                }
+                },
+                selectedFeatures: ['29', '39', '38']
             }
 
             mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
-
-            var clickOptions = {
-                multipleSelection: false, // Multiple feature selection
-                setSelected: true // set feature as selected
-            };
-            map.addListener("click", function (event) {
-                mvtSource.onClick(event, ShowSelectedFeatures, clickOptions);
-            });
-
-            var rightClickOptions = {
-                multipleSelection: true, // Multiple feature selection
-                setSelected: true // set feature as selected
-            };
-            map.addListener("rightclick", function (event) {
-                mvtSource.onClick(event, ShowSelectedFeatures, rightClickOptions);
-            });
-        }
-
-        function ShowSelectedFeatures(event) {
-            if (!event.feature) {
-                mvtSource.deselectAllFeatures();
-            }            
-            var features = mvtSource.getSelectedFeatures();
-            var listSelectedFeatures = document.getElementById("listSelectedFeatures");
-            listSelectedFeatures.innerHTML = '';
-            for (var i = 0; i < features.length; i++) {
-                var li = document.createElement("li");
-                var feature = features[i];
-                li.innerHTML = (feature.properties.Name + ": " + feature.properties.Value);
-                listSelectedFeatures.appendChild(li);
-            }
         }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA_bDL3sglTy8HGoiAU9JsLtayEkQakE7c&callback=InitGoogleMap&libraries=&v=weekly"

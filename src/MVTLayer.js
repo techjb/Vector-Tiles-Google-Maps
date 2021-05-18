@@ -32,22 +32,23 @@ class MVTLayer {
             }
         }
 
-        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
         var style = this.getStyle(vectorTileFeature);
+        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
         var mVTFeature = this._features[featureId];
-        var selected = this.mVTSource.isPreselectedFeature(featureId);        
-        if (!mVTFeature) {            
+        if (!mVTFeature) {
+            var selected = this.mVTSource.isFeatureSelected(featureId);
             var options = {
                 mVTLayer: this,
                 vectorTileFeature: vectorTileFeature,
                 tileContext: tileContext,
                 style: style,
-                selected: selected
+                selected: selected,
+                featureId: featureId
             }
             mVTFeature = new MVTFeature(options);
             this._features[featureId] = mVTFeature;
-        } else {            
-            mVTFeature.setStyle(style);            
+        } else {
+            mVTFeature.setStyle(style);
             mVTFeature.addTileFeature(vectorTileFeature, tileContext);
         }
 
@@ -103,9 +104,9 @@ class MVTLayer {
 
     handleClickEvent(event) {
         var canvas = this._tileCanvas[event.id];
-        var features = this._mVTFeatures[event.id];        
+        var features = this._mVTFeatures[event.id];
 
-        if (!canvas || !features) {            
+        if (!canvas || !features) {
             return event;
         }
 
