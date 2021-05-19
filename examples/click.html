@@ -46,7 +46,7 @@
                 visibleLayers: ["provinces"],
                 getIDForLayerFeature: function (feature) {  // Unique identifier for each feature
                     return feature.properties.Id;
-                }, cache:true
+                }
             }
 
             mvtSource = new MVTSource(map, options);
