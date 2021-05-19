@@ -224,7 +224,7 @@ class MVTSource {
             this.mVTLayers[key] = this._createMVTLayer(key);
         }
         var mVTLayer = this.mVTLayers[key];
-        mVTLayer.parseVectorTileLayer(vectorTileLayer.parsedFeatures, tileContext);
+        mVTLayer.parseVectorTileLayer(this, vectorTileLayer.parsedFeatures, tileContext);
     }
 
     _createMVTLayer(key) {
@@ -233,8 +233,8 @@ class MVTSource {
             filter: this._filter,
             style: this.style,
             name: key
-        };
-        return new MVTLayer(this, options);
+        };        
+        return new MVTLayer(options);
     }
 
     _drawDebugInfo(tileContext) {

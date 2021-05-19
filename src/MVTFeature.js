@@ -5,16 +5,15 @@
 class MVTFeature {
     constructor(options) {
         this.tileContext = options.tileContext;
-        this.mVTLayer = options.mVTLayer;
-        this.vectorTileFeature = options.vectorTileFeature;
+        this.mVTSource = options.mVTSource;        
         this.selected = options.selected;
         this.featureId = options.featureId;
         this.tiles = {};
         this.style = options.style;
-        for (var key in this.vectorTileFeature) {
-            this[key] = this.vectorTileFeature[key];
+        for (var key in options.vectorTileFeature) {
+            this[key] = options.vectorTileFeature[key];
         }
-        this.addTileFeature(this.vectorTileFeature, this.tileContext);
+        this.addTileFeature(options.vectorTileFeature, this.tileContext);
         if (this.selected) {
             this.select();
         }
@@ -41,11 +40,11 @@ class MVTFeature {
     }
 
     redrawTiles() {
-        var zoom = this.mVTLayer.mVTSource.map.getZoom();
+        var zoom = this.mVTSource.map.getZoom();
         for (var id in this.tiles) {
-            this.mVTLayer.mVTSource.deleteTileDrawn(id);
+            this.mVTSource.deleteTileDrawn(id);
             if (id.split(":")[0] == zoom) {
-                this.mVTLayer.mVTSource.redrawTile(id);
+                this.mVTSource.redrawTile(id);
             }
         }
     }
@@ -60,13 +59,13 @@ class MVTFeature {
 
     select() {
         this.selected = true;
-        this.mVTLayer.mVTSource.featureSelected(this);
+        this.mVTSource.featureSelected(this);
         this.redrawTiles();
     }
 
     deselect() {
         this.selected = false;
-        this.mVTLayer.mVTSource.featureDeselected(this);
+        this.mVTSource.featureDeselected(this);
         this.redrawTiles();
     }
 
@@ -160,8 +159,8 @@ class MVTFeature {
         };
 
         if (tileContext.parentId) {
-            var parentTile = this.mVTLayer.mVTSource._getTile(tileContext.parentId);
-            var currentTile = this.mVTLayer.mVTSource._getTile(tileContext.id);
+            var parentTile = this.mVTSource._getTile(tileContext.parentId);
+            var currentTile = this.mVTSource._getTile(tileContext.id);
             var zoomDistance = currentTile.zoom - parentTile.zoom;
 
             const scale = Math.pow(2, zoomDistance);
