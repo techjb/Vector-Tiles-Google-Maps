@@ -62,8 +62,13 @@ class MVTSource {
         }
 
         this.map.addListener("zoom_changed", () => {
-            self.resetVisibleTiles();
+            self.resetVisibleTiles();            
         });
+
+        // not enought tested
+        //this.map.addListener("tilesloaded", () => {
+        //    self.removeNonVisibleFeatures(); 
+        //});
     }
 
     getTile(coord, zoom, ownerDocument) {
@@ -80,6 +85,13 @@ class MVTSource {
 
     resetVisibleTiles() {
         this._visibleTiles = [];
+    }
+
+    removeNonVisibleFeatures() {
+        var zoom = this.map.getZoom();
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].removeFeatures(zoom);
+        }
     }
 
     drawTile(coord, zoom, ownerDocument) {

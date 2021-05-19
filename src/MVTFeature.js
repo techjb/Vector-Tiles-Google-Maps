@@ -9,10 +9,9 @@ class MVTFeature {
         this.selected = options.selected;
         this.featureId = options.featureId;
         this.tiles = {};
-        this.style = options.style;
-        for (var key in options.vectorTileFeature) {
-            this[key] = options.vectorTileFeature[key];
-        }
+        this.style = options.style;        
+        this.type = options.vectorTileFeature.type;
+        this.properties = options.vectorTileFeature.properties;
         this.addTileFeature(options.vectorTileFeature, this.tileContext);
         if (this.selected) {
             this.select();
@@ -26,6 +25,15 @@ class MVTFeature {
             divisor: vectorTileFeature.extent / tileContext.tileSize
         };
     }
+
+    removeTiles(zoom) {        
+        for (var tile in this.tiles) {
+            if (tile.split(":")[0] != zoom) {
+                delete this.tiles[tile];
+            }
+        }
+    }
+
 
     setStyle(style) {
         this.style = style;

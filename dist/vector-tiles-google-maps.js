@@ -543,10 +543,9 @@ class MVTFeature {
         this.selected = options.selected;
         this.featureId = options.featureId;
         this.tiles = {};
-        this.style = options.style;
-        for (var key in options.vectorTileFeature) {
-            this[key] = options.vectorTileFeature[key];
-        }
+        this.style = options.style;        
+        this.type = options.vectorTileFeature.type;
+        this.properties = options.vectorTileFeature.properties;
         this.addTileFeature(options.vectorTileFeature, this.tileContext);
         if (this.selected) {
             this.select();
@@ -560,6 +559,15 @@ class MVTFeature {
             divisor: vectorTileFeature.extent / tileContext.tileSize
         };
     }
+
+    removeTiles(zoom) {        
+        for (var tile in this.tiles) {
+            if (tile.split(":")[0] != zoom) {
+                delete this.tiles[tile];
+            }
+        }
+    }
+
 
     setStyle(style) {
         this.style = style;
@@ -815,8 +823,10 @@ class MVTLayer {
     }
 
     handleClickEvent(event) {
-        var canvas = this._canvasAndFeatures[event.id].canvas;
-        var features = this._canvasAndFeatures[event.id].features;
+        var canvasAndFeatures = this._canvasAndFeatures[event.id];
+        if (!canvasAndFeatures) return event;
+        var canvas = canvasAndFeatures.canvas;
+        var features = canvasAndFeatures.features;
 
         if (!canvas || !features) {
             return event;
@@ -828,6 +838,7 @@ class MVTLayer {
         for (var i = 0; i < features.length; i++) {
             var feature = features[i];
             var paths = feature.getPathsForTile(event.id);
+            
             for (var j = 0; j < paths.length; j++) {
                 var path = paths[j];
                 switch (feature.type) {
@@ -853,12 +864,23 @@ class MVTLayer {
                         break;
                 }
             }
-            if (minDistance == 0) {
+            if (minDistance == 0) {                
                 break;
             }
         }
         event.feature = selectedFeature;
         return event;
+    }
+
+    removeFeatures(zoom) {
+        for (var featureId in this._features) {
+            this._features[featureId].removeTiles(zoom);            
+        }
+        for (var id in this._canvasAndFeatures) {
+            if (id.split(":")[0] != zoom) {
+                delete this._canvasAndFeatures[id];
+            }
+        }
     }
 };
 /*
@@ -925,8 +947,13 @@ class MVTSource {
         }
 
         this.map.addListener("zoom_changed", () => {
-            self.resetVisibleTiles();
+            self.resetVisibleTiles();            
         });
+
+        // not enought tested
+        //this.map.addListener("tilesloaded", () => {
+        //    self.removeNonVisibleFeatures(); 
+        //});
     }
 
     getTile(coord, zoom, ownerDocument) {
@@ -943,6 +970,13 @@ class MVTSource {
 
     resetVisibleTiles() {
         this._visibleTiles = [];
+    }
+
+    removeNonVisibleFeatures() {
+        var zoom = this.map.getZoom();
+        for (var key in this.mVTLayers) {
+            this.mVTLayers[key].removeFeatures(zoom);
+        }
     }
 
     drawTile(coord, zoom, ownerDocument) {

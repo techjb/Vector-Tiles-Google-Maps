@@ -102,8 +102,10 @@ class MVTLayer {
     }
 
     handleClickEvent(event) {
-        var canvas = this._canvasAndFeatures[event.id].canvas;
-        var features = this._canvasAndFeatures[event.id].features;
+        var canvasAndFeatures = this._canvasAndFeatures[event.id];
+        if (!canvasAndFeatures) return event;
+        var canvas = canvasAndFeatures.canvas;
+        var features = canvasAndFeatures.features;
 
         if (!canvas || !features) {
             return event;
@@ -115,6 +117,7 @@ class MVTLayer {
         for (var i = 0; i < features.length; i++) {
             var feature = features[i];
             var paths = feature.getPathsForTile(event.id);
+            
             for (var j = 0; j < paths.length; j++) {
                 var path = paths[j];
                 switch (feature.type) {
@@ -140,11 +143,22 @@ class MVTLayer {
                         break;
                 }
             }
-            if (minDistance == 0) {
+            if (minDistance == 0) {                
                 break;
             }
         }
         event.feature = selectedFeature;
         return event;
+    }
+
+    removeFeatures(zoom) {
+        for (var featureId in this._features) {
+            this._features[featureId].removeTiles(zoom);            
+        }
+        for (var id in this._canvasAndFeatures) {
+            if (id.split(":")[0] != zoom) {
+                delete this._canvasAndFeatures[id];
+            }
+        }
     }
 };
