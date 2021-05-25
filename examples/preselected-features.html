@@ -16,12 +16,16 @@
             <p>
                 Set features as selected before loading.
             </p>
+            <p>
+                <button id="inputButton">Select three random features</button>
+            </p>
         </div>
     </div>
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
         var map;
-        var mvtSource;
+        var mvtSource;        
+        document.getElementById("inputButton").onclick = SeltecRandomItems;
 
         function InitGoogleMap() {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -41,12 +45,21 @@
                 visibleLayers: ["provinces"],
                 getIDForLayerFeature: function (feature) {  // Unique identifier for each feature
                     return feature.properties.Id;
-                },
+                },                
                 selectedFeatures: ['29', '39', '38'] // list of feature ids to mark as selected
             }
 
             mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
+        }
+
+        function SeltecRandomItems() {
+            var localIds = [];
+            for (var i = 0; i < 3; i++) {
+                const rndInt = Math.floor(Math.random() * 52) + 1;
+                localIds.push(rndInt);
+            }            
+            mvtSource.setSelectedFeatures(localIds);
         }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA_bDL3sglTy8HGoiAU9JsLtayEkQakE7c&callback=InitGoogleMap&libraries=&v=weekly"

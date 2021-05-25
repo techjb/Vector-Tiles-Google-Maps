@@ -52,23 +52,18 @@ class MVTSource {
             return style;
         };
 
-        this.mVTLayers = {};  //Keep a list of the layers contained in the PBFs
-        this._tilesProcessed = {}; //List of tiles that have been processed (when cache enabled)
+        this.mVTLayers = [];  //Keep a list of the layers contained in the PBFs
+        this._tilesProcessed = []; //List of tiles that have been processed (when cache enabled)
         this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
-        this._visibleTiles = {}; // tiles currently in the viewport
-        this._selectedFeatures = {}; // list of selected features
+        this._visibleTiles = []; // tiles currently in the viewport
+        this._selectedFeatures = []; // list of selected features
         if (options.selectedFeatures) {
             this.setSelectedFeatures(options.selectedFeatures);
         }
 
         this.map.addListener("zoom_changed", () => {
-            self.resetVisibleTiles();            
+            self.resetVisibleTiles();
         });
-
-        // not enought tested
-        //this.map.addListener("tilesloaded", () => {
-        //    self.removeNonVisibleFeatures(); 
-        //});
     }
 
     getTile(coord, zoom, ownerDocument) {
@@ -77,47 +72,29 @@ class MVTSource {
     }
 
     releaseTile(canvas) {
-        var tile = this._getTile(canvas.id);
-        if (this.map.getZoom() != tile.zoom) {
-            delete this._visibleTiles[canvas.id];
-        }
+        delete this._visibleTiles[canvas.id];
     }
 
     resetVisibleTiles() {
         this._visibleTiles = [];
     }
 
-    removeNonVisibleFeatures() {
-        var zoom = this.map.getZoom();
-        for (var key in this.mVTLayers) {
-            this.mVTLayers[key].removeFeatures(zoom);
-        }
-    }
-
     drawTile(coord, zoom, ownerDocument) {
-        var id = this._getTileId(zoom, coord.x, coord.y);
+        var id = this.getTileId(zoom, coord.x, coord.y);
         var tileContext = this._tilesDrawn[id];
         if (tileContext) {
-            this._setTileVisible(tileContext);
+            this._setVisibleTile(tileContext);
             return tileContext;
         }
-        var canvas = this._createCanvas(ownerDocument, id);
-        var parentId = this._getParentId(id);
 
-        tileContext = {
-            id: id,
-            canvas: canvas,
-            zoom: zoom,
-            tileSize: this._tileSize,
-            parentId: parentId
-        };
-
+        tileContext = this._createTileContext(coord, zoom, ownerDocument);
         var id = tileContext.parentId || tileContext.id;
         var vectorTile = this._tilesProcessed[id];
         if (vectorTile !== undefined) {
             if (vectorTile) {
                 this._drawVectorTile(vectorTile, tileContext);
             }
+            else { } // tile not found
         }
         else {
             this._xhrRequest(tileContext);
@@ -125,16 +102,30 @@ class MVTSource {
         return tileContext;
     }
 
+    _createTileContext(coord, zoom, ownerDocument) {
+        var id = this.getTileId(zoom, coord.x, coord.y);
+        var canvas = this._createCanvas(ownerDocument, id);
+        var parentId = this._getParentId(id);
+
+        return {
+            id: id,
+            canvas: canvas,
+            zoom: zoom,
+            tileSize: this._tileSize,
+            parentId: parentId
+        };
+    }
+
     _getParentId(id) {
         var parentId = false;
         if (this._sourceMaxZoom) {
-            var tile = this._getTile(id);
+            var tile = this.getTileObject(id);
             if (tile.zoom > this._sourceMaxZoom) {
                 var zoomDistance = tile.zoom - this._sourceMaxZoom;
                 var zoom = tile.zoom - zoomDistance;
                 var x = tile.x >> zoomDistance;
                 var y = tile.y >> zoomDistance;
-                parentId = this._getTileId(zoom, x, y);
+                parentId = this.getTileId(zoom, x, y);
             }
         }
         return parentId;
@@ -148,11 +139,11 @@ class MVTSource {
         return canvas;
     }
 
-    _getTileId(zoom, x, y) {
+    getTileId(zoom, x, y) {
         return [zoom, x, y].join(":");
     }
 
-    _getTile(id) {
+    getTileObject(id) {
         var values = id.split(":");
         return {
             zoom: values[0],
@@ -165,7 +156,7 @@ class MVTSource {
         var self = this;
 
         var id = tileContext.parentId || tileContext.id;
-        var tile = this._getTile(id);
+        var tile = this.getTileObject(id);
 
         var src = this._url
             .replace("{z}", tile.zoom)
@@ -205,14 +196,18 @@ class MVTSource {
         this._tilesProcessed[id] = vectorTile;
     }
 
-    _tileDrawn(tileContext) {
+    _setTileDrawn(tileContext) {
         if (!this._cache) return;
         this._tilesDrawn[tileContext.id] = tileContext;
     }
 
+    deleteTileDrawn(id) {
+        delete this._tilesDrawn[id];
+    }
+
     _drawVectorTile(vectorTile, tileContext) {
         if (this._visibleLayers) {
-            for (var i = 0; i < this._visibleLayers.length; i++) {
+            for (var i = 0, length = this._visibleLayers.length; i < length; i++) {
                 var key = this._visibleLayers[i];
                 if (vectorTile.layers[key]) {
                     var vectorTileLayer = vectorTile.layers[key];
@@ -226,9 +221,9 @@ class MVTSource {
             }
         }
         tileContext.vectorTile = vectorTile;
-        this._setTileVisible(tileContext);
+        this._setVisibleTile(tileContext);
         this._drawDebugInfo(tileContext);
-        this._tileDrawn(tileContext);
+        this._setTileDrawn(tileContext);
     }
 
     _drawVectorTileLayer(vectorTileLayer, key, tileContext) {
@@ -236,7 +231,7 @@ class MVTSource {
             this.mVTLayers[key] = this._createMVTLayer(key);
         }
         var mVTLayer = this.mVTLayers[key];
-        mVTLayer.parseVectorTileLayer(this, vectorTileLayer.parsedFeatures, tileContext);
+        mVTLayer.parseVectorTileFeatures(this, vectorTileLayer.parsedFeatures, tileContext);
     }
 
     _createMVTLayer(key) {
@@ -245,13 +240,13 @@ class MVTSource {
             filter: this._filter,
             style: this.style,
             name: key
-        };        
+        };
         return new MVTLayer(options);
     }
 
     _drawDebugInfo(tileContext) {
         if (!this._debug) return;
-        var tile = this._getTile(tileContext.id)
+        var tile = this.getTileObject(tileContext.id)
         var width = this._tileSize;
         var height = this._tileSize;
         var context2d = tileContext.canvas.getContext('2d');
@@ -267,7 +262,7 @@ class MVTSource {
         context2d.strokeText(tileContext.zoom + ' ' + tile.x + ' ' + tile.y, width / 2 - 30, height / 2 - 10);
     }
 
-    _setTileVisible(tileContext) {
+    _setVisibleTile(tileContext) {
         this._visibleTiles[tileContext.id] = tileContext;
     }
 
@@ -294,11 +289,11 @@ class MVTSource {
         callbackFunction = callbackFunction || function () { };
         var zoom = this.map.getZoom();
         var tile = MERCATOR.getTileAtLatLng(event.latLng, zoom);
-        event.id = this._getTileId(tile.z, tile.x, tile.y);
+        event.id = this.getTileId(tile.z, tile.x, tile.y);
         event.tilePoint = MERCATOR.fromLatLngToTilePoint(this.map, event);
 
         var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers) || [];
-        for (var i = 0; i < clickableLayers.length; i++) {
+        for (var i = 0, length = clickableLayers.length; i < length; i++) {
             var key = clickableLayers[i];
             var layer = this.mVTLayers[key];
             if (layer) {
@@ -355,7 +350,7 @@ class MVTSource {
             this._multipleSelection = true;
         }
         this.deselectAllFeatures();
-        for (var i = 0; i < featuresIds.length; i++) {
+        for (var i = 0, length = featuresIds.length; i < length; i++) {
             var featureId = featuresIds[i];
             this._selectedFeatures[featureId] = false;
             for (var key in this.mVTLayers) {
@@ -377,28 +372,32 @@ class MVTSource {
     }
 
     setFilter(filter, redrawTiles) {
+        redrawTiles = (redrawTiles === undefined || redrawTiles);
         this._filter = filter;
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].setFilter(filter);
         }
-        if (redrawTiles === undefined || redrawTiles) {
+        if (redrawTiles) {
             this.redrawAllTiles();
         }
     }
 
     setStyle(style, redrawTiles) {
+        redrawTiles = (redrawTiles === undefined || redrawTiles);
         this.style = style
         for (var key in this.mVTLayers) {
             this.mVTLayers[key].setStyle(style);
         }
-        if (redrawTiles === undefined || redrawTiles) {
+
+        if (redrawTiles) {
             this.redrawAllTiles();
         }
     }
 
     setVisibleLayers(visibleLayers, redrawTiles) {
+        redrawTiles = (redrawTiles === undefined || redrawTiles);
         this._visibleLayers = visibleLayers;
-        if (redrawTiles === undefined || redrawTiles) {
+        if (redrawTiles) {
             this.redrawAllTiles();
         }
     }
@@ -418,16 +417,11 @@ class MVTSource {
         this.deleteTileDrawn(id);
         var tileContext = this._visibleTiles[id];
         if (!tileContext) return;
-        this.clearTile(tileContext);
+        this.clearTile(tileContext.canvas);
         this._drawVectorTile(tileContext.vectorTile, tileContext);
     }
 
-    deleteTileDrawn(id) {
-        delete this._tilesDrawn[id];
-    }
-
-    clearTile(tileContext) {
-        var canvas = tileContext.canvas;
+    clearTile(canvas) {
         var context = canvas.getContext('2d');
         context.clearRect(0, 0, canvas.width, canvas.height);
     }

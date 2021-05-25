@@ -10,15 +10,15 @@ class MVTLayer {
         this.name = options.name;
         this._filter = options.filter || false;
         this._canvasAndFeatures = [];
-        this._features = {};
+        this._features = [];
     }
 
-    parseVectorTileLayer(mVTSource, vectorTileFeatures, tileContext) {
+    parseVectorTileFeatures(mVTSource, vectorTileFeatures, tileContext) {
         this._canvasAndFeatures[tileContext.id] = {
             canvas: tileContext.canvas,
             features: []
         }
-        for (var i = 0; i < vectorTileFeatures.length; i++) {
+        for (var i = 0, length = vectorTileFeatures.length; i < length; i++) {
             var vectorTileFeature = vectorTileFeatures[i];
             this._parseVectorTileFeature(mVTSource, vectorTileFeature, tileContext, i);
         }
@@ -54,11 +54,11 @@ class MVTLayer {
         this._canvasAndFeatures[tileContext.id].features.push(mVTFeature);
     }
 
-    drawTile(tileContext) {        
+    drawTile(tileContext) {
         var features = this._canvasAndFeatures[tileContext.id].features;
         if (!features) return;
         var selectedFeatures = [];
-        for (var i = 0; i < features.length; i++) {
+        for (var i = 0, length = features.length; i < length; i++) {
             var feature = features[i];
             if (feature.selected) {
                 selectedFeatures.push(feature);
@@ -66,12 +66,12 @@ class MVTLayer {
                 feature.draw(tileContext);
             }
         }
-        for (var i = 0; i < selectedFeatures.length; i++) {
+        for (var i = 0, length = selectedFeatures.length; i < length; i++) {
             selectedFeatures[i].draw(tileContext);
         }
     }
 
-    getCanvas(id) {        
+    getCanvas(id) {
         return this._canvasAndFeatures[id].canvas;
     }
 
@@ -90,10 +90,8 @@ class MVTLayer {
     }
 
     setSelected(featureId) {
-        for (var feature in this._features) {
-            if (feature == featureId) {
-                this._features[feature].select();
-            }
+        if (this._features[featureId] !== undefined) {
+            this._features[featureId].select();
         }
     }
 
@@ -114,36 +112,34 @@ class MVTLayer {
         var minDistance = Number.POSITIVE_INFINITY;
         var selectedFeature = null;
 
-        for (var i = 0; i < features.length; i++) {
+        for (var i = 0, length = features.length; i < length; i++) {
             var feature = features[i];
-            var paths = feature.getPathsForTile(event.id);
-            
-            for (var j = 0; j < paths.length; j++) {
-                var path = paths[j];
-                switch (feature.type) {
-                    case 1: // Point
-                        if (MERCATOR.in_circle(path[0].x, path[0].y, feature.style.radio, event.tilePoint.x, event.tilePoint.y)) {
-                            selectedFeature = feature;
-                            minDistance = 0;
-                        }
-                        break;
-                    case 2: // LineString
-                        var distance = MERCATOR.getDistanceFromLine(event.tilePoint, path);
-                        var thickness = (feature.selected && feature.style.selected ? feature.style.selected.lineWidth : feature.style.lineWidth);
-                        if (distance < thickness / 2 + this._lineClickTolerance && distance < minDistance) {
-                            selectedFeature = feature;
-                            minDistance = distance;
-                        }
-                        break;
-                    case 3: // Polygon
-                        if (MERCATOR.isPointInPolygon(event.tilePoint, path)) {
-                            selectedFeature = feature;
-                            minDistance = 0;
-                        }
-                        break;
-                }
+            var path = feature.getPath(event.id);
+
+            switch (feature.type) {
+                case 1: // Point
+                    if (MERCATOR.in_circle(path[0].x, path[0].y, feature.style.radio, event.tilePoint.x, event.tilePoint.y)) {
+                        selectedFeature = feature;
+                        minDistance = 0;
+                    }
+                    break;
+                case 2: // LineString
+                    var distance = MERCATOR.getDistanceFromLine(event.tilePoint, path);
+                    var thickness = (feature.selected && feature.style.selected ? feature.style.selected.lineWidth : feature.style.lineWidth);
+                    if (distance < thickness / 2 + this._lineClickTolerance && distance < minDistance) {
+                        selectedFeature = feature;
+                        minDistance = distance;
+                    }
+                    break;
+                case 3: // Polygon
+                    if (MERCATOR.isPointInPolygon(event.tilePoint, path)) {
+                        selectedFeature = feature;
+                        minDistance = 0;
+                    }
+                    break;
             }
-            if (minDistance == 0) {                
+
+            if (minDistance == 0) {
                 break;
             }
         }
@@ -151,14 +147,14 @@ class MVTLayer {
         return event;
     }
 
-    removeFeatures(zoom) {
-        for (var featureId in this._features) {
-            this._features[featureId].removeTiles(zoom);            
-        }
-        for (var id in this._canvasAndFeatures) {
-            if (id.split(":")[0] != zoom) {
-                delete this._canvasAndFeatures[id];
-            }
-        }
-    }
+    //deleteFeatures(id) {
+    //    if (this._canvasAndFeatures[id] != undefined) {
+    //        var features = this._canvasAndFeatures[id].features;
+    //        for (var i = 0, length = features.length; i < length; i++) {
+    //            var feature = features[i];
+    //            delete this._features[feature.featureId];
+    //        }
+    //    }
+    //    delete this._canvasAndFeatures[id];        
+    //}
 };
