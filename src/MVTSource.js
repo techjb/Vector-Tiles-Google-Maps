@@ -56,27 +56,42 @@ class MVTSource {
         this._tilesProcessed = []; //List of tiles that have been processed (when cache enabled)
         this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
         this._visibleTiles = []; // tiles currently in the viewport
+        this._blockReleaseTiles = []; // prevent release after drawing tile (fast zoom in - out)
         this._selectedFeatures = []; // list of selected features
         if (options.selectedFeatures) {
             this.setSelectedFeatures(options.selectedFeatures);
         }
 
         this.map.addListener("zoom_changed", () => {
-            self.resetVisibleTiles();
+            self._resetVisibleTiles();            
         });
     }
 
-    getTile(coord, zoom, ownerDocument) {
+    getTile(coord, zoom, ownerDocument) {        
         var tileContext = this.drawTile(coord, zoom, ownerDocument);
         return tileContext.canvas;
     }
 
     releaseTile(canvas) {
-        delete this._visibleTiles[canvas.id];
+        this._deleteVisbleTile(canvas.id);
     }
 
-    resetVisibleTiles() {
+    _deleteVisbleTile(id) {
+        if (this._blockReleaseTiles[id] != undefined) return;
+        delete this._visibleTiles[id];
+    }
+
+    _resetVisibleTiles() {
         this._visibleTiles = [];
+    }
+
+    _setVisibleTile(tileContext) {
+        var self = this;
+        this._visibleTiles[tileContext.id] = tileContext;
+        this._blockReleaseTiles[tileContext.id] = true;
+        setTimeout(function () {
+            delete self._blockReleaseTiles[tileContext.id];
+        }, 200);
     }
 
     drawTile(coord, zoom, ownerDocument) {
@@ -260,10 +275,6 @@ class MVTSource {
         context2d.fillRect(width - 5, height - 5, 5, 5);
         context2d.fillRect(width / 2 - 5, height / 2 - 5, 10, 10);
         context2d.strokeText(tileContext.zoom + ' ' + tile.x + ' ' + tile.y, width / 2 - 30, height / 2 - 10);
-    }
-
-    _setVisibleTile(tileContext) {
-        this._visibleTiles[tileContext.id] = tileContext;
     }
 
     onClick(event, callbackFunction, options) {
