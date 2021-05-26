@@ -933,8 +933,7 @@ class MVTSource {
             return style;
         };
 
-        this.mVTLayers = [];  //Keep a list of the layers contained in the PBFs
-        this._tilesProcessed = []; //List of tiles that have been processed (when cache enabled)
+        this.mVTLayers = [];  //Keep a list of the layers contained in the PBFs        
         this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
         this._visibleTiles = []; // tiles currently in the viewport        
         this._selectedFeatures = []; // list of selected features
@@ -942,12 +941,12 @@ class MVTSource {
             this.setSelectedFeatures(options.selectedFeatures);
         }
 
-        this.map.addListener("zoom_changed", () => {            
-            self._resetVisibleTiles();
+        this.map.addListener("zoom_changed", () => {
+            self._zoomChanged();
         });
     }
 
-    getTile(coord, zoom, ownerDocument) {        
+    getTile(coord, zoom, ownerDocument) {
         var tileContext = this.drawTile(coord, zoom, ownerDocument);
         this._setVisibleTile(tileContext);
         return tileContext.canvas;
@@ -955,6 +954,17 @@ class MVTSource {
 
     releaseTile(canvas) {
         //this._deleteVisibleTile(canvas.id);
+    }
+
+    _zoomChanged() {
+        this._resetVisibleTiles();
+        if (!this._cache) {
+            this._resetMVTLayers();
+        }
+    }
+
+    _resetMVTLayers(id) {
+        this.mVTLayers = [];
     }
 
     _deleteVisibleTile(id) {
@@ -965,29 +975,19 @@ class MVTSource {
         this._visibleTiles = [];
     }
 
-    _setVisibleTile(tileContext) {        
-        this._visibleTiles[tileContext.id] = tileContext;        
+    _setVisibleTile(tileContext) {
+        this._visibleTiles[tileContext.id] = tileContext;
     }
 
     drawTile(coord, zoom, ownerDocument) {
         var id = this.getTileId(zoom, coord.x, coord.y);
         var tileContext = this._tilesDrawn[id];
-        if (tileContext) {            
+        if (tileContext) {
             return tileContext;
         }
 
         tileContext = this._createTileContext(coord, zoom, ownerDocument);
-        var id = tileContext.parentId || tileContext.id;
-        var vectorTile = this._tilesProcessed[id];
-        if (vectorTile !== undefined) {
-            if (vectorTile) {
-                this._drawVectorTile(vectorTile, tileContext);
-            }
-            else { } // tile not found
-        }
-        else {
-            this._xhrRequest(tileContext);
-        }
+        this._xhrRequest(tileContext);
         return tileContext;
     }
 
@@ -1058,7 +1058,6 @@ class MVTSource {
                 return self._xhrResponseOk(tileContext, xmlHttpRequest.response)
             }
             self._drawDebugInfo(tileContext);
-            self._tileProcessed(id, false);
         };
         xmlHttpRequest.open('GET', src, true);
         for (var header in this._xhrHeaders) {
@@ -1075,14 +1074,7 @@ class MVTSource {
         var uint8Array = new Uint8Array(response);
         var pbf = new Pbf(uint8Array);
         var vectorTile = new VectorTile(pbf);
-        var id = tileContext.parentId || tileContext.id;
-        this._tileProcessed(id, vectorTile);
         this._drawVectorTile(vectorTile, tileContext);
-    }
-
-    _tileProcessed(id, vectorTile) {
-        if (!this._cache) return;
-        this._tilesProcessed[id] = vectorTile;
     }
 
     _setTileDrawn(tileContext) {
