@@ -55,29 +55,28 @@ class MVTSource {
         this.mVTLayers = [];  //Keep a list of the layers contained in the PBFs
         this._tilesProcessed = []; //List of tiles that have been processed (when cache enabled)
         this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
-        this._visibleTiles = []; // tiles currently in the viewport
-        this._blockReleaseTiles = []; // prevent release after drawing tile (fast zoom in - out)
+        this._visibleTiles = []; // tiles currently in the viewport        
         this._selectedFeatures = []; // list of selected features
         if (options.selectedFeatures) {
             this.setSelectedFeatures(options.selectedFeatures);
         }
 
-        this.map.addListener("zoom_changed", () => {
-            self._resetVisibleTiles();            
+        this.map.addListener("zoom_changed", () => {            
+            self._resetVisibleTiles();
         });
     }
 
     getTile(coord, zoom, ownerDocument) {        
         var tileContext = this.drawTile(coord, zoom, ownerDocument);
+        this._setVisibleTile(tileContext);
         return tileContext.canvas;
     }
 
     releaseTile(canvas) {
-        this._deleteVisbleTile(canvas.id);
+        //this._deleteVisibleTile(canvas.id);
     }
 
-    _deleteVisbleTile(id) {
-        if (this._blockReleaseTiles[id] != undefined) return;
+    _deleteVisibleTile(id) {
         delete this._visibleTiles[id];
     }
 
@@ -85,20 +84,14 @@ class MVTSource {
         this._visibleTiles = [];
     }
 
-    _setVisibleTile(tileContext) {
-        var self = this;
-        this._visibleTiles[tileContext.id] = tileContext;
-        this._blockReleaseTiles[tileContext.id] = true;
-        setTimeout(function () {
-            delete self._blockReleaseTiles[tileContext.id];
-        }, 200);
+    _setVisibleTile(tileContext) {        
+        this._visibleTiles[tileContext.id] = tileContext;        
     }
 
     drawTile(coord, zoom, ownerDocument) {
         var id = this.getTileId(zoom, coord.x, coord.y);
         var tileContext = this._tilesDrawn[id];
-        if (tileContext) {
-            this._setVisibleTile(tileContext);
+        if (tileContext) {            
             return tileContext;
         }
 
@@ -236,7 +229,6 @@ class MVTSource {
             }
         }
         tileContext.vectorTile = vectorTile;
-        this._setVisibleTile(tileContext);
         this._drawDebugInfo(tileContext);
         this._setTileDrawn(tileContext);
     }
@@ -300,7 +292,13 @@ class MVTSource {
         callbackFunction = callbackFunction || function () { };
         var zoom = this.map.getZoom();
         var tile = MERCATOR.getTileAtLatLng(event.latLng, zoom);
-        event.id = this.getTileId(tile.z, tile.x, tile.y);
+        var id = this.getTileId(tile.z, tile.x, tile.y);
+        var tileContext = this._visibleTiles[id];
+        if (!tileContext) {
+            console.log(tileContext);
+            return;
+        }
+        event.tileContext = tileContext;
         event.tilePoint = MERCATOR.fromLatLngToTilePoint(this.map, event);
 
         var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers) || [];
@@ -427,7 +425,7 @@ class MVTSource {
     redrawTile(id) {
         this.deleteTileDrawn(id);
         var tileContext = this._visibleTiles[id];
-        if (!tileContext) return;
+        if (!tileContext || !tileContext.vectorTile) return;
         this.clearTile(tileContext.canvas);
         this._drawVectorTile(tileContext.vectorTile, tileContext);
     }

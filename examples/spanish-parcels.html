@@ -56,14 +56,14 @@
             var mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
 
-            map.addListener("click", function (event) {
-                mvtSource.onClick(event, function (event) {
-                    if (!event.feature) {
-                        return mvtSource.deselectAllFeatures();
-                    }
-                    console.log(event.feature.properties)
-                });
-            });
+            //map.addListener("click", function (event) {
+            //    mvtSource.onClick(event, function (event) {
+            //        if (!event.feature) {
+            //            return mvtSource.deselectAllFeatures();
+            //        }
+            //        console.log(event.feature.properties)
+            //    });
+            //});
         }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA_bDL3sglTy8HGoiAU9JsLtayEkQakE7c&callback=InitGoogleMap&libraries=&v=weekly"

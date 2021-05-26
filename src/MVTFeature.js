@@ -4,7 +4,6 @@
 
 class MVTFeature {
     constructor(options) {
-        this.tileContext = options.tileContext;
         this.mVTSource = options.mVTSource;
         this.selected = options.selected;
         this.featureId = options.featureId;
@@ -12,7 +11,7 @@ class MVTFeature {
         this.style = options.style;
         this.type = options.vectorTileFeature.type;
         this.properties = options.vectorTileFeature.properties;
-        this.addTileFeature(options.vectorTileFeature, this.tileContext);
+        this.addTileFeature(options.vectorTileFeature, options.tileContext);
 
         if (this.selected) {
             this.select();
@@ -22,10 +21,9 @@ class MVTFeature {
     addTileFeature(vectorTileFeature, tileContext) {
         this.tiles[tileContext.id] = {
             vectorTileFeature: vectorTileFeature,
-            path: [],
             divisor: vectorTileFeature.extent / tileContext.tileSize
         };
-    }   
+    }
 
     setStyle(style) {
         this.style = style;
@@ -97,8 +95,6 @@ class MVTFeature {
         context2d.closePath();
         context2d.fill();
         context2d.stroke();
-        var path = [point];
-        this._setPath(tileContext, path);
     }
 
     _drawLineString(tileContext, tile, style) {
@@ -111,17 +107,16 @@ class MVTFeature {
         var context2d = this._getContext2d(tileContext.canvas, style);
         this._drawCoordinates(tileContext, context2d, tile);
         context2d.closePath();
+
         if (style.fillStyle) {
             context2d.fill();
         }
-
         if (style.strokeStyle) {
             context2d.stroke();
         }
     }
 
     _drawCoordinates(tileContext, context2d, tile) {
-        var path = [];
         context2d.beginPath();
         var coordinates = tile.vectorTileFeature.coordinates;
 
@@ -130,19 +125,27 @@ class MVTFeature {
             for (var j = 0, length2 = coordinate.length; j < length2; j++) {
                 var method = (j === 0 ? 'move' : 'line') + 'To';
                 var point = this._getPoint(coordinate[j], tileContext, tile.divisor);
-                path.push(point);
                 context2d[method](point.x, point.y);
             }
         }
-        this._setPath(tileContext, path);
     }
 
-    _setPath(tileContext, path) {
-        this.tiles[tileContext.id].path = path;
-    }
-
-    getPath(id) {
-        return this.tiles[id].path;
+    getPaths(tileContext) {
+        var paths = [];
+        var tile = this.tiles[tileContext.id];
+        var coordinates = tile.vectorTileFeature.coordinates;
+        for (var i = 0, length1 = coordinates.length; i < length1; i++) {
+            var path = [];
+            var coordinate = coordinates[i];
+            for (var j = 0, length2 = coordinate.length; j < length2; j++) {
+                var point = this._getPoint(coordinate[j], tileContext, tile.divisor);
+                path.push(point);
+            }
+            if (path.length > 0) {
+                paths.push(path);
+            }
+        }
+        return paths;
     }
 
     _getContext2d(canvas, style) {
@@ -181,8 +184,8 @@ class MVTFeature {
         let xtileOffset = currentTile.x % scale;
         let ytileOffset = currentTile.y % scale;
 
-        point.x = xScale - (xtileOffset * this.tileContext.tileSize);
-        point.y = yScale - (ytileOffset * this.tileContext.tileSize);
+        point.x = xScale - (xtileOffset * tileContext.tileSize);
+        point.y = yScale - (ytileOffset * tileContext.tileSize);
 
         return point;
     }

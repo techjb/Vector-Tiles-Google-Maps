@@ -100,7 +100,7 @@ class MVTLayer {
     }
 
     handleClickEvent(event) {
-        var canvasAndFeatures = this._canvasAndFeatures[event.id];
+        var canvasAndFeatures = this._canvasAndFeatures[event.tileContext.id];
         if (!canvasAndFeatures) return event;
         var canvas = canvasAndFeatures.canvas;
         var features = canvasAndFeatures.features;
@@ -108,53 +108,48 @@ class MVTLayer {
         if (!canvas || !features) {
             return event;
         }
-
-        var minDistance = Number.POSITIVE_INFINITY;
-        var selectedFeature = null;
-
-        for (var i = 0, length = features.length; i < length; i++) {
-            var feature = features[i];
-            var path = feature.getPath(event.id);
-
-            switch (feature.type) {
-                case 1: // Point
-                    if (MERCATOR.in_circle(path[0].x, path[0].y, feature.style.radio, event.tilePoint.x, event.tilePoint.y)) {
-                        selectedFeature = feature;
-                        minDistance = 0;
-                    }
-                    break;
-                case 2: // LineString
-                    var distance = MERCATOR.getDistanceFromLine(event.tilePoint, path);
-                    var thickness = (feature.selected && feature.style.selected ? feature.style.selected.lineWidth : feature.style.lineWidth);
-                    if (distance < thickness / 2 + this._lineClickTolerance && distance < minDistance) {
-                        selectedFeature = feature;
-                        minDistance = distance;
-                    }
-                    break;
-                case 3: // Polygon
-                    if (MERCATOR.isPointInPolygon(event.tilePoint, path)) {
-                        selectedFeature = feature;
-                        minDistance = 0;
-                    }
-                    break;
-            }
-
-            if (minDistance == 0) {
-                break;
-            }
-        }
-        event.feature = selectedFeature;
+        event.feature = this._getSelectedFeature(event, features);
         return event;
     }
 
-    //deleteFeatures(id) {
-    //    if (this._canvasAndFeatures[id] != undefined) {
-    //        var features = this._canvasAndFeatures[id].features;
-    //        for (var i = 0, length = features.length; i < length; i++) {
-    //            var feature = features[i];
-    //            delete this._features[feature.featureId];
-    //        }
-    //    }
-    //    delete this._canvasAndFeatures[id];        
-    //}
+    _getSelectedFeature(event, features) {
+        var minDistance = Number.POSITIVE_INFINITY;
+        var selectedFeature = null;
+
+        for (var i = 0, length1 = features.length; i < length1; i++) {
+            var feature = features[i];
+            var paths = feature.getPaths(event.tileContext);
+
+            for (var j = 0, length2 = paths.length; j < length2; j++) {
+                var path = paths[j];
+                switch (feature.type) {
+                    case 1: // Point
+                        if (MERCATOR.in_circle(path[0].x, path[0].y, feature.style.radio, event.tilePoint.x, event.tilePoint.y)) {
+                            selectedFeature = feature;
+                            minDistance = 0;
+                        }
+                        break;
+                    case 2: // LineString
+                        var distance = MERCATOR.getDistanceFromLine(event.tilePoint, path);
+                        var thickness = (feature.selected && feature.style.selected ? feature.style.selected.lineWidth : feature.style.lineWidth);
+                        if (distance < thickness / 2 + this._lineClickTolerance && distance < minDistance) {
+                            selectedFeature = feature;
+                            minDistance = distance;
+                        }
+                        break;
+                    case 3: // Polygon
+                        if (MERCATOR.isPointInPolygon(event.tilePoint, path)) {
+                            selectedFeature = feature;
+                            minDistance = 0;
+                        }
+                        break;
+                }
+
+                if (minDistance == 0) {
+                    return selectedFeature;
+                }
+            }
+        }
+        return selectedFeature;
+    }
 };
