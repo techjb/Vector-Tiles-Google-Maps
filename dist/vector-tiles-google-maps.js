@@ -1284,6 +1284,10 @@ class MVTSource {
         }
     }
 
+    setClickableLayers(clickableLayers) {
+        this._clickableLayers = clickableLayers;
+    }
+
     redrawAllTiles() {
         this._tilesDrawn = [];
         this.redrawTiles(this._visibleTiles);
