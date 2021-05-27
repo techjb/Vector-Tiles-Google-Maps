@@ -1168,7 +1168,6 @@ class MVTSource {
         var id = this.getTileId(tile.z, tile.x, tile.y);
         var tileContext = this._visibleTiles[id];
         if (!tileContext) {
-            console.log(tileContext);
             return;
         }
         event.tileContext = tileContext;
