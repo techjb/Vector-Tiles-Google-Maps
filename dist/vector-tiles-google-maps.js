@@ -1144,20 +1144,22 @@ class MVTSource {
 
     onClick(event, callbackFunction, options) {
         this._multipleSelection = (options && options.multipleSelection) || false;
-        var options = {
-            mouseHover: false,
-            setSelected: options.setSelected || false
-        }
+        options = this._getMouseOptions(options, false);
         this._mouseEvent(event, callbackFunction, options);
     }
 
     onMouseHover(event, callbackFunction, options) {
         this._multipleSelection = false;
-        var options = {
-            mouseHover: true,
-            setSelected: options.setSelected || false
-        }
+        options = this._getMouseOptions(options, true);
         this._mouseEvent(event, callbackFunction, options);
+    }
+
+    _getMouseOptions(options, mouseHover) {
+        return {
+            mouseHover: mouseHover,
+            setSelected: options.setSelected || false,
+            toggleSelection: (options.toggleSelection === undefined || options.toggleSelection)
+        }
     }
 
     _mouseEvent(event, callbackFunction, options) {
@@ -1186,14 +1188,22 @@ class MVTSource {
 
     _mouseSelectedFeature(event, callbackFunction, options) {
         if (options.setSelected) {
-            if (event.feature) {
+            var feature = event.feature;
+            if (feature) {
                 if (options.mouseHover) {
-                    if (!event.feature.selected) {
-                        event.feature.select();
+                    if (!feature.selected) {
+                        feature.select();
                     }
                 }
                 else {
-                    event.feature.toggle();
+                    if (options.toggleSelection) {
+                        feature.toggle();
+                    }
+                    else {
+                        if (!feature.selected) {
+                            feature.select();
+                        }
+                    }                    
                 }
             }
             else {

@@ -54,7 +54,8 @@
 
             var clickOptions = {
                 multipleSelection: false, // Multiple feature selection
-                setSelected: true // set feature as selected
+                setSelected: true, // set feature as selected
+                toggleSelection: false // toggle selection on click
             };
             map.addListener("click", function (event) {
                 mvtSource.onClick(event, ShowSelectedFeatures, clickOptions);
