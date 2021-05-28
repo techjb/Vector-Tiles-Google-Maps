@@ -207,7 +207,16 @@ mVTSource.setFilter(filter);
 ```js
 var visibleLayers = ["provinces", "municipalities"];
 
-mVTSource.setVisibleLayers(filter);
+mVTSource.setVisibleLayers(visibleLayers);
+```
+
+* `setClickableLayers(clickableLayers)` - Update the clickable layers. 
+  * *@param clickableLayers* *[{string}, ...]* - List of clickable layers. Set to `false` to make all layers clickable.   
+
+```js
+var clickableLayers = ["provinces"];
+
+mVTSource.setClickableLayers(clickableLayers);
 ```
 
 

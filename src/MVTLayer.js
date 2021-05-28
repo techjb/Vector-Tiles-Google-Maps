@@ -108,11 +108,11 @@ class MVTLayer {
         if (!canvas || !features) {
             return event;
         }
-        event.feature = this._getSelectedFeature(event, features);
+        event.feature = this._handleClickGetFeature(event, features);
         return event;
     }
 
-    _getSelectedFeature(event, features) {
+    _handleClickGetFeature(event, features) {
         var minDistance = Number.POSITIVE_INFINITY;
         var selectedFeature = null;
 
