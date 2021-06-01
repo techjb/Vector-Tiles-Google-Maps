@@ -1325,9 +1325,12 @@ class MVTSource {
         context.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    setUrl(url) {
+    setUrl(url, redrawTiles) {
+        redrawTiles = (redrawTiles === undefined || redrawTiles);
         this._url = url;
         this._resetMVTLayers();
-        this.redrawAllTiles();
+        if (redrawTiles) {
+            this.redrawAllTiles();
+        }        
     }
 }

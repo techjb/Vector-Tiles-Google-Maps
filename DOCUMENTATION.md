@@ -230,8 +230,9 @@ mVTSource.setSelectedFeatures(featureIds);
 ```
 
 
-* `setUrl(url)` - Set new url form the MVTSource
+* `setUrl(url, redrawTiles)` - Set new url form the MVTSource and redraw tiles.
   * *@param url* *{string}* - New url
+  * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
 
 ```js
 var url = 'https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf';
