@@ -963,7 +963,7 @@ class MVTSource {
         }
     }
 
-    _resetMVTLayers(id) {
+    _resetMVTLayers() {
         this.mVTLayers = [];
     }
 
@@ -1084,6 +1084,10 @@ class MVTSource {
 
     deleteTileDrawn(id) {
         delete this._tilesDrawn[id];
+    }
+
+    _resetTileDrawn() {
+        this._tilesDrawn = [];
     }
 
     _drawVectorTile(vectorTile, tileContext) {
@@ -1298,7 +1302,7 @@ class MVTSource {
     }
 
     redrawAllTiles() {
-        this._tilesDrawn = [];
+        this._resetTileDrawn();        
         this.redrawTiles(this._visibleTiles);
     }
 
@@ -1319,5 +1323,11 @@ class MVTSource {
     clearTile(canvas) {
         var context = canvas.getContext('2d');
         context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    setUrl(url) {
+        this._url = url;
+        this._resetMVTLayers();
+        this.redrawAllTiles();
     }
 }

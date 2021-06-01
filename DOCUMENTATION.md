@@ -228,3 +228,13 @@ var featureIds = ['29', '39', '38'];
 
 mVTSource.setSelectedFeatures(featureIds);
 ```
+
+
+* `setUrl(url)` - Set new url form the MVTSource
+  * *@param url* *{string}* - New url
+
+```js
+var url = 'https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf';
+
+mVTSource.setUrl(url);
+```
