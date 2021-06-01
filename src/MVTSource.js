@@ -338,14 +338,34 @@ class MVTSource {
         callbackFunction(event);
     }
 
-    deselectAllFeatures() {
+    //deselectAllFeatures() {
+    //    for (var featureId in this._selectedFeatures) {
+    //        var mVTFeature = this._selectedFeatures[featureId];
+    //        if (mVTFeature) {
+    //            mVTFeature.deselect();
+    //        }
+    //    }
+    //    this._selectedFeatures = [];
+    //}
+
+    deselectAllFeatures() {        
+        var zoom = this.map.getZoom();
+        var tilesToRedraw = [];        
         for (var featureId in this._selectedFeatures) {
             var mVTFeature = this._selectedFeatures[featureId];
-            if (mVTFeature) {
-                mVTFeature.deselect();
+            mVTFeature.setSelected(false);
+            var tiles = mVTFeature.getTiles();
+            for (var id in tiles) {
+                this.deleteTileDrawn(id);
+                var idObject = this.getTileObject(id);
+                if (idObject.zoom == zoom) {
+                    tilesToRedraw[id] = true;
+                }
             }
         }
-        this._selectedFeatures = {};
+        
+        this.redrawTiles(tilesToRedraw);
+        this._selectedFeatures = [];
     }
 
     featureSelected(mVTFeature) {
@@ -432,7 +452,7 @@ class MVTSource {
     }
 
     redrawTile(id) {
-        this.deleteTileDrawn(id);
+        this.deleteTileDrawn(id);        
         var tileContext = this._visibleTiles[id];
         if (!tileContext || !tileContext.vectorTile) return;
         this.clearTile(tileContext.canvas);

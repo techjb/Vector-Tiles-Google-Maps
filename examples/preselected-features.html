@@ -17,7 +17,10 @@
                 Set features as selected before loading.
             </p>
             <p>
-                <button id="inputButton">Select three random features</button>
+                <button id="inputSelect">Select three random features</button>
+            </p>
+            <p>
+                <button id="inputDeselect">Deselect all features</button>
             </p>
         </div>
     </div>
@@ -25,7 +28,8 @@
     <script type="text/javascript">
         var map;
         var mvtSource;        
-        document.getElementById("inputButton").onclick = SeltecRandomItems;
+        document.getElementById("inputSelect").onclick = SeltecRandomItems;
+        document.getElementById("inputDeselect").onclick = DeselectAll;
 
         function InitGoogleMap() {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -61,6 +65,11 @@
             }            
             mvtSource.setSelectedFeatures(localIds);
         }
+
+        function DeselectAll() {
+            mvtSource.deselectAllFeatures();
+        }
+
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA_bDL3sglTy8HGoiAU9JsLtayEkQakE7c&callback=InitGoogleMap&libraries=&v=weekly"
             defer></script>

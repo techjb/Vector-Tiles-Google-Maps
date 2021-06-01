@@ -25,6 +25,10 @@ class MVTFeature {
         };
     }
 
+    getTiles() {
+        return this.tiles;
+    }
+
     setStyle(style) {
         this.style = style;
     }
@@ -62,6 +66,10 @@ class MVTFeature {
         this.selected = false;
         this.mVTSource.featureDeselected(this);
         this.redrawTiles();
+    }
+
+    setSelected(selected) {
+        this.selected = selected;
     }
 
     draw(tileContext) {
