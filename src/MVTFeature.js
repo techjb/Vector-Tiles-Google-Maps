@@ -33,10 +33,6 @@ class MVTFeature {
         this.style = style;
     }
 
-    setSelected(selected) {
-        this.selected = selected;
-    }
-
     redrawTiles() {
         var zoom = this.mVTSource.map.getZoom();
         for (var id in this.tiles) {
