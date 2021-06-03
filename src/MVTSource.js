@@ -338,21 +338,12 @@ class MVTSource {
         callbackFunction(event);
     }
 
-    //deselectAllFeatures() {
-    //    for (var featureId in this._selectedFeatures) {
-    //        var mVTFeature = this._selectedFeatures[featureId];
-    //        if (mVTFeature) {
-    //            mVTFeature.deselect();
-    //        }
-    //    }
-    //    this._selectedFeatures = [];
-    //}
-
     deselectAllFeatures() {        
         var zoom = this.map.getZoom();
         var tilesToRedraw = [];        
         for (var featureId in this._selectedFeatures) {
             var mVTFeature = this._selectedFeatures[featureId];
+            if (!mVTFeature) continue;
             mVTFeature.setSelected(false);
             var tiles = mVTFeature.getTiles();
             for (var id in tiles) {
@@ -362,8 +353,7 @@ class MVTSource {
                     tilesToRedraw[id] = true;
                 }
             }
-        }
-        
+        }        
         this.redrawTiles(tilesToRedraw);
         this._selectedFeatures = [];
     }
@@ -434,6 +424,10 @@ class MVTSource {
         if (redrawTiles) {
             this.redrawAllTiles();
         }
+    }
+
+    getVisibleLayers() {
+        return this._visibleLayers;
     }
 
     setClickableLayers(clickableLayers) {
