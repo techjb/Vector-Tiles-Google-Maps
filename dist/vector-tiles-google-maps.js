@@ -1065,7 +1065,7 @@ class MVTSource {
         };
         xmlHttpRequest.open('GET', src, true);
         for (var header in this._xhrHeaders) {
-            xmlHttpRequest.setRequestHeader(header, headers[header]);
+            xmlHttpRequest.setRequestHeader(header, this._xhrHeaders[header]);
         }
         xmlHttpRequest.responseType = 'arraybuffer';
         xmlHttpRequest.send();
