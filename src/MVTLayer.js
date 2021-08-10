@@ -124,7 +124,7 @@ class MVTLayer {
                 var path = paths[j];
                 switch (feature.type) {
                     case 1: // Point
-                        if (MERCATOR.in_circle(path[0].x, path[0].y, feature.style.radio, event.tilePoint.x, event.tilePoint.y)) {
+                        if (MERCATOR.in_circle(path[0].x, path[0].y, feature.style.radius, event.tilePoint.x, event.tilePoint.y)) {
                             selectedFeature = feature;
                             minDistance = 0;
                         }

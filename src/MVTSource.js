@@ -24,10 +24,10 @@ class MVTSource {
             switch (feature.type) {
                 case 1: //'Point'
                     style.fillStyle = 'rgba(49,79,79,1)';
-                    style.radio = 5;
+                    style.radius = 5;
                     style.selected = {
                         fillStyle: 'rgba(255,255,0,0.5)',
-                        radio: 6
+                        radius: 6
                     }
                     break;
                 case 2: //'LineString'

@@ -91,11 +91,11 @@ class MVTFeature {
 
     _drawPoint(tileContext, tile, style) {
         var context2d = this._getContext2d(tileContext.canvas, style);
-        var radio = style.radio || 3;
+        var radius = style.radius || 3;
         context2d.beginPath();
         var coordinates = tile.vectorTileFeature.coordinates[0][0];
         var point = this._getPoint(coordinates, tileContext, tile.divisor);
-        context2d.arc(point.x, point.y, radio, 0, Math.PI * 2);
+        context2d.arc(point.x, point.y, radius, 0, Math.PI * 2);
         context2d.closePath();
         context2d.fill();
         context2d.stroke();

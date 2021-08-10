@@ -226,6 +226,7 @@ VectorTileLayer.prototype.readFeatureValue = function () {
             value = buffer.readString();
         } else if (tag == 2) {
             throw new Error('read float');
+            //value = buffer.readFloat();
         } else if (tag == 3) {
             value = buffer.readDouble();
         } else if (tag == 4) {
@@ -625,11 +626,11 @@ class MVTFeature {
 
     _drawPoint(tileContext, tile, style) {
         var context2d = this._getContext2d(tileContext.canvas, style);
-        var radio = style.radio || 3;
+        var radius = style.radius || 3;
         context2d.beginPath();
         var coordinates = tile.vectorTileFeature.coordinates[0][0];
         var point = this._getPoint(coordinates, tileContext, tile.divisor);
-        context2d.arc(point.x, point.y, radio, 0, Math.PI * 2);
+        context2d.arc(point.x, point.y, radius, 0, Math.PI * 2);
         context2d.closePath();
         context2d.fill();
         context2d.stroke();
@@ -854,7 +855,7 @@ class MVTLayer {
                 var path = paths[j];
                 switch (feature.type) {
                     case 1: // Point
-                        if (MERCATOR.in_circle(path[0].x, path[0].y, feature.style.radio, event.tilePoint.x, event.tilePoint.y)) {
+                        if (MERCATOR.in_circle(path[0].x, path[0].y, feature.style.radius, event.tilePoint.x, event.tilePoint.y)) {
                             selectedFeature = feature;
                             minDistance = 0;
                         }
@@ -909,10 +910,10 @@ class MVTSource {
             switch (feature.type) {
                 case 1: //'Point'
                     style.fillStyle = 'rgba(49,79,79,1)';
-                    style.radio = 5;
+                    style.radius = 5;
                     style.selected = {
                         fillStyle: 'rgba(255,255,0,0.5)',
-                        radio: 6
+                        radius: 6
                     }
                     break;
                 case 2: //'LineString'
