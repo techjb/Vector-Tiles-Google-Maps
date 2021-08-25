@@ -120,8 +120,8 @@ The following are methods that updates the `MVTSource` object:
 ```js
  var options = {
     multipleSelection: true, // Multiple feature selection (default: false)
-    setSelected: true, // Set feature as selected (default: false)
-    toggleSelection: false // Toggle selection on click (default: true)
+    setSelected: true, // Set feature selected style (default: false)
+    toggleSelection: false // Toggle feature selected style (default: true)
 }
 
 map.addListener("rightclick", function (event) {
