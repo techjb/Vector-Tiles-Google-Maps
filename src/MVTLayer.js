@@ -115,12 +115,12 @@ class MVTLayer {
     _handleClickGetFeature(event, features) {
         var minDistance = Number.POSITIVE_INFINITY;
         var selectedFeature = null;
-
-        for (var i = 0, length1 = features.length; i < length1; i++) {
+        
+        for (var i = features.length - 1; i >= 0; i--) {
             var feature = features[i];
-            var paths = feature.getPaths(event.tileContext);
+            var paths = feature.getPaths(event.tileContext);            
 
-            for (var j = 0, length2 = paths.length; j < length2; j++) {
+            for (var j = paths.length - 1; j >= 0; j--) {                
                 var path = paths[j];
                 switch (feature.type) {
                     case 1: // Point
