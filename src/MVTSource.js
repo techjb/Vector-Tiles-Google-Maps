@@ -281,13 +281,15 @@ class MVTSource {
         return {
             mouseHover: mouseHover,
             setSelected: options.setSelected || false,
-            toggleSelection: (options.toggleSelection === undefined || options.toggleSelection)
+            toggleSelection: (options.toggleSelection === undefined || options.toggleSelection),
+            limitToFirstVisibleLayer: options.limitToFirstVisibleLayer || false
         }
     }
 
     _mouseEvent(event, callbackFunction, options) {
         if (!event.pixel || !event.latLng) return;
         callbackFunction = callbackFunction || function () { };
+        var limitToFirstVisibleLayer = options.limitToFirstVisibleLayer || false;
         var zoom = this.map.getZoom();
         var tile = MERCATOR.getTileAtLatLng(event.latLng, zoom);
         var id = this.getTileId(tile.z, tile.x, tile.y);
@@ -299,12 +301,15 @@ class MVTSource {
         event.tilePoint = MERCATOR.fromLatLngToTilePoint(this.map, event);
 
         var clickableLayers = this._clickableLayers || Object.keys(this.mVTLayers) || [];
-        for (var i = 0, length = clickableLayers.length; i < length; i++) {
+        for (var i = clickableLayers.length -1; i >= 0; i--) {
             var key = clickableLayers[i];
             var layer = this.mVTLayers[key];
             if (layer) {
                 var event = layer.handleClickEvent(event);
                 this._mouseSelectedFeature(event, callbackFunction, options);
+                if (limitToFirstVisibleLayer && event.feature) {
+                    break;
+                }
             }
         }
     }
