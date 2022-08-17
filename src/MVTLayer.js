@@ -9,6 +9,7 @@ class MVTLayer {
         this.style = options.style;
         this.name = options.name;
         this._filter = options.filter || false;
+        this._customDraw = options.customDraw || false;
         this._canvasAndFeatures = [];
         this._features = [];
     }
@@ -43,7 +44,8 @@ class MVTLayer {
                 tileContext: tileContext,
                 style: style,
                 selected: selected,
-                featureId: featureId
+                featureId: featureId,
+                customDraw: this._customDraw
             }
             mVTFeature = new MVTFeature(options);
             this._features[featureId] = mVTFeature;

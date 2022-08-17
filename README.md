@@ -62,6 +62,7 @@ Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox
 * [Styles feature](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/styles-feature.html) - Style based on feature properties.
 * [Style filter and layer](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/style-filter-layer.html) - Update the style, filter and visible layers simultaneously.
 * [Point, linestring and polygon](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/point-linestring-polygon.html) - Show all type of geometries.
+* [Custom draw](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/custom-draw.html) - Custom draw function for each feature.
 
 
 <!-- INSTALATION -->

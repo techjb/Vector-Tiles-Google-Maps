@@ -51,6 +51,7 @@ class MVTSource {
             }
             return style;
         };
+        this._customDraw = options.customDraw || false;
 
         this.mVTLayers = [];  //Keep a list of the layers contained in the PBFs        
         this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
@@ -242,7 +243,8 @@ class MVTSource {
             getIDForLayerFeature: this.getIDForLayerFeature,
             filter: this._filter,
             style: this.style,
-            name: key
+            name: key,
+            customDraw: this._customDraw
         };
         return new MVTLayer(options);
     }
