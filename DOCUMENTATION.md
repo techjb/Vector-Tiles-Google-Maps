@@ -111,6 +111,32 @@ style: function(feature) {
 }
 ```
 
+* `customDraw` - **{function}** Custom draw function. When passed it replace the default draw function.
+
+```js
+customDraw: function(tileContext, tile, style, mVTFeature){
+    var coordinates = tile.vectorTileFeature.coordinates[0][0];
+    var point = mVTFeature.getPoint(coordinates, tileContext, tile.divisor);
+    var context2d = mVTFeature.getContext2d(tileContext.canvas, style);
+    var radius = style.radius;                
+
+    var angle = Math.atan2(-1, 0);                
+    var point1 = Vertice(radius, angle, point);
+    angle += (1 / 3) * (2 * Math.PI);
+    var point2 = Vertice(radius, angle, point);
+    angle += (1 / 3) * (2 * Math.PI);
+    var point3 = Vertice(radius, angle, point);
+
+    context2d.beginPath();
+    context2d.moveTo(point1.x, point1.y);
+    context2d.lineTo(point2.x, point2.y);
+    context2d.lineTo(point3.x, point3.y);
+    context2d.closePath();
+    context2d.fill();
+    context2d.stroke();
+}
+```
+
 ### Methods
 
 The following are methods that updates the `MVTSource` object:

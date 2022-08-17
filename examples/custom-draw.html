@@ -86,13 +86,7 @@
                         DrawTriangle(tileContext, tile, style, mVTFeature);
                         break;
 
-                    case 2: //LineString
-                        //mVTFeature.drawLineString(tileContext, tile, style);
-                        break;
-
-                    case 3: //Polygon
-                        //mVTFeature.drawPolygon(tileContext, tile, style);
-                        break;
+                    default: break;
                 }
 
             }
@@ -119,12 +113,10 @@
                 context2d.stroke();
             }
 
-            function Vertice(radius, angle, point) {
-                var x = radius * Math.cos(angle) + point.x;
-                var y = radius * Math.sin(angle) + point.y;
+            function Vertice(radius, angle, point) {                
                 return {
-                    x: x,
-                    y: y
+                    x: radius * Math.cos(angle) + point.x,
+                    y: radius * Math.sin(angle) + point.y
                 }
             }
 
