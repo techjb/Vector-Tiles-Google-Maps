@@ -145,10 +145,11 @@ The following are methods that updates the `MVTSource` object:
 
 ```js
  var options = {
-    limitToFirstVisibleLayer: true // Trigger events only to the first visible layer (default: false).
-    multipleSelection: true, // Multiple feature selection (default: false).
+    limitToFirstVisibleLayer: true // Trigger events only to the first visible layer (default: false)
+    multipleSelection: true, // Multiple feature selection (default: false)
     setSelected: true, // Set feature selected style (default: false)
     toggleSelection: false // Toggle feature selected style (default: true)
+    delay: 50 // Set a delay to avoid overload, for example on mousemove event (default: 0)
 }
 
 map.addListener("rightclick", function (event) {

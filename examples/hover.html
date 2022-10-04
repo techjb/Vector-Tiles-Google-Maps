@@ -53,7 +53,8 @@
             map.overlayMapTypes.insertAt(0, mvtSource);
 
             var options = {
-                setSelected: false // set feature as selected
+                setSelected: false, // set feature as selected
+                delay: 50
             }
 
             map.addListener("mousemove", function (event) {
