@@ -149,7 +149,7 @@ The following are methods that updates the `MVTSource` object:
     multipleSelection: true, // Multiple feature selection (default: false)
     setSelected: true, // Set feature selected style (default: false)
     toggleSelection: false // Toggle feature selected style (default: true)
-    delay: 50 // Set a delay to avoid overload, for example on mousemove event (default: 0)
+    delay: 50 // If new event is triggered before delay, old event will be ignored. Used to avoid overload on mousemove event (default: 0)
 }
 
 map.addListener("rightclick", function (event) {
