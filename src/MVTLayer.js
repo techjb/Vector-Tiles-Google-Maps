@@ -10,12 +10,12 @@ class MVTLayer {
         this.name = options.name;
         this._filter = options.filter || false;
         this._customDraw = options.customDraw || false;
-        this._canvasAndFeatures = [];
-        this._features = [];
+        this._canvasAndMVTFeatures = [];
+        this._mVTFeatures = [];
     }
 
     parseVectorTileFeatures(mVTSource, vectorTileFeatures, tileContext) {
-        this._canvasAndFeatures[tileContext.id] = {
+        this._canvasAndMVTFeatures[tileContext.id] = {
             canvas: tileContext.canvas,
             features: []
         }
@@ -35,7 +35,7 @@ class MVTLayer {
 
         var style = this.getStyle(vectorTileFeature);
         var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
-        var mVTFeature = this._features[featureId];
+        var mVTFeature = this._mVTFeatures[featureId];
         if (!mVTFeature) {
             var selected = mVTSource.isFeatureSelected(featureId);
             var options = {
@@ -48,24 +48,24 @@ class MVTLayer {
                 customDraw: this._customDraw
             }
             mVTFeature = new MVTFeature(options);
-            this._features[featureId] = mVTFeature;
+            this._mVTFeatures[featureId] = mVTFeature;
         } else {
             mVTFeature.setStyle(style);
             mVTFeature.addTileFeature(vectorTileFeature, tileContext);
         }
-        this._canvasAndFeatures[tileContext.id].features.push(mVTFeature);
+        this._canvasAndMVTFeatures[tileContext.id].features.push(mVTFeature);
     }
 
     drawTile(tileContext) {
-        var features = this._canvasAndFeatures[tileContext.id].features;
-        if (!features) return;
+        var mVTFeatures = this._canvasAndMVTFeatures[tileContext.id].features;
+        if (!mVTFeatures) return;
         var selectedFeatures = [];
-        for (var i = 0, length = features.length; i < length; i++) {
-            var feature = features[i];
-            if (feature.selected) {
-                selectedFeatures.push(feature);
+        for (var i = 0, length = mVTFeatures.length; i < length; i++) {
+            var mVTFeature = mVTFeatures[i];
+            if (mVTFeature.selected) {
+                selectedFeatures.push(mVTFeature);
             } else {
-                feature.draw(tileContext);
+                mVTFeature.draw(tileContext);
             }
         }
         for (var i = 0, length = selectedFeatures.length; i < length; i++) {
@@ -74,7 +74,7 @@ class MVTLayer {
     }
 
     getCanvas(id) {
-        return this._canvasAndFeatures[id].canvas;
+        return this._canvasAndMVTFeatures[id].canvas;
     }
 
     getStyle(feature) {
@@ -86,14 +86,14 @@ class MVTLayer {
 
     setStyle(style) {
         this.style = style;
-        for (var featureId in this._features) {
-            this._features[featureId].setStyle(style);
+        for (var featureId in this._mVTFeatures) {
+            this._mVTFeatures[featureId].setStyle(style);
         }
     }
 
     setSelected(featureId) {
-        if (this._features[featureId] !== undefined) {
-            this._features[featureId].select();
+        if (this._mVTFeatures[featureId] !== undefined) {
+            this._mVTFeatures[featureId].select();
         }
     }
 
@@ -101,57 +101,81 @@ class MVTLayer {
         this._filter = filter;
     }
 
-    handleClickEvent(event) {
-        var canvasAndFeatures = this._canvasAndFeatures[event.tileContext.id];
+    handleClickEvent(event, mVTSource) {
+        var canvasAndFeatures = this._canvasAndMVTFeatures[event.tileContext.id];
         if (!canvasAndFeatures) return event;
         var canvas = canvasAndFeatures.canvas;
-        var features = canvasAndFeatures.features;
+        var mVTFeatures = canvasAndFeatures.features;
 
-        if (!canvas || !features) {
+        if (!canvas || !mVTFeatures) {
             return event;
         }
-        event.feature = this._handleClickGetFeature(event, features);
+        event.feature = this._handleClickEvent(event, mVTFeatures, mVTSource);
         return event;
     }
 
-    _handleClickGetFeature(event, features) {
-        var minDistance = Number.POSITIVE_INFINITY;
-        var selectedFeature = null;
-        
-        for (var i = features.length - 1; i >= 0; i--) {
-            var feature = features[i];
-            var paths = feature.getPaths(event.tileContext);            
+    _handleClickEvent(event, mVTFeatures, mVTSource) {
+        this.selectedFeature = null;
 
-            for (var j = paths.length - 1; j >= 0; j--) {                
-                var path = paths[j];
-                switch (feature.type) {
-                    case 1: // Point
-                        if (MERCATOR.in_circle(path[0].x, path[0].y, feature.style.radius, event.tilePoint.x, event.tilePoint.y)) {
-                            selectedFeature = feature;
-                            minDistance = 0;
-                        }
-                        break;
-                    case 2: // LineString
-                        var distance = MERCATOR.getDistanceFromLine(event.tilePoint, path);
-                        var thickness = (feature.selected && feature.style.selected ? feature.style.selected.lineWidth : feature.style.lineWidth);
-                        if (distance < thickness / 2 + this._lineClickTolerance && distance < minDistance) {
-                            selectedFeature = feature;
-                            minDistance = distance;
-                        }
-                        break;
-                    case 3: // Polygon
-                        if (MERCATOR.isPointInPolygon(event.tilePoint, path)) {
-                            selectedFeature = feature;
-                            minDistance = 0;
-                        }
-                        break;
-                }
+        var tileContextId = event.tileContext.id;
+        var currentSelectedFeaturesInTile = mVTSource.getSelectedFeaturesInTile(tileContextId);
+        this._handleClickFeatures(event, currentSelectedFeaturesInTile);
 
-                if (minDistance == 0) {
-                    return selectedFeature;
-                }
+        if (this.selectedFeature != null) {
+            return this.selectedFeature;
+        }
+
+        this._handleClickFeatures(event, mVTFeatures);
+        if (this.selectedFeature != null) {
+            return this.selectedFeature;
+        }
+
+        return this.selectedFeature;
+    }
+
+    _handleClickFeatures(event, mVTFeatures) {
+        this.minDistance = Number.POSITIVE_INFINITY;
+
+        for (var i = mVTFeatures.length - 1; i >= 0; i--) {
+            var mVTFeature = mVTFeatures[i];
+            this._handleClickFeature(event, mVTFeature);
+            if (this.selectedFeature != null) {
+                return this.selectedFeature;
             }
         }
-        return selectedFeature;
+    }
+
+    _handleClickFeature(event, mVTFeature) {
+        var paths = mVTFeature.getPaths(event.tileContext);
+
+        for (var j = paths.length - 1; j >= 0; j--) {
+            var path = paths[j];
+            switch (mVTFeature.type) {
+                case 1: // Point
+                    if (MERCATOR.in_circle(path[0].x, path[0].y, mVTFeature.style.radius, event.tilePoint.x, event.tilePoint.y)) {
+                        this.selectedFeature = mVTFeature;
+                        this.minDistance = 0;
+                    }
+                    break;
+                case 2: // LineString
+                    var distance = MERCATOR.getDistanceFromLine(event.tilePoint, path);
+                    var thickness = (mVTFeature.selected && mVTFeature.style.selected ? mVTFeature.style.selected.lineWidth : mVTFeature.style.lineWidth);
+                    if (distance < thickness / 2 + this._lineClickTolerance && distance < minDistance) {
+                        this.selectedFeature = mVTFeature;
+                        this.minDistance = distance;
+                    }
+                    break;
+                case 3: // Polygon
+                    if (MERCATOR.isPointInPolygon(event.tilePoint, path)) {
+                        this.selectedFeature = mVTFeature;
+                        this.minDistance = 0;
+                    }
+                    break;
+            }
+
+            if (this.minDistance == 0) {
+                return this.selectedFeature;
+            }
+        }
     }
 };

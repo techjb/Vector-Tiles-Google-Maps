@@ -323,7 +323,7 @@ class MVTSource {
             var key = clickableLayers[i];
             var layer = this.mVTLayers[key];
             if (layer) {
-                var event = layer.handleClickEvent(event);
+                var event = layer.handleClickEvent(event, this);
                 this._mouseSelectedFeature(event, callbackFunction, options);
                 if (limitToFirstVisibleLayer && event.feature) {
                     break;
@@ -414,6 +414,19 @@ class MVTSource {
         var selectedFeatures = [];
         for (var featureId in this._selectedFeatures) {
             selectedFeatures.push(this._selectedFeatures[featureId]);
+        }
+        return selectedFeatures;
+    }
+
+    getSelectedFeaturesInTile(tileContextId) {
+        var selectedFeatures = [];
+        for (var featureId in this._selectedFeatures) {
+            var selectedFeature = this._selectedFeatures[featureId];
+            for (var tile in selectedFeature.tiles) {
+                if (tile == tileContextId) {
+                    selectedFeatures.push(selectedFeature);
+                }
+            }
         }
         return selectedFeatures;
     }
