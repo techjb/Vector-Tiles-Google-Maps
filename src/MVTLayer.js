@@ -160,7 +160,7 @@ class MVTLayer {
                 case 2: // LineString
                     var distance = MERCATOR.getDistanceFromLine(event.tilePoint, path);
                     var thickness = (mVTFeature.selected && mVTFeature.style.selected ? mVTFeature.style.selected.lineWidth : mVTFeature.style.lineWidth);
-                    if (distance < thickness / 2 + this._lineClickTolerance && distance < minDistance) {
+                    if (distance < thickness / 2 + this._lineClickTolerance && distance < this.minDistance) {
                         this.selectedFeature = mVTFeature;
                         this.minDistance = distance;
                     }
