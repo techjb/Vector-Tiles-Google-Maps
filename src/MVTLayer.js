@@ -146,8 +146,26 @@ class MVTLayer {
     }
 
     _handleClickFeature(event, mVTFeature) {
-        var paths = mVTFeature.getPaths(event.tileContext);
+        switch (mVTFeature.type) {
+            case 3:// polygon
+                this._handleClickFeaturePolygon(event, mVTFeature);
+                break;
+            default: {
+                this._handleClickFeatureDefault(event, mVTFeature);
+                break;
+            }
+        }        
+    }
 
+    _handleClickFeaturePolygon(event, mVTFeature) {
+        if (mVTFeature.isPointInPath(event.tilePoint, event.tileContext)) {
+            this.selectedFeature = mVTFeature;
+            this.minDistance = 0;
+        }
+    }
+
+    _handleClickFeatureDefault(event, mVTFeature) {
+        var paths = mVTFeature.getPaths(event.tileContext);
         for (var j = paths.length - 1; j >= 0; j--) {
             var path = paths[j];
             switch (mVTFeature.type) {
@@ -165,14 +183,7 @@ class MVTLayer {
                         this.minDistance = distance;
                     }
                     break;
-                case 3: // Polygon
-                    if (MERCATOR.isPointInPolygon(event.tilePoint, path)) {
-                        this.selectedFeature = mVTFeature;
-                        this.minDistance = 0;
-                    }
-                    break;
             }
-
             if (this.minDistance == 0) {
                 return this.selectedFeature;
             }
