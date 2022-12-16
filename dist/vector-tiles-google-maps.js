@@ -641,7 +641,7 @@ class MVTFeature {
         var coordinates = tile.vectorTileFeature.coordinates[0][0];
         var point = this.getPoint(coordinates, tileContext, tile.divisor);
         var radius = style.radius || 3;
-        var context2d = this._getContext2d(tileContext.canvas, style);
+        var context2d = this.getContext2d(tileContext.canvas, style);
         context2d.beginPath();
         context2d.arc(point.x, point.y, radius, 0, Math.PI * 2);
         context2d.closePath();
@@ -650,13 +650,13 @@ class MVTFeature {
     }
 
     drawLineString(tileContext, tile, style) {
-        tile.context2d = this._getContext2d(tileContext.canvas, style);
+        tile.context2d = this.getContext2d(tileContext.canvas, style);
         this.drawCoordinates(tileContext, tile);
         tile.context2d.stroke(tile.paths2d);
     }
 
     drawPolygon(tileContext, tile, style) {
-        tile.context2d = this._getContext2d(tileContext.canvas, style);
+        tile.context2d = this.getContext2d(tileContext.canvas, style);
         this.drawCoordinates(tileContext, tile);
         tile.paths2d.closePath();
 
@@ -705,7 +705,7 @@ class MVTFeature {
         return paths;
     }
 
-    _getContext2d(canvas, style) {
+    getContext2d(canvas, style) {
         var context2d = canvas.getContext('2d');
         for (var key in style) {
             if (key === 'selected') {
