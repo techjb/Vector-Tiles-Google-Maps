@@ -2,6 +2,8 @@
  *  Created by Jes�s Barrio on 04/2021
  */
 
+import { VectorTile } from "@mapbox/vector-tile";
+
 export class MVTSource {
   constructor(map, options) {
     const self = this;
