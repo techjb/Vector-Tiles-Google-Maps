@@ -17,5 +17,8 @@
     },
     "moduleNameMapper": {
         "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "dependencies": {
+        "pbf": "^3.2.1"
     }
 }
