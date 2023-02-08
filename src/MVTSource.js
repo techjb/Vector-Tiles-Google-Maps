@@ -2,7 +2,8 @@
  *  Created by Jes�s Barrio on 04/2021
  */
 import Pbf from 'pbf';
-import VectorTile from '../lib/vectortiles/VectorTile.js';
+import {VectorTile} from '@mapbox/vector-tile';
+import * as MERCATOR from '../lib/mercator/Mercator.js';
 import MVTLayer from './MVTLayer.js';
 export class MVTSource {
   constructor(map, options) {
@@ -196,6 +197,19 @@ export class MVTSource {
     const uint8Array = new Uint8Array(response);
     const pbf = new Pbf(uint8Array);
     const vectorTile = new VectorTile(pbf);
+    // This is copied from the code originally found in VectorTile.js
+    // It is necessary to actually load the geometry of each feature before they can be drawn
+    for (var key in vectorTile.layers) {
+      var layer = vectorTile.layers[key];
+      layer.parsedFeatures = [];
+      var featuresLength = layer._features.length;
+      for (var i = 0, len = featuresLength; i < len; i++) {
+        var feature = layer.feature(i);
+        feature.coordinates = feature.loadGeometry();
+        layer.parsedFeatures.push(feature);
+      }
+      vectorTile.layers[key] = layer;
+    }
     this._drawVectorTile(vectorTile, tileContext);
   }
 

@@ -2,6 +2,7 @@
  *  Created by Jes�s Barrio on 04/2021
  */
 import {MVTFeature} from './MVTFeature.js';
+import * as MERCATOR from '../lib/mercator/Mercator.js';
 
 export default class MVTLayer {
   constructor(options) {
@@ -172,7 +173,7 @@ export default class MVTLayer {
       const path = paths[j];
       switch (mVTFeature.type) {
         case 1: // Point
-          if (MERCATOR.in_circle(path[0].x, path[0].y, mVTFeature.style.radius, event.tilePoint.x, event.tilePoint.y)) {
+          if (MERCATOR.inCircle(path[0].x, path[0].y, mVTFeature.style.radius, event.tilePoint.x, event.tilePoint.y)) {
             this.selectedFeature = mVTFeature;
             this.minDistance = 0;
           }
@@ -192,3 +193,5 @@ export default class MVTLayer {
     }
   }
 }
+
+export {MVTLayer}
