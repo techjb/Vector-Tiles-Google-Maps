@@ -37,30 +37,53 @@ export const mockMVTSource = {
   redrawTile: jest.fn(),
   map: mockMap(),
 };
+/**
+ * @typedef {import('@mapbox/vector-tile').VectorTileLayer} VectorTileLayer
+ * @typedef {import('@mapbox/vector-tile').VectorTileFeature} VectorTileFeature
+ */
 
-export const mockVectorTileFeatures = [
+/** @type {VectorTileFeature} */
+const mockVectorTileFeature1 = {
+  type: 1,
+  extent: 64,
+  properties: 'mock vector tile props',
+  loadGeometry: jest.fn(() => [
+    [
+      {x: 1, y: 2}, {x: 2, y: 1},
+    ],
+    [
+      {x: -2, y: 3}, {x: 0, y: 3}, {x: 3, y: 3},
+    ],
+  ]),
+};
+
+/** @type {VectorTileFeature} */
+const mockVectorTileFeature2 = {
+  type: 2,
+  extent: 32,
+  properties: 'mock props',
+  loadGeometry: jest.fn(() => [
+    [
+      {x: 0, y: 0}, {x: 3, y: 1}, {x: 5, y: -2},
+    ],
+  ]),
+};
+
+/** @type {Array<VectorTileLayer} */
+export const mockVectorTileLayers = [
   {
     extent: 64,
-    type: 1,
-    properties: 'mock vector tile props',
-    // I don't fully understand what the shape of `coordinates` is supposed to be,
-    // but this satisfies the functions that use it.
-    coordinates: [
-      [
-        {x: 1, y: 2}, {x: 2, y: 1},
-      ],
-      [
-        {x: -2, y: 3}, {x: 0, y: 3}, {x: 3, y: 3},
-      ],
-    ],
+    length: 1,
+    feature: jest.fn().mockImplementation((i) => {
+      return mockVectorTileFeature1;
+    }),
   },
   {
     extent: 32,
-    type: 2,
-    properties: 'mock props',
-    coordinates: [
-      [{x: 0, y: 0}, {x: 3, y: 1}, {x: 5, y: -2}],
-    ],
+    length: 2,
+    feature: jest.fn((i) => {
+      return mockVectorTileFeature2;
+    }),
   },
 ];
 

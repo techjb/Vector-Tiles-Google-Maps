@@ -5,15 +5,20 @@
     "license": "MIT",
     "type": "module",
     "scripts": {
-        "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+        "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
     },
     "devDependencies": {
         "@googlemaps/jest-mocks": "2.7.5",
+        "@types/google.maps": "^3.51.1",
         "eslint": "^8.32.0",
         "eslint-config-google": "^0.14.0",
         "eslint-plugin-jest": "^27.2.1",
         "jest": "^29.4.0",
-        "jest-environment-jsdom": "^29.4.0"
+        "jest-environment-jsdom": "^29.4.0",
+        "vite": "^4.1.1"
     },
     "moduleNameMapper": {
         "^@/(.*)$": "<rootDir>/src/$1"

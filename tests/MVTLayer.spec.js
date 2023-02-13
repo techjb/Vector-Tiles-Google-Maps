@@ -1,19 +1,33 @@
-import {MVTLayer} from '@/MVTLayer.js';
+import {jest} from '@jest/globals';
+// import {MVTLayer} from '@/MVTLayer.js';
 import {MVTFeature} from '@/MVTFeature.js';
-import {mockMVTSource, mockTileContext, mockVectorTileFeatures} from './common-mocks.js';
+import {mockMVTSource, mockTileContext, mockVectorTileLayers} from './common-mocks.js';
 
-// TODO jest.mock does not seem to work at all like it does in Beyond Maps and I have
-// no idea why. The MVTFeature class does _not_ get mocked by this line.
-jest.mock('@/MVTFeature.js');
-
-const mockStyle = jest.fn(() => 'style return');
+const mockStyle = {mock: 'style'};
 const mockDrawFn = jest.fn();
+
+jest.unstable_mockModule('@/MVTFeature.js', () => {
+  return {
+    MVTFeature: jest.fn().mockImplementation((options) => {
+      return new MVTFeature(options);
+    }),
+  };
+});
+const {MVTFeature: mockMVTFeature} = await import('@/MVTFeature.js');
+const {MVTLayer} = await import('@/MVTLayer.js');
+
+class Path2D {
+  constructor() {}
+}
+global.Path2D = Path2D;
+
+const mockStyleFn = jest.fn(() => mockStyle);
 
 const mockOptions = () =>{
   let nextId = 123;
   return {
     getIDForLayerFeature: jest.fn(() => nextId++),
-    style: mockStyle,
+    style: mockStyleFn,
     name: 'Mock Name',
     filter: jest.fn(() => true),
     customDraw: mockDrawFn,
@@ -37,24 +51,23 @@ describe('MVTLayer', () => {
     describe('Constructing MVTFeature', () => {
       it('calls the MVTFeature constructor with expected options', () => {
         const mVTLayer = new MVTLayer(mockOptions());
-        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileFeatures.slice(0, 1), mockTileContext);
+        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileLayers[0], mockTileContext);
 
-        // TODO this expect won't work until jest.mock() works.
-        //     expect(MVTFeature).toHaveBeenCalledWith(expect.objectContaining({
-        //       mVTSource: mockMVTSource,
-        //       vectorTileFeature: mockVectorTileFeatures[0],
-        //       tileContext: mockTileContext,
-        //       style: mockStyle,
-        //       selected: false, // from MVTSource.isFeatureSelected
-        //       featureId: 123,
-        //       customDraw: mockDrawFn,
-        //     }));
+        expect(mockMVTFeature).toHaveBeenCalledWith(expect.objectContaining({
+          mVTSource: mockMVTSource,
+          vectorTileFeature: expect.any(Object), // mapbox VectorTileFeature
+          tileContext: mockTileContext,
+          style: mockStyle,
+          selected: false, // from MVTSource.isFeatureSelected
+          featureId: 123,
+          customDraw: mockDrawFn,
+        }));
 
         expect(mVTLayer._mVTFeatures[123]).toStrictEqual(expect.any(MVTFeature));
       });
       it('creates one MVTFeature per VectorTileFeature supplied', () => {
         const mVTLayer = new MVTLayer(mockOptions());
-        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileFeatures, mockTileContext);
+        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileLayers[1], mockTileContext);
 
         expect(mVTLayer._mVTFeatures[123]).toStrictEqual(expect.any(MVTFeature));
         expect(mVTLayer._mVTFeatures[124]).toStrictEqual(expect.any(MVTFeature));
@@ -62,7 +75,7 @@ describe('MVTLayer', () => {
       });
       it('if the getIDForLayerFeature function returns nothing, autoincrements MVTFeature IDs', () => {
         const mVTLayer = new MVTLayer({...mockOptions(), getIDForLayerFeature: jest.fn()});
-        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileFeatures, mockTileContext);
+        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileLayers[1], mockTileContext);
 
         expect(mVTLayer._mVTFeatures[0]).toStrictEqual(expect.any(MVTFeature));
         expect(mVTLayer._mVTFeatures[1]).toStrictEqual(expect.any(MVTFeature));
@@ -70,7 +83,7 @@ describe('MVTLayer', () => {
       });
       it('does not add a MVTFeature if filter returns false', () => {
         const mVTLayer = new MVTLayer({...mockOptions(), filter: jest.fn(() => false)});
-        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileFeatures, mockTileContext);
+        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileLayers[1], mockTileContext);
 
         expect(mVTLayer._mVTFeatures).toHaveLength(0);
       });
@@ -78,7 +91,7 @@ describe('MVTLayer', () => {
         const mVTLayer = new MVTLayer(mockOptions());
         mVTLayer.drawTile = jest.fn();
 
-        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileFeatures, mockTileContext);
+        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileLayers[0], mockTileContext);
 
         expect(mVTLayer.drawTile).toHaveBeenCalledWith(mockTileContext);
       });
@@ -88,7 +101,7 @@ describe('MVTLayer', () => {
       let features;
       beforeEach(() => {
         mVTLayer = new MVTLayer(mockOptions());
-        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileFeatures, mockTileContext);
+        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileLayers[1], mockTileContext);
         features = mVTLayer._mVTFeatures;
         features.forEach((f) => f.draw = jest.fn());
         jest.clearAllMocks();
@@ -124,13 +137,13 @@ describe('MVTLayer', () => {
         const mockFeature = {};
         const result = new MVTLayer(mockOptions()).getStyle(mockFeature);
 
-        expect(mockStyle).toHaveBeenCalledWith(mockFeature);
-        expect(result).toBe('style return');
+        expect(mockStyleFn).toHaveBeenCalledWith(mockFeature);
+        expect(result).toBe(mockStyle);
       });
       it('if MVTLayer\'s style is not a function, return it', () => {
         const result = new MVTLayer({...mockOptions(), style: 'not a function'}).getStyle({});
 
-        expect(mockStyle).not.toHaveBeenCalled();
+        expect(mockStyleFn).not.toHaveBeenCalled();
         expect(result).toBe('not a function');
       });
     });
@@ -138,19 +151,17 @@ describe('MVTLayer', () => {
       let mVTLayer;
       beforeEach(() => {
         mVTLayer = new MVTLayer(mockOptions());
-        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileFeatures, mockTileContext);
+        mVTLayer.parseVectorTileFeatures(mockMVTSource, mockVectorTileLayers[0], mockTileContext);
       });
       it('sets the MVTLayer\'s style property', () => {
         mVTLayer.setStyle('new style');
 
         expect(mVTLayer.style).toBe('new style');
       });
-      it('calls setStyle on each feature', () => {
-        mVTLayer._mVTFeatures.forEach((f) => f.setStyle = jest.fn());
-
+      it('sets the style on each feature', () => {
         mVTLayer.setStyle('new style');
 
-        mVTLayer._mVTFeatures.forEach(({setStyle}) => expect(setStyle).toHaveBeenCalledWith('new style'));
+        mVTLayer._mVTFeatures.forEach(({style}) => expect(style).toBe('new style'));
       });
     });
   });

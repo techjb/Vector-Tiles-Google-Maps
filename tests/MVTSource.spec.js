@@ -1,18 +1,9 @@
 import {MVTSource} from '@/MVTSource';
 import {mockMap, mockCanvas, mockContext} from './common-mocks';
+import {initialize, Size} from '@googlemaps/jest-mocks';
+import {getTileFromString, getTileString} from '../lib/geometry';
 
-// TODO various functions access 'google' as a global. Refactor to use imports instead.
-class Size {
-  constructor(size1, size2) {
-    this.size1 = size1;
-    this.size2 = size2;
-  }
-}
-global.google = {
-  maps: {
-    Size,
-  },
-};
+initialize();
 
 const mockMVTFeature = {
   featureId: 8,
@@ -56,8 +47,8 @@ describe('MVTSource', () => {
 
       expect(mVTSource.getIDForLayerFeature).toBe(options.getIDForLayerFeature);
       expect(mVTSource.tileSize).toStrictEqual(expect.any(Size));
-      expect(mVTSource.tileSize.size1).toBe(options.tileSize);
-      expect(mVTSource.tileSize.size2).toBe(options.tileSize);
+      expect(mVTSource.tileSize.width).toBe(options.tileSize);
+      expect(mVTSource.tileSize.height).toBe(options.tileSize);
     });
     // TODO something for setSelectedFeatures
     it('registers a zoom_changed listener on the map', () => {
@@ -67,25 +58,21 @@ describe('MVTSource', () => {
       expect(map.addListener).toHaveBeenCalledWith('zoom_changed', expect.any(Function));
     });
   });
-  describe('getTileId', () => {
+  describe('getTileString', () => {
     it('returns expected id', () => {
       const zoom = 10;
       const x = 18;
       const y = 28;
-      const mVTSource = new MVTSource(mockMap(), mockOptions());
-
-      expect(mVTSource.getTileId(zoom, x, y)).toBe('10:18:28');
+      expect(getTileString(zoom, x, y)).toBe('10:18:28');
     });
   });
-  describe('getTileObject', () => {
+  describe('getTileFromString', () => {
     it('returns expected object', () => {
       const id = '8:55:143';
-      const mVTSource = new MVTSource(mockMap(), mockOptions());
-
-      expect(mVTSource.getTileObject(id)).toStrictEqual({
-        zoom: '8',
-        x: '55',
-        y: '143',
+      expect(getTileFromString(id)).toStrictEqual({
+        zoom: 8,
+        x: 55,
+        y: 143,
       });
     });
   });

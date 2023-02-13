@@ -2,221 +2,171 @@
  *  Created by Jes�s Barrio on 04/2021
  */
 
-export class MVTFeature {
-  constructor(options) {
-    this.mVTSource = options.mVTSource;
-    this.selected = options.selected;
-    this.featureId = options.featureId;
-    this.tiles = [];
-    this.style = options.style;
-    this.type = options.vectorTileFeature.type;
-    this.properties = options.vectorTileFeature.properties;
-    this.addTileFeature(options.vectorTileFeature, options.tileContext);
-    this._draw = options.customDraw || this.defaultDraw;
+import {getTileFromString, getPoint} from '../lib/geometry.js';
+import {drawPoint, drawPolygon, drawLineString, getContext2d} from '../lib/drawing.js';
 
+/**
+ * @typedef {import('./MVTSource').MVTSource} MVTSource
+ * @typedef {import('./MVTSource').TileContext} TileContext
+ * @typedef {import('./MVTSource').StyleOptions} StyleOptions
+ * @typedef {import('./MVTSource').drawFn} drawFn
+ *
+ * @typedef {import('@mapbox/vector-tile').VectorTileFeature} VectorTileFeature
+ */
+
+/**
+ * @typedef {object} MVTFeatureOptions
+ * @property {MVTSource} mVTSource
+ * @property {boolean} selected Indicates if these feature has ben selected and should be using the "selected" styles
+ * @property {string} featureId The feature id
+ * @property {StyleOptions} style
+ * @property {VectorTileFeature} vectorTileFeature
+ * @property {TileContext} tileContext
+ * @property {drawFn} customDraw
+ */
+
+/**
+ * @typedef {object} FeatureTile
+ * @property {VectorTileFeature} vectorTileFeature
+ * @property {number} divisor
+ * @property {Path2D} paths2d
+ */
+
+const getDefaultDraw = (/** @type {1|2|3} */type) => {
+  /**
+   * Default draw method handles drawing points, linestrings and polygons using the built in draw methods which
+   * use the currently applied style.
+   * @param {TileContext} tileContext
+   * @param {FeatureTile} tile
+   * @param {StyleOptions} style
+   */
+  const defaultDraw = (tileContext, tile, style) => {
+    const drawFns = {
+      1: drawPoint,
+      2: drawLineString,
+      3: drawPolygon,
+    };
+    drawFns[type]?.(tileContext, tile, style);
+  };
+  return defaultDraw;
+};
+
+class MVTFeature {
+  /**
+   * @param {MVTFeatureOptions} options
+   */
+  constructor(options = {}) {
+    /** @type {MVTSource} */
+    this.mVTSource = options.mVTSource;
+    /** @type {boolean} Indicates if these feature has ben selected and should be using the "selected" styles */
+    this.selected = options.selected;
+    /** @type {string} The feature id */
+    this.featureId = options.featureId;
+    /** @type {StyleOptions} */
+    this.style = options.style;
+    /** @type {1|2|3} */
+    this.type = options.vectorTileFeature.type;
+    /** @type {object} */
+    this.properties = options.vectorTileFeature.properties;
+
+    /** @type {drawFn} */
+    this._draw = options.customDraw || getDefaultDraw(this.type);
+
+    /** @type {Record<string, FeatureTile>} */
+    this.tiles = {};
+
+    this.addTileFeature(options.vectorTileFeature, options.tileContext);
     if (this.selected) {
-      this.select();
+      this.setSelected(true);
     }
   }
 
+  /**
+   * @param {VectorTileFeature} vectorTileFeature
+   * @param {TileContext} tileContext
+   */
   addTileFeature(vectorTileFeature, tileContext) {
     this.tiles[tileContext.id] = {
       vectorTileFeature: vectorTileFeature,
       divisor: vectorTileFeature.extent / tileContext.tileSize,
-      context2d: false,
-      paths2d: false,
+      paths2d: new Path2D(),
     };
   }
 
-  getTiles() {
-    return this.tiles;
-  }
-
-  getTile(tileContext) {
-    return this.tiles[tileContext.id];
-  }
-
-  setStyle(style) {
-    this.style = style;
-  }
-
+  /**
+   * Redraw all the tiles that this feature is in. Used to apply styling changes
+   */
   redrawTiles() {
-    const zoom = this.mVTSource.map.getZoom();
-    for (const id in this.tiles) {
-      this.mVTSource.deleteTileDrawn(id);
-      const idObject = this.mVTSource.getTileObject(id);
-      if (idObject.zoom == zoom) {
-        this.mVTSource.redrawTile(id);
-      }
-    }
+    const mapZoom = this.mVTSource.map.getZoom();
+    Object.keys(this.tiles).forEach((tileId) => {
+      if (getTileFromString(tileId).zoom !== mapZoom) return;
+      this.mVTSource.redrawTile(tileId);
+    });
   }
 
-  toggle() {
-    if (this.selected) {
-      this.deselect();
-    } else {
-      this.select();
-    }
-  }
-
-  select() {
-    this.selected = true;
-    this.mVTSource.featureSelected(this);
-    this.redrawTiles();
-  }
-
-  deselect() {
-    this.selected = false;
-    this.mVTSource.featureDeselected(this);
-    this.redrawTiles();
-  }
-
+  /**
+   * Set this feature as selected or not. The feature will be redrawn with the correct style
+   * @param {boolean} selected
+   */
   setSelected(selected) {
     this.selected = selected;
+    if (selected) {
+      this.mVTSource.featureSelected(this);
+    } else {
+      this.mVTSource.featureDeselected(this);
+    }
+    this.redrawTiles();
   }
 
+  /**
+   * Draws the given tile using the correct style based on selected state
+   * @param {TileContext} tileContext
+   */
   draw(tileContext) {
-    const tile = this.tiles[tileContext.id];
-    let style = this.style;
-    if (this.selected && this.style.selected) {
-      style = this.style.selected;
-    }
-
-    this._draw(tileContext, tile, style, this);
+    // if this feature has been selected and a selected style is available, use that style. Otherwise use the default
+    const style = this.selected && this.style.selected ? this.style.selected : this.style;
+    this._draw(tileContext, this.tiles[tileContext.id], style, this);
   }
 
-  defaultDraw(tileContext, tile, style) {
-    switch (this.type) {
-      case 1: // Point
-        this.drawPoint(tileContext, tile, style);
-        break;
-
-      case 2: // LineString
-        this.drawLineString(tileContext, tile, style);
-        break;
-
-      case 3: // Polygon
-        this.drawPolygon(tileContext, tile, style);
-        break;
-    }
-  }
-
-  drawPoint(tileContext, tile, style) {
-    const coordinates = tile.vectorTileFeature.coordinates[0][0];
-    const point = this.getPoint(coordinates, tileContext, tile.divisor);
-    const radius = style.radius || 3;
-    const context2d = this.getContext2d(tileContext.canvas, style);
-    context2d.beginPath();
-    context2d.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    context2d.closePath();
-    context2d.fill();
-    context2d.stroke();
-  }
-
-  drawLineString(tileContext, tile, style) {
-    tile.context2d = this.getContext2d(tileContext.canvas, style);
-    this.drawCoordinates(tileContext, tile);
-    tile.context2d.stroke(tile.paths2d);
-  }
-
-  drawPolygon(tileContext, tile, style) {
-    tile.context2d = this.getContext2d(tileContext.canvas, style);
-    this.drawCoordinates(tileContext, tile);
-    tile.paths2d.closePath();
-
-    if (style.fillStyle) {
-      tile.context2d.fill(tile.paths2d);
-    }
-    if (style.strokeStyle) {
-      tile.context2d.stroke(tile.paths2d);
-    }
-  }
-
-  drawCoordinates(tileContext, tile) {
-    const coordinates = tile.vectorTileFeature.coordinates;
-    tile.paths2d = new Path2D();
-    for (let i = 0, length1 = coordinates.length; i < length1; i++) {
-      const coordinate = coordinates[i];
-      const path2 = new Path2D();
-      for (let j = 0, length2 = coordinate.length; j < length2; j++) {
-        const point = this.getPoint(coordinate[j], tileContext, tile.divisor);
-        if (j == 0) {
-          path2.moveTo(point.x, point.y);
-        } else {
-          path2.lineTo(point.x, point.y);
-        }
-      }
-      tile.paths2d.addPath(path2);
-    }
-  }
-
+  /**
+   * Returns the scaled paths for this feature
+   * @param {TileContext} tileContext
+   * @return {Array<Array<Point>>}
+   */
   getPaths(tileContext) {
+    /** @type {Array<Array<Point>>} */
     const paths = [];
     const tile = this.tiles[tileContext.id];
-    const coordinates = tile.vectorTileFeature.coordinates;
-    for (let i = 0, length1 = coordinates.length; i < length1; i++) {
-      const path = [];
-      const coordinate = coordinates[i];
-      for (let j = 0, length2 = coordinate.length; j < length2; j++) {
-        const point = this.getPoint(coordinate[j], tileContext, tile.divisor);
-        path.push(point);
+    const geometry = tile.vectorTileFeature.loadGeometry();
+    geometry.forEach((path) => {
+      /** @type {Array<Point>} */
+      const scaledPath = [];
+      path.forEach((rawPoint) => {
+        scaledPath.push(getPoint(rawPoint, tileContext, tile.divisor));
+      });
+      if (scaledPath.length > 0) {
+        paths.push(scaledPath);
       }
-      if (path.length > 0) {
-        paths.push(path);
-      }
-    }
+    });
     return paths;
   }
 
-  getContext2d(canvas, style) {
-    const context2d = canvas.getContext('2d');
-    for (const key in style) {
-      if (key === 'selected') {
-        continue;
-      }
-      context2d[key] = style[key];
-    }
-    return context2d;
-  }
-
-  getPoint(coords, tileContext, divisor) {
-    let point = {
-      x: coords.x / divisor,
-      y: coords.y / divisor,
-    };
-
-    if (tileContext.parentId) { // TODO likely a bug: needs to check for nullish value, not falsy
-      point = this._getOverzoomedPoint(point, tileContext);
-    }
-    return point;
-  }
-
-  _getOverzoomedPoint(point, tileContext) {
-    const parentTile = this.mVTSource.getTileObject(tileContext.parentId);
-    const currentTile = this.mVTSource.getTileObject(tileContext.id);
-    const zoomDistance = currentTile.zoom - parentTile.zoom;
-
-    const scale = Math.pow(2, zoomDistance);
-
-    const xScale = point.x * scale;
-    const yScale = point.y * scale;
-
-    const xtileOffset = currentTile.x % scale;
-    const ytileOffset = currentTile.y % scale;
-
-    point.x = xScale - (xtileOffset * tileContext.tileSize);
-    point.y = yScale - (ytileOffset * tileContext.tileSize);
-
-    return point;
-  }
-
+  /**
+   * Returns whether or not a given point exists in any path in the feature
+   * @param {Point} point
+   * @param {TileContext} tileContext
+   * @return {boolean}
+   */
   isPointInPath(point, tileContext) {
-    const tile = this.getTile(tileContext);
-    const context2d = tile.context2d;
-    const paths2d = tile.paths2d;
-    if (!context2d || !paths2d) {
+    const tile = this.tiles[tileContext.id];
+    const context2d = getContext2d(tileContext.canvas);
+    if (!context2d || !tile.paths2d) {
       return false;
     }
-    return context2d.isPointInPath(paths2d, point.x, point.y);
+    return context2d.isPointInPath(tile.paths2d, point.x, point.y);
   }
 }
+
+export {
+  MVTFeature,
+};

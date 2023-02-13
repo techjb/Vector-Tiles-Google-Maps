@@ -9,6 +9,11 @@
 <body>
     <div class="container-left">
         <div id="map"></div>
+        <div id="noKey">
+            <p>
+                You need to set an API key to use Google Maps.
+            </p>
+        </div>
     </div>
     <div class="container-right">
         <div>
@@ -17,11 +22,16 @@
                 This example loads the types of geometries.
             </p>
         </div>
+        <div>
+            <label for="apiKey">API Key: </label>
+            <input type="text" id="apiKey" name="input" />
+            <button id="setApiKey" onclick="LoadGoogleMapSDK()" >Set API Key</button>
+        </div>
     </div>
-    <script src="../vector-tiles-google-maps/dist/assets/index.js"></script>
-    <script type="text/javascript">
+   <script type="module" type="text/javascript">
+        import { MVTSource } from '../main.js';
         var map;
-        function InitGoogleMap() {
+        window.InitGoogleMap = function InitGoogleMap() {
             map = new google.maps.Map(document.getElementById("map"), {
                 center: { lat: 41.39, lng: 2.14 },
                 zoom: 15,
@@ -82,8 +92,28 @@
             var mvtSource = new MVTSource(map, options);
             map.overlayMapTypes.insertAt(0, mvtSource);
         }
-    </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=REPLACE_WITH_BEYOND_MAPS_API_KEY&callback=InitGoogleMap&libraries=&v=weekly"
-            defer></script>
+    
+        window.LoadGoogleMapSDK = function LoadGoogleMapSDK() {
+            var apiKey = document.getElementById("apiKey").value;
+            // save the API key in local storage
+            localStorage.setItem("apiKey", apiKey);
+            // do not load the SDK if the API key is empty
+            if (!apiKey) return;
+            // do not load the SDK if it is already loaded
+            if (window.google && window.google.maps) return;
+            var script = document.createElement("script");
+            script.src = "https://maps.googleapis.com/maps/api/js?key=" + apiKey + "&callback=InitGoogleMap&libraries=&v=weekly";
+            script.defer = true;
+            document.head.appendChild(script);
+            document.getElementById("noKey").style.display = "none";
+        }
+    
+        // try to get the API key from local storage
+        var apiKey = localStorage.getItem("apiKey");
+        if (apiKey) {
+            document.getElementById("apiKey").value = apiKey;
+            LoadGoogleMapSDK();
+        }
+ </script>
 </body>
 </html>

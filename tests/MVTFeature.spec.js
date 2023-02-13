@@ -1,7 +1,23 @@
-import {MVTFeature} from '@/MVTFeature.js';
-import {mockMVTSource, mockVectorTileFeatures, mockCanvas, mockContext} from './common-mocks';
+import {jest} from '@jest/globals';
+import {mockMVTSource, mockVectorTileLayers, mockCanvas, mockContext} from './common-mocks';
+import {initialize, Point} from '@googlemaps/jest-mocks';
+initialize();
 
-const mockVectorTileFeature = mockVectorTileFeatures[0];
+import {drawPoint, drawLineString, drawPolygon, drawGeometry, getContext2d} from '../lib/drawing.js';
+import {getPoint} from '../lib/geometry';
+
+jest.unstable_mockModule('../lib/drawing.js', () => ({
+  drawPoint: jest.fn(),
+  drawLineString: jest.fn(),
+  drawPolygon: jest.fn(),
+  getContext2d: jest.fn(),
+}));
+
+
+const {drawPoint: mockDrawPoint, drawLineString: mockDrawLineString, drawPolygon: mockDrawPolygon} = await import('../lib/drawing.js');
+const {MVTFeature} = await import('@/MVTFeature.js');
+
+const mockVectorTileFeature = mockVectorTileLayers[0].feature(0);
 
 // This mocks Path2D of the Canvas API.
 const mockAddPath = jest.fn();
@@ -9,7 +25,6 @@ const mockMoveTo = jest.fn();
 const mockLineTo = jest.fn();
 class Path2D {
   constructor() {
-    this.addPath = mockAddPath;
     this.moveTo = mockMoveTo;
     this.lineTo = mockLineTo;
   }
@@ -21,6 +36,7 @@ const mockTile = {
   vectorTileFeature: mockVectorTileFeature,
   paths2d: {
     closePath: jest.fn(),
+    addPath: mockAddPath,
   },
 };
 const mockTileContext = {
@@ -63,7 +79,7 @@ describe('MVTFeature', () => {
       it('starts with one tile', () => {
         const mVTFeature = new MVTFeature(mockOptions());
 
-        expect(mVTFeature.tiles).toHaveLength(1);
+        expect(Object.keys(mVTFeature.tiles)).toHaveLength(1);
       });
       it('if selected, calls mVTSource.featureSelected with this feature', () => {
         const mVTFeature = new MVTFeature(mockOptions());
@@ -86,40 +102,32 @@ describe('MVTFeature', () => {
       expect(mVTFeature.tiles[0]).toStrictEqual({
         vectorTileFeature: mockVectorTileFeature,
         divisor: 16,
-        context2d: false,
-        paths2d: false,
+        paths2d: expect.any(Path2D),
       });
     });
-    it('creates a sparse `tiles` array if indices are skipped', () => {
+    it('populates the `tiles` object', () => {
       const context = {id: 100, tileSize: 2};
       const mVTFeature = new MVTFeature(mockOptions());
       mVTFeature.addTileFeature(mockVectorTileFeature, context);
 
-      expect(mVTFeature.tiles).toHaveLength(101);
+      expect(Object.keys(mVTFeature.tiles)).toHaveLength(2);
       // There will be two tiles (one from constructor, one from this test's call)
       expect(Object.values(mVTFeature.tiles)).toHaveLength(2);
     });
   });
   describe('redrawTiles', () => {
+    /** @type {MVTFeature} */
     let mVTFeature;
     beforeEach(() => {
       mVTFeature = new MVTFeature(mockOptions());
       // Add six tiles for testing
       for (let i = 1; i < 7; i++) {
-        mVTFeature.addTileFeature(mockVectorTileFeature, {...mockTileContext, id: i});
-      }
-    });
-    it('calls MVTSource.deleteTileDrawn for all tiles', () => {
-      mVTFeature.redrawTiles();
-
-      for (let i = 0; i < 7; i++) {
-        // It's called with the numbers as strings.
-        expect(mockMVTSource.deleteTileDrawn).toHaveBeenCalledWith(i.toString());
+        mVTFeature.addTileFeature(mockVectorTileFeature, {...mockTileContext, id: `${i > 3 ? '13' : '10'}:${i}:0`});
       }
     });
     it('calls MVTSource.redrawTile only for tiles at current zoom', () => {
-      const expectedRedrawn = ['3', '5'];
-      const expectedNotRedrawn = ['0', '1', '2', '4', '6'];
+      const expectedRedrawn = ['13:4:0', '13:5:0', '13:6:0'];
+      const expectedNotRedrawn = ['10:1:0', '10:2:0', '10:3:0', '0'];
 
       mVTFeature.redrawTiles();
 
@@ -136,7 +144,7 @@ describe('MVTFeature', () => {
       const mVTFeature = new MVTFeature({...mockOptions(), selected: true});
       jest.clearAllMocks();
 
-      mVTFeature.toggle();
+      mVTFeature.setSelected(!mVTFeature.selected);
 
       expect(mockMVTSource.featureDeselected).toHaveBeenCalledWith(mVTFeature);
       expect(mockMVTSource.featureSelected).not.toHaveBeenCalled();
@@ -145,7 +153,7 @@ describe('MVTFeature', () => {
       const mVTFeature = new MVTFeature({...mockOptions(), selected: false});
       jest.clearAllMocks();
 
-      mVTFeature.toggle();
+      mVTFeature.setSelected(!mVTFeature.selected);
 
       expect(mockMVTSource.featureSelected).toHaveBeenCalledWith(mVTFeature);
       expect(mockMVTSource.featureDeselected).not.toHaveBeenCalled();
@@ -157,15 +165,6 @@ describe('MVTFeature', () => {
       mVTFeature.setSelected(false);
 
       expect(mVTFeature.selected).toBe(false);
-    });
-    it.each([true, false])('when setting to %s, does not call MVTSource methods', (value) => {
-      const mVTFeature = new MVTFeature({...mockOptions(), selected: !value});
-      jest.clearAllMocks();
-
-      mVTFeature.setSelected(value);
-
-      expect(mockMVTSource.featureSelected).not.toHaveBeenCalled();
-      expect(mockMVTSource.featureDeselected).not.toHaveBeenCalled();
     });
   });
   describe('draw', () => {
@@ -210,29 +209,26 @@ describe('MVTFeature', () => {
   });
   describe('defaultDraw', () => {
     it.each([
-      {name: 'Point', type: 1, delegatee: 'drawPoint'},
-      {name: 'LineString', type: 2, delegatee: 'drawLineString'},
-      {name: 'Polygon', type: 3, delegatee: 'drawPolygon'},
+      {name: 'Point', type: 1, delegatee: mockDrawPoint},
+      {name: 'LineString', type: 2, delegatee: mockDrawLineString},
+      {name: 'Polygon', type: 3, delegatee: mockDrawPolygon},
     ])('when called with type $type ($name), delegates to $delegatee', ({type, delegatee}) => {
+      const options = mockOptions();
+      delete options.customDraw;
       const mVTFeature = new MVTFeature({
-        ...mockOptions(),
+        ...options,
         vectorTileFeature: {...mockVectorTileFeature, type},
       });
-      mVTFeature.drawPoint = jest.fn();
-      mVTFeature.drawLineString = jest.fn();
-      mVTFeature.drawPolygon = jest.fn();
-      const mockTile = 'foo';
       jest.clearAllMocks();
 
-      mVTFeature.defaultDraw(mockTileContext, mockTile, mockStyle);
+      mVTFeature.draw(mockTileContext);
 
-      expect(mVTFeature[delegatee]).toHaveBeenCalledWith(mockTileContext, mockTile, mockStyle);
+      expect(delegatee).toHaveBeenCalledWith(mockTileContext, mVTFeature.tiles[mockTileContext.id], mockStyle);
     });
   });
   describe('drawPoint', () => {
     it('calls the 2D canvas context functions as expected', () => {
-      new MVTFeature(mockOptions())
-          .drawPoint(mockTileContext, mockTile, mockStyle);
+      drawPoint(mockTileContext, mockTile, mockStyle);
 
       expect(mockCanvas.getContext).toHaveBeenCalledWith('2d');
       expect(mockContext().beginPath).toHaveBeenCalled();
@@ -242,8 +238,7 @@ describe('MVTFeature', () => {
       expect(mockContext().arc).toHaveBeenCalledWith(0.0625, 0.125, mockStyle.radius, 0, Math.PI * 2);
     });
     it('calls the 2D canvas context with a radius of 3 by default', () => {
-      new MVTFeature(mockOptions())
-          .drawPoint(mockTileContext, mockTile, {...mockStyle, radius: undefined});
+      drawPoint(mockTileContext, mockTile, {...mockStyle, radius: undefined});
 
       expect(mockContext().arc).toHaveBeenCalledWith(
           expect.anything(), expect.anything(), 3, expect.anything(), expect.anything(),
@@ -251,36 +246,25 @@ describe('MVTFeature', () => {
     });
   });
   describe('drawLineString', () => {
-    let mVTFeature;
     beforeEach(() => {
-      mVTFeature = new MVTFeature(mockOptions());
-      mVTFeature.drawCoordinates = jest.fn();
       jest.clearAllMocks();
 
-      mVTFeature.drawLineString(mockTileContext, mockTile, mockStyle);
-    });
-    it('calls this.drawCoordinates with expected arguments', () => {
-      expect(mVTFeature.drawCoordinates).toHaveBeenCalledWith(mockTileContext, mockTile);
+      drawLineString(mockTileContext, mockTile, mockStyle);
     });
     it('calls the 2D canvas context functions as expected', () => {
       expect(mockCanvas.getContext).toHaveBeenCalledWith('2d');
+      mockTile.vectorTileFeature.loadGeometry().forEach((path, i) => {
+        expect(mockTile.paths2d.addPath).toHaveBeenNthCalledWith(i + 1, expect.any(Path2D));
+      });
       expect(mockContext().stroke).toHaveBeenCalledWith(mockTile.paths2d);
     });
   });
   describe('drawPolygon', () => {
-    let mVTFeature;
     beforeEach(() => {
-      mVTFeature = new MVTFeature(mockOptions());
-      mVTFeature.drawCoordinates = jest.fn();
       jest.clearAllMocks();
     });
-    it('calls this.drawCoordinates with expected arguments', () => {
-      mVTFeature.drawPolygon(mockTileContext, mockTile, mockStyle);
-
-      expect(mVTFeature.drawCoordinates).toHaveBeenCalledWith(mockTileContext, mockTile);
-    });
     it('calls closePath on the tile\'s paths2d', () => {
-      mVTFeature.drawPolygon(mockTileContext, mockTile, mockStyle);
+      drawPolygon(mockTileContext, mockTile, mockStyle);
 
       expect(mockTile.paths2d.closePath).toHaveBeenCalled();
     });
@@ -289,25 +273,23 @@ describe('MVTFeature', () => {
       {fnName: 'stroke', propName: 'strokeStyle'},
     ];
     it.each(testConditions)('calls $fnName if style.$propName is true', ({fnName, propName}) => {
-      mVTFeature.drawPolygon(mockTileContext, mockTile, {...mockStyle, [propName]: true});
+      drawPolygon(mockTileContext, mockTile, {...mockStyle, [propName]: true});
 
       expect(mockContext()[fnName]).toHaveBeenCalledWith(mockTile.paths2d);
     });
     it.each(testConditions)('doesn\'t call $fnName if style.$propName is false', ({fnName, propName}) => {
-      mVTFeature.drawPolygon(mockTileContext, mockTile, {...mockStyle, [propName]: false});
+      drawPolygon(mockTileContext, mockTile, {...mockStyle, [propName]: false});
 
       expect(mockContext()[fnName]).not.toHaveBeenCalled();
     });
   });
-  describe('drawCoordinates', () => {
+  describe('drawGeometry', () => {
     let tileCopy;
     beforeEach(() => {
-      // Necessary because drawCoordinates mutates the tile.
+      // Necessary because drawGeometry mutates the tile.
       tileCopy = {...mockTile};
-      const mVTFeature = new MVTFeature(mockOptions());
       jest.clearAllMocks();
-
-      mVTFeature.drawCoordinates(mockTileContext, tileCopy);
+      drawGeometry(mockTileContext, tileCopy);
     });
     it('calls Path2D.moveTo with the point from first coordinates of each set', () => {
       expect(mockMoveTo).toHaveBeenNthCalledWith(1, 0.0625, 0.125);
@@ -323,57 +305,54 @@ describe('MVTFeature', () => {
     it('calls Path2D.addPath with the created Path2D', () => {
       expect(mockAddPath).toHaveBeenCalledWith(expect.any(Path2D));
     });
-    it('replaces the tile\'s Path2D with a new one', () => {
-      expect(mockTile.paths2d).not.toBe(tileCopy.paths2d);
-    });
   });
   describe('getPaths', () => {
     it('returns expected array', () => {
       const result = new MVTFeature(mockOptions()).getPaths(mockTileContext);
 
       expect(result).toStrictEqual([
-        [
-          {x: 0.0625, y: 0.125}, {x: 0.125, y: 0.0625},
-        ],
-        [
-          {x: -0.125, y: 0.1875}, {x: 0, y: 0.1875}, {x: 0.1875, y: 0.1875},
-        ],
+        expect.arrayContaining([
+          expect.objectContaining({x: 0.0625, y: 0.125}),
+          expect.objectContaining({x: 0.125, y: 0.0625}),
+        ]),
+        expect.arrayContaining([
+          expect.objectContaining({x: -0.125, y: 0.1875}),
+          expect.objectContaining({x: 0, y: 0.1875}),
+          expect.objectContaining({x: 0.1875, y: 0.1875}),
+        ]),
       ]);
     });
   });
   describe('getContext2d', () => {
     it('retrieves the 2D context from the canvas', () => {
-      const mVTFeature = new MVTFeature(mockOptions());
-
-      mVTFeature.getContext2d(mockCanvas, mockStyle);
+      getContext2d(mockCanvas, mockStyle);
 
       expect(mockCanvas.getContext).toHaveBeenCalledWith('2d');
     });
     it('returns an object with expected properties copied from style', () => {
-      const mVTFeature = new MVTFeature(mockOptions());
       const testStyleProps = {fooProp: 'foo', barProp: 'bar'};
 
-      const result = mVTFeature.getContext2d(mockCanvas, {...mockStyle, ...testStyleProps});
+      const result = getContext2d(mockCanvas, {...mockStyle, ...testStyleProps});
 
       expect(result).toStrictEqual(expect.objectContaining(testStyleProps));
     });
     it('does not copy `selected` from style to return value', () => {
-      const mVTFeature = new MVTFeature(mockOptions());
-
-      const result = mVTFeature.getContext2d(mockCanvas, {...mockStyle, selected: 'baz'});
+      const result = getContext2d(mockCanvas, {...mockStyle, selected: 'baz'});
       expect(result.selected).not.toBe('baz');
     });
   });
   describe('getPoint', () => {
     it('returns expected value', () => {
       const testCoords = {x: 97, y: 15};
-      const result = new MVTFeature(mockOptions()).getPoint(
+      const result = getPoint(
           testCoords,
-          {...mockTileContext, id: 2, parentId: 1},
-          4,
+          {...mockTileContext, id: '2:0:0', parentId: '1:0:0'},
+          2,
       );
 
-      expect(result).toStrictEqual({x: 93, y: 7});
+      expect(result).toBeInstanceOf(Point);
+      expect(result.x).toBe(97);
+      expect(result.y).toBe(15);
     });
   });
 });
