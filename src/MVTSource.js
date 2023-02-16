@@ -7,7 +7,7 @@
 
 import Pbf from 'pbf';
 import {VectorTile} from '@mapbox/vector-tile';
-import * as MERCATOR from '../lib/mercator/Mercator.js';
+import {getTileAtLatLng, fromLatLngToTilePoint} from '../lib/mercator.js';
 import {MVTLayer} from './MVTLayer.js';
 import {getTileFromString, getTileString} from '../lib/geometry.js';
 
@@ -446,12 +446,12 @@ class MVTSource {
    * @param {ClickHandlerOptions} options
    */
   _mouseEventContinue(event, callbackFunction = ()=>{}, options) {
-    const tile = MERCATOR.getTileAtLatLng(event.latLng, this.map.getZoom());
+    const tile = getTileAtLatLng(event.latLng, this.map.getZoom());
     const tileId = getTileString(tile.z, tile.x, tile.y);
     const tileContext = this._visibleTiles[tileId];
     if (!tileContext) return;
 
-    const tilePoint = MERCATOR.fromLatLngToTilePoint(this.map, event);
+    const tilePoint = fromLatLngToTilePoint(this.map, event);
     /** @type {TileMapMouseEvent} */
     const newEvent = {
       ...event,

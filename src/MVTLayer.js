@@ -2,7 +2,7 @@
  *  Created by Jes�s Barrio on 04/2021
  */
 import {MVTFeature} from './MVTFeature.js';
-import * as MERCATOR from '../lib/mercator/Mercator.js';
+import {inCircle, getDistanceFromLine} from '../lib/mercator.js';
 
 /**
  * @typedef {import('@mapbox/vector-tile').VectorTileLayer} VectorTileLayer
@@ -219,7 +219,7 @@ class MVTLayer {
    */
   _handleClickFeaturePoint(event, mVTFeature) {
     return mVTFeature.getPaths(event.tileContext).some((path) => {
-      return MERCATOR.inCircle(path[0].x, path[0].y, mVTFeature.style.radius, event.tilePoint.x, event.tilePoint.y);
+      return inCircle(path[0].x, path[0].y, mVTFeature.style.radius, event.tilePoint.x, event.tilePoint.y);
     });
   }
 
@@ -236,7 +236,7 @@ class MVTLayer {
       lineWidth = mVTFeature.style.selected.lineWidth;
     }
     mVTFeature.getPaths(event.tileContext).forEach((path) => {
-      const distance = MERCATOR.getDistanceFromLine(event.tilePoint, path);
+      const distance = getDistanceFromLine(event.tilePoint, path);
       if (distance < minDistance) {
         minDistance = distance;
       }

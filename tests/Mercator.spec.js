@@ -11,7 +11,7 @@ import {
   isPointInPolygon,
   normalizeTile,
   projectPointOnLineSegment,
-} from '../lib/mercator/Mercator.js';
+} from '../lib/mercator.js';
 
 initialize();
 
