@@ -43,6 +43,7 @@ import {getTileFromString, getTileString} from '../lib/geometry.js';
 /**
  * @typedef {Object} MVTSourceOptions
  * @property {string} [url] Url to Vector Tile Source
+ * @property {Function} [urlGenerator] Function for generating vector tile source url
  * @property {number} [sourceMaxZoom] Source max zoom to enable over zoom
  * @property {boolean} [debug] Draw tiles lines and ids
  * @property {boolean} [cache=false] Load tiles in cache to avoid duplicated requests
@@ -193,6 +194,8 @@ class MVTSource {
     // Private properties
     /** @type {string} Url to Vector Tile Source */
     this._url = options.url || '';
+    /** @type {Function} function for generating tile source url */
+    this._urlGenerator = options.urlGenerator || null;
     /** @type {number} Source max zoom to enable over zoom */
     this._sourceMaxZoom = options.sourceMaxZoom ?? null;
     /** @type {boolean} Draw tiles lines and ids */
@@ -296,10 +299,21 @@ class MVTSource {
    * @param {TileContext} tileContext
    */
   async _fetchTile(tileContext) {
+    // Draw debug tile info before trying to get tile data so that if errors occur, the debug info still draws
+    this._drawDebugInfo(tileContext);
+
+    // Get the tile from the id
     const id = tileContext.parentId || tileContext.id;
     const tile = getTileFromString(id);
 
-    const src = this._url.replace('{z}', tile.zoom).replace('{x}', tile.x).replace('{y}', tile.y);
+    // Create the source url with the urlGenerator function if it exists, else replace {z} {y} and {x}
+    let src;
+    if (this._urlGenerator) {
+      src = this._urlGenerator(tile.zoom, tile.x, tile.y);
+    } else {
+      src = this._url.replace('{z}', tile.zoom).replace('{x}', tile.x).replace('{y}', tile.y);
+    }
+
     /** @type {Response} */
     let response;
     try {
@@ -313,11 +327,16 @@ class MVTSource {
       // If the zoom has changed since the request was made, don't draw the tile
       if (this.map.getZoom() != tileContext.zoom) return;
 
-      const arrayBuffer = await response.arrayBuffer();
-      const vectorTile = new VectorTile((new Pbf((new Uint8Array(arrayBuffer)))));
-      this._drawVectorTile(vectorTile, tileContext);
+      // Create a vector tile instance and draw it
+      try {
+        const arrayBuffer = await response.arrayBuffer();
+        const vectorTile = new VectorTile(new Pbf(new Uint8Array(arrayBuffer)));
+        this._drawVectorTile(vectorTile, tileContext);
+      } catch (error) {
+        console.error('Error occurred while creating/drawing vector tile:', error);
+        return;
+      }
     }
-    this._drawDebugInfo(tileContext);
   }
 
   /**
