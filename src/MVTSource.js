@@ -20,6 +20,12 @@ import {getTileFromString, getTileString} from '../lib/geometry.js';
  */
 
 /**
+ * @callback urlFn - A function that generates a url
+ * @param {number} zoom - the zoom level on the map
+ * @param {number} x - the x position of the tile
+ * @param {number} y - the y position of the tile
+ * @return {string} - A url for fetching a tile
+ *
  * @callback featureIdFn - A function that returns a unique id for a feature
  * @param {VectorTileFeature} feature
  * @return {string|number}
@@ -42,8 +48,7 @@ import {getTileFromString, getTileString} from '../lib/geometry.js';
 
 /**
  * @typedef {Object} MVTSourceOptions
- * @property {string} [url] Url to Vector Tile Source
- * @property {Function} [urlGenerator] Function for generating vector tile source url
+ * @property {(string|urlFn)} [url] Url to Vector Tile Source
  * @property {number} [sourceMaxZoom] Source max zoom to enable over zoom
  * @property {boolean} [debug] Draw tiles lines and ids
  * @property {boolean} [cache=false] Load tiles in cache to avoid duplicated requests
@@ -192,10 +197,8 @@ class MVTSource {
    */
   constructor(map, options = {}) {
     // Private properties
-    /** @type {string} Url to Vector Tile Source */
-    this._url = options.url || '';
-    /** @type {Function} function for generating tile source url */
-    this._urlGenerator = options.urlGenerator || null;
+    /** @type {(string|urlFn)} Url to Vector Tile Source */
+    this._url = options.url || null;
     /** @type {number} Source max zoom to enable over zoom */
     this._sourceMaxZoom = options.sourceMaxZoom ?? null;
     /** @type {boolean} Draw tiles lines and ids */
@@ -306,22 +309,24 @@ class MVTSource {
     const id = tileContext.parentId || tileContext.id;
     const tile = getTileFromString(id);
 
-    // Create the source url with the urlGenerator function if it exists, else replace {z} {y} and {x}
-    let src;
-    if (this._urlGenerator) {
-      src = this._urlGenerator(tile.zoom, tile.x, tile.y);
-    } else {
-      src = this._url.replace('{z}', tile.zoom).replace('{x}', tile.x).replace('{y}', tile.y);
-    }
-
     /** @type {Response} */
     let response;
+    /** @type {string} */
+    let src;
     try {
+      // If this._url is a function general the url with it, else replace {z} {y} and {x} in a string
+      if (typeof this._url === 'function') {
+        src = this._url(tile.zoom, tile.x, tile.y);
+      } else {
+        src = this._url.replace('{z}', tile.zoom).replace('{x}', tile.x).replace('{y}', tile.y);
+      }
+      // Fetch the response
       response = await fetch(src, {
         headers: this._xhrHeaders,
       });
     } catch (error) {
-      console.error(new Error(`Error fetching tile ${src}`), error);
+      console.error(`Error fetching tile at source '${src}': ${error}`);
+      return;
     }
     if (response.ok) {
       // If the zoom has changed since the request was made, don't draw the tile
