@@ -119,7 +119,7 @@ class MVTLayer {
    * @return {StyleOptions}
    */
   getStyle(feature) {
-    return (typeof this.style === 'function') ? this.style(feature) : this.style;
+    return (typeof this.style === 'function') ? this.style(feature, this.name) : this.style;
   }
 
   /**

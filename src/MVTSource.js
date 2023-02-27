@@ -32,6 +32,7 @@ import {getTileFromString, getTileString} from '../lib/geometry.js';
  *
  * @callback styleFn - A function that returns a style for a feature
  * @param {VectorTileFeature} feature
+ * @param {string} name
  * @return {StyleOptions}
  *
  * @callback drawFn - A function that returns a style for a feature
