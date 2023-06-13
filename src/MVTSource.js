@@ -1,5 +1,5 @@
 /*
- *  Created by Jesús Barrio on 04/2021
+ *  Created by JesÃºs Barrio on 04/2021
  */
 
 class MVTSource {
@@ -57,6 +57,8 @@ class MVTSource {
         this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
         this._visibleTiles = []; // tiles currently in the viewport        
         this._selectedFeatures = []; // list of selected features
+        this.loadedTilesLen = 0; // total number of loaded tiles
+
         if (options.selectedFeatures) {
             this.setSelectedFeatures(options.selectedFeatures);
         }
@@ -107,6 +109,7 @@ class MVTSource {
         }
 
         tileContext = this._createTileContext(coord, zoom, ownerDocument);
+        this.loadedTilesLen = 0;
         this._xhrRequest(tileContext);
         return tileContext;
     }
@@ -196,6 +199,28 @@ class MVTSource {
         var vectorTile = new VectorTile(pbf);
         this._drawVectorTile(vectorTile, tileContext);
     }
+    
+    tileLoaded() {
+        const lenVisibleTiles = Object.keys(this._visibleTiles).length;
+        let self = this;
+
+        return new Promise(function (resolve, reject) {
+          let timer;
+
+          if (lenVisibleTiles && lenVisibleTiles == self.loadedTilesLen) {
+            clearTimeout(timer);
+            resolve(true);
+          } else {
+            timer = setTimeout(() => {
+              resolve(
+                self.tileRendered().then((a) => {
+                  return a;
+                })
+              );
+            }, 100);
+          }
+        });
+      }
 
     _setTileDrawn(tileContext) {
         if (!this._cache) return;
