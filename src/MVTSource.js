@@ -213,7 +213,7 @@ class MVTSource {
           } else {
             timer = setTimeout(() => {
               resolve(
-                self.tileRendered().then((a) => {
+                self.tileLoaded().then((a) => {
                   return a;
                 })
               );
