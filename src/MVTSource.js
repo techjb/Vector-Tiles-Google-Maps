@@ -299,7 +299,7 @@ class MVTSource {
     }
 
     onMouseHover(event, callbackFunction, options) {
-        this._multipleSelection = false;
+        this._multipleSelection = (options && options.multipleSelection) || false;
         options = this._getMouseOptions(options, true);
         this._mouseEvent(event, callbackFunction, options);
     }
