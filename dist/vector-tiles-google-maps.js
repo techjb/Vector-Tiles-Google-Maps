@@ -4,11 +4,12 @@ function VectorTile(buffer, end) {
     this._buffer = buffer;
     end = end || buffer.length;
 
-    while (buffer.pos < end) {
+    var pos = buffer.pos;
+    while (pos < end) {
         var val = buffer.readVarint(),
             tag = val >> 3;
 
-        if (tag == 3) {
+        if (tag === 3) {
             var layer = this._readLayer();
             if (layer.length) {
                 this.layers[layer.name] = layer;
@@ -16,6 +17,7 @@ function VectorTile(buffer, end) {
         } else {
             buffer.skip(val);
         }
+        pos = buffer.pos;
     }
     this.parseGeometries();
 }
@@ -31,54 +33,71 @@ VectorTile.prototype._readLayer = function () {
 };
 
 VectorTile.prototype.parseGeometries = function () {
-    for (var key in this.layers) {
-        var layer = this.layers[key];
-        layer.parsedFeatures = [];
-        var featuresLength = layer._features.length;
-        for (var i = 0, len = featuresLength; i < len; i++) {
+    var layers = this.layers;
+    for (var key in layers) {
+        if (!layers.hasOwnProperty(key)) continue;
+
+        var layer = layers[key];
+        var features = layer._features;
+        var len = features.length;
+        var parsedFeatures = new Array(len);
+
+        for (var i = 0; i < len; i++) {
             var feature = layer.feature(i);
             feature.coordinates = feature.loadGeometry();
-            layer.parsedFeatures.push(feature);
+            parsedFeatures[i] = feature;
         }
+        layer.parsedFeatures = parsedFeatures;
     }
-}
+};
 function VectorTileFeature(buffer, end, extent, keys, values) {
     this.properties = {};
-
-    // Public
     this.extent = extent;
     this.type = 0;
-
-    // Private
     this._buffer = buffer;
     this._geometry = -1;
 
     end = end || buffer.length;
+    var pos = buffer.pos;
 
-    while (buffer.pos < end) {
+    while (pos < end) {
+        buffer.pos = pos;
         var val = buffer.readVarint(),
             tag = val >> 3;
+        pos = buffer.pos;
 
-        if (tag == 1) {
-            this._id = buffer.readVarint();
-        } else if (tag == 2) {
-            var tagLen = buffer.readVarint(),
-                tagEnd = buffer.pos + tagLen;
-
-            while (buffer.pos < tagEnd) {
-                var key = keys[buffer.readVarint()];
-                var value = values[buffer.readVarint()];
-                this.properties[key] = value;
-            }
-        } else if (tag == 3) {
-            this.type = buffer.readVarint();
-        } else if (tag == 4) {
-            this._geometry = buffer.pos;
-            buffer.skip(val);
-        } else {
-            buffer.skip(val);
+        switch (tag) {
+            case 1:
+                this._id = buffer.readVarint();
+                pos = buffer.pos;
+                break;
+            case 2:
+                var tagEnd = pos + buffer.readVarint();
+                pos = buffer.pos;
+                while (pos < tagEnd) {
+                    buffer.pos = pos;
+                    var keyIdx = buffer.readVarint();
+                    var valueIdx = buffer.readVarint();
+                    this.properties[keys[keyIdx]] = values[valueIdx];
+                    pos = buffer.pos;
+                }
+                break;
+            case 3:
+                this.type = buffer.readVarint();
+                pos = buffer.pos;
+                break;
+            case 4:
+                this._geometry = pos;
+                buffer.skip(val);
+                pos = buffer.pos;
+                break;
+            default:
+                buffer.skip(val);
+                pos = buffer.pos;
+                break;
         }
     }
+    buffer.pos = pos;
 }
 
 VectorTileFeature.types = ['Unknown', 'Point', 'LineString', 'Polygon'];
@@ -87,31 +106,35 @@ VectorTileFeature.prototype.loadGeometry = function () {
     var buffer = this._buffer;
     buffer.pos = this._geometry;
 
-    var bytes = buffer.readVarint(),
-        end = buffer.pos + bytes,
+    var end = buffer.pos + buffer.readVarint(),
         cmd = 1,
         length = 0,
         x = 0,
         y = 0,
         lines = [],
-        line;
+        line = null,
+        pos = buffer.pos;
 
-    while (buffer.pos < end) {
-        if (!length) {
+    while (pos < end) {
+        if (length === 0) {
+            buffer.pos = pos;
             var cmd_length = buffer.readVarint();
             cmd = cmd_length & 0x7;
             length = cmd_length >> 3;
+            pos = buffer.pos;
         }
 
         length--;
 
         if (cmd === 1 || cmd === 2) {
+            buffer.pos = pos;
             x += buffer.readSVarint();
             y += buffer.readSVarint();
+            pos = buffer.pos;
 
             if (cmd === 1) {
                 // moveTo
-                if (line) {
+                if (line !== null) {
                     lines.push(line);
                 }
                 line = [];
@@ -120,13 +143,15 @@ VectorTileFeature.prototype.loadGeometry = function () {
             line.push(new Point(x, y));
         } else if (cmd === 7) {
             // closePolygon
-            line.push(line[0].clone());
+            if (line !== null && line.length > 0) {
+                line.push(line[0].clone());
+            }
         } else {
             throw new Error('unknown command ' + cmd);
         }
     }
 
-    if (line) lines.push(line);
+    if (line !== null) lines.push(line);
 
     return lines;
 };
@@ -135,9 +160,7 @@ VectorTileFeature.prototype.bbox = function () {
     var buffer = this._buffer;
     buffer.pos = this._geometry;
 
-    var bytes = buffer.readVarint(),
-        end = buffer.pos + bytes,
-
+    var end = buffer.pos + buffer.readVarint(),
         cmd = 1,
         length = 0,
         x = 0,
@@ -145,20 +168,26 @@ VectorTileFeature.prototype.bbox = function () {
         x1 = Infinity,
         x2 = -Infinity,
         y1 = Infinity,
-        y2 = -Infinity;
+        y2 = -Infinity,
+        pos = buffer.pos;
 
-    while (buffer.pos < end) {
-        if (!length) {
+    while (pos < end) {
+        if (length === 0) {
+            buffer.pos = pos;
             var cmd_length = buffer.readVarint();
             cmd = cmd_length & 0x7;
             length = cmd_length >> 3;
+            pos = buffer.pos;
         }
 
         length--;
 
         if (cmd === 1 || cmd === 2) {
+            buffer.pos = pos;
             x += buffer.readSVarint();
             y += buffer.readSVarint();
+            pos = buffer.pos;
+
             if (x < x1) x1 = x;
             if (x > x2) x2 = x;
             if (y < y1) y1 = y;
@@ -183,30 +212,38 @@ function VectorTileLayer(buffer, end) {
     this._values = [];
     this._features = [];
 
-    var val, tag;
-
     end = end || buffer.length;
+
+    // Cache buffer.pos to avoid repeated property lookups
+    var pos, val, tag;
 
     while (buffer.pos < end) {
         val = buffer.readVarint();
         tag = val >> 3;
 
-        if (tag === 15) {
-            this.version = buffer.readVarint();
-        } else if (tag === 1) {
-            this.name = buffer.readString();
-        } else if (tag === 5) {
-            this.extent = buffer.readVarint();
-        } else if (tag === 2) {
-            this.length++;
-            this._features.push(buffer.pos);
-            buffer.skip(val);
-        } else if (tag === 3) {
-            this._keys.push(buffer.readString());
-        } else if (tag === 4) {
-            this._values.push(this.readFeatureValue());
-        } else {
-            buffer.skip(val);
+        switch (tag) {
+            case 15:
+                this.version = buffer.readVarint();
+                break;
+            case 1:
+                this.name = buffer.readString();
+                break;
+            case 5:
+                this.extent = buffer.readVarint();
+                break;
+            case 2:
+                this.length++;
+                this._features.push(buffer.pos);
+                buffer.skip(val);
+                break;
+            case 3:
+                this._keys.push(buffer.readString());
+                break;
+            case 4:
+                this._values.push(this.readFeatureValue());
+                break;
+            default:
+                buffer.skip(val);
         }
     }
 }
@@ -214,32 +251,35 @@ function VectorTileLayer(buffer, end) {
 VectorTileLayer.prototype.readFeatureValue = function () {
     var buffer = this._buffer,
         value = null,
-        bytes = buffer.readVarint(),
-        end = buffer.pos + bytes,
+        end = buffer.pos + buffer.readVarint(),
         val, tag;
 
     while (buffer.pos < end) {
         val = buffer.readVarint();
         tag = val >> 3;
 
-        if (tag == 1) {
-            value = buffer.readString();
-        } else if (tag == 2) {
-            //throw new Error('read float');
-            value = buffer.readFloat();
-        } else if (tag == 3) {
-            value = buffer.readDouble();
-        } else if (tag == 4) {
-            value = buffer.readVarint();
-        } else if (tag == 5) {
-            //throw new Error('read uint');
-            value = buffer.readVarint();
-        } else if (tag == 6) {
-            value = buffer.readSVarint();
-        } else if (tag == 7) {
-            value = Boolean(buffer.readVarint());
-        } else {
-            buffer.skip(val);
+        switch (tag) {
+            case 1:
+                value = buffer.readString();
+                break;
+            case 2:
+                value = buffer.readFloat();
+                break;
+            case 3:
+                value = buffer.readDouble();
+                break;
+            case 4:
+            case 5:
+                value = buffer.readVarint();
+                break;
+            case 6:
+                value = buffer.readSVarint();
+                break;
+            case 7:
+                value = Boolean(buffer.readVarint());
+                break;
+            default:
+                buffer.skip(val);
         }
     }
 
@@ -260,119 +300,145 @@ function Point(x, y) {
     this.y = y;
 }
 
-Point.prototype = {
-    clone: function () { return new Point(this.x, this.y); },
-
-    add: function (p) { return this.clone()._add(p); },
-    sub: function (p) { return this.clone()._sub(p); },
-    mult: function (k) { return this.clone()._mult(k); },
-    div: function (k) { return this.clone()._div(k); },
-    rotate: function (a) { return this.clone()._rotate(a); },
-    matMult: function (m) { return this.clone()._matMult(m); },
-    unit: function () { return this.clone()._unit(); },
-    perp: function () { return this.clone()._perp(); },
-    round: function () { return this.clone()._round(); },
-
-    mag: function () {
-        return Math.sqrt(this.x * this.x + this.y * this.y);
-    },
-
-    equals: function (p) {
-        return this.x === p.x &&
-            this.y === p.y;
-    },
-
-    dist: function (p) {
-        return Math.sqrt(this.distSqr(p));
-    },
-
-    distSqr: function (p) {
-        var dx = p.x - this.x,
-            dy = p.y - this.y;
-        return dx * dx + dy * dy;
-    },
-
-    angle: function () {
-        return Math.atan2(this.y, this.x);
-    },
-
-    angleTo: function (b) {
-        return Math.atan2(this.y - b.y, this.x - b.x);
-    },
-
-    angleWith: function (b) {
-        return this.angleWithSep(b.x, b.y);
-    },
-
-    // Find the angle of the two vectors, solving the formula for the cross product a x b = |a||b|sin(θ) for θ.
-    angleWithSep: function (x, y) {
-        return Math.atan2(
-            this.x * y - this.y * x,
-            this.x * x + this.y * y);
-    },
-
-    _matMult: function (m) {
-        var x = m[0] * this.x + m[1] * this.y,
-            y = m[2] * this.x + m[3] * this.y;
-        this.x = x;
-        this.y = y;
-        return this;
-    },
-
-    _add: function (p) {
-        this.x += p.x;
-        this.y += p.y;
-        return this;
-    },
-
-    _sub: function (p) {
-        this.x -= p.x;
-        this.y -= p.y;
-        return this;
-    },
-
-    _mult: function (k) {
-        this.x *= k;
-        this.y *= k;
-        return this;
-    },
-
-    _div: function (k) {
-        this.x /= k;
-        this.y /= k;
-        return this;
-    },
-
-    _unit: function () {
-        this._div(this.mag());
-        return this;
-    },
-
-    _perp: function () {
-        var y = this.y;
-        this.y = this.x;
-        this.x = -y;
-        return this;
-    },
-
-    _rotate: function (angle) {
-        var cos = Math.cos(angle),
-            sin = Math.sin(angle),
-            x = cos * this.x - sin * this.y,
-            y = sin * this.x + cos * this.y;
-        this.x = x;
-        this.y = y;
-        return this;
-    },
-
-    _round: function () {
-        this.x = Math.round(this.x);
-        this.y = Math.round(this.y);
-        return this;
-    }
+Point.prototype.clone = function () {
+    return new Point(this.x, this.y);
 };
 
-// constructs Point from an array if necessary
+Point.prototype.add = function (p) {
+    return new Point(this.x + p.x, this.y + p.y);
+};
+
+Point.prototype.sub = function (p) {
+    return new Point(this.x - p.x, this.y - p.y);
+};
+
+Point.prototype.mult = function (k) {
+    return new Point(this.x * k, this.y * k);
+};
+
+Point.prototype.div = function (k) {
+    return new Point(this.x / k, this.y / k);
+};
+
+Point.prototype.rotate = function (a) {
+    const cos = Math.cos(a);
+    const sin = Math.sin(a);
+    return new Point(cos * this.x - sin * this.y, sin * this.x + cos * this.y);
+};
+
+Point.prototype.matMult = function (m) {
+    return new Point(m[0] * this.x + m[1] * this.y, m[2] * this.x + m[3] * this.y);
+};
+
+Point.prototype.unit = function () {
+    const mag = Math.sqrt(this.x * this.x + this.y * this.y);
+    return new Point(this.x / mag, this.y / mag);
+};
+
+Point.prototype.perp = function () {
+    return new Point(-this.y, this.x);
+};
+
+Point.prototype.round = function () {
+    return new Point(Math.round(this.x), Math.round(this.y));
+};
+
+Point.prototype.mag = function () {
+    return Math.sqrt(this.x * this.x + this.y * this.y);
+};
+
+Point.prototype.equals = function (p) {
+    return this.x === p.x && this.y === p.y;
+};
+
+Point.prototype.dist = function (p) {
+    const dx = p.x - this.x;
+    const dy = p.y - this.y;
+    return Math.sqrt(dx * dx + dy * dy);
+};
+
+Point.prototype.distSqr = function (p) {
+    const dx = p.x - this.x;
+    const dy = p.y - this.y;
+    return dx * dx + dy * dy;
+};
+
+Point.prototype.angle = function () {
+    return Math.atan2(this.y, this.x);
+};
+
+Point.prototype.angleTo = function (b) {
+    return Math.atan2(this.y - b.y, this.x - b.x);
+};
+
+Point.prototype.angleWith = function (b) {
+    return Math.atan2(this.x * b.y - this.y * b.x, this.x * b.x + this.y * b.y);
+};
+
+Point.prototype.angleWithSep = function (x, y) {
+    return Math.atan2(this.x * y - this.y * x, this.x * x + this.y * y);
+};
+
+Point.prototype._matMult = function (m) {
+    const x = m[0] * this.x + m[1] * this.y;
+    this.y = m[2] * this.x + m[3] * this.y;
+    this.x = x;
+    return this;
+};
+
+Point.prototype._add = function (p) {
+    this.x += p.x;
+    this.y += p.y;
+    return this;
+};
+
+Point.prototype._sub = function (p) {
+    this.x -= p.x;
+    this.y -= p.y;
+    return this;
+};
+
+Point.prototype._mult = function (k) {
+    this.x *= k;
+    this.y *= k;
+    return this;
+};
+
+Point.prototype._div = function (k) {
+    this.x /= k;
+    this.y /= k;
+    return this;
+};
+
+Point.prototype._unit = function () {
+    const mag = Math.sqrt(this.x * this.x + this.y * this.y);
+    this.x /= mag;
+    this.y /= mag;
+    return this;
+};
+
+Point.prototype._perp = function () {
+    const y = this.y;
+    this.y = this.x;
+    this.x = -y;
+    return this;
+};
+
+Point.prototype._rotate = function (angle) {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const x = cos * this.x - sin * this.y;
+    this.y = sin * this.x + cos * this.y;
+    this.x = x;
+    return this;
+};
+
+Point.prototype._round = function () {
+    this.x = Math.round(this.x);
+    this.y = Math.round(this.y);
+    return this;
+};
+
 Point.convert = function (a) {
     if (a instanceof Point) {
         return a;
@@ -382,173 +448,191 @@ Point.convert = function (a) {
     }
     return a;
 };
-MERCATOR = {
-    fromLatLngToPoint: function (latLng) {
-        var siny = Math.min(Math.max(Math.sin(latLng.lat() * (Math.PI / 180)),
-            -.9999),
-            .9999);
-        return {
-            x: 128 + latLng.lng() * (256 / 360),
-            y: 128 + 0.5 * Math.log((1 + siny) / (1 - siny)) * -(256 / (2 * Math.PI))
-        };
-    },
+MERCATOR = (function () {
+    // Pre-calculate constants
+    const DEG_TO_RAD = Math.PI / 180;
+    const RAD_TO_DEG = 180 / Math.PI;
+    const LNG_SCALE = 256 / 360;
+    const LAT_SCALE = 256 / (2 * Math.PI);
+    const WORLD_SIZE = 256;
+    const HALF_WORLD = 128;
+    const SINY_CLAMP = 0.9999;
 
-    fromPointToLatLng: function (point) {
-        return {
-            lat: (2 * Math.atan(Math.exp((point.y - 128) / -(256 / (2 * Math.PI)))) -
-                Math.PI / 2) / (Math.PI / 180),
-            lng: (point.x - 128) / (256 / 360)
-        };
-    },
-
-    getTileAtLatLng: function (latLng, zoom) {
-        var t = Math.pow(2, zoom),
-            s = 256 / t,
-            p = this.fromLatLngToPoint(latLng);
-        return {
-            x: Math.floor(p.x / s),
-            y: Math.floor(p.y / s),
-            z: zoom
-        };
-    },
-
-    getTileBounds: function (tile) {
-        tile = this.normalizeTile(tile);
-        var t = Math.pow(2, tile.z),
-            s = 256 / t,
-            sw = {
-                x: tile.x * s,
-                y: (tile.y * s) + s
-            },
-            ne = {
-                x: tile.x * s + s,
-                y: (tile.y * s)
+    return {
+        fromLatLngToPoint: function (latLng) {
+            const lat = latLng.lat() * DEG_TO_RAD;
+            const siny = Math.min(Math.max(Math.sin(lat), -SINY_CLAMP), SINY_CLAMP);
+            return {
+                x: HALF_WORLD + latLng.lng() * LNG_SCALE,
+                y: HALF_WORLD + 0.5 * Math.log((1 + siny) / (1 - siny)) * -LAT_SCALE
             };
-        return {
-            sw: this.fromPointToLatLng(sw),
-            ne: this.fromPointToLatLng(ne)
-        }
-    },
+        },
 
-    normalizeTile: function (tile) {
-        var t = Math.pow(2, tile.z);
-        tile.x = ((tile.x % t) + t) % t;
-        tile.y = ((tile.y % t) + t) % t;
-        return tile;
-    },
+        fromPointToLatLng: function (point) {
+            return {
+                lat: (2 * Math.atan(Math.exp((point.y - HALF_WORLD) / -LAT_SCALE)) - Math.PI / 2) * RAD_TO_DEG,
+                lng: (point.x - HALF_WORLD) / LNG_SCALE
+            };
+        },
 
-    fromLatLngToPixels: function (map, latLng) {
-        var bounds = map.getBounds();
-        var ne = bounds.getNorthEast();
-        var sw = bounds.getSouthWest();
-        var topRight = map.getProjection().fromLatLngToPoint(ne);
-        var bottomLeft = map.getProjection().fromLatLngToPoint(sw);
-        var scale = Math.pow(2, map.getZoom());
-        var worldPoint = map.getProjection().fromLatLngToPoint(latLng);
-        return {
-            x: (worldPoint.x - bottomLeft.x) * scale,
-            y: (worldPoint.y - topRight.y) * scale
-        }
-    },
+        getTileAtLatLng: function (latLng, zoom) {
+            const t = 1 << zoom; // Bit shift instead of Math.pow(2, zoom)
+            const s = WORLD_SIZE / t;
+            const p = this.fromLatLngToPoint(latLng);
+            return {
+                x: Math.floor(p.x / s),
+                y: Math.floor(p.y / s),
+                z: zoom
+            };
+        },
 
-    fromLatLngToTilePoint: function (map, evt) {
-        var zoom = map.getZoom();
-        var tile = this.getTileAtLatLng(evt.latLng, zoom);
-        var tileBounds = this.getTileBounds(tile);
-        var tileSwLatLng = new google.maps.LatLng(tileBounds.sw);
-        var tileNeLatLng = new google.maps.LatLng(tileBounds.ne);
-        var tileSwPixels = this.fromLatLngToPixels(map, tileSwLatLng);
-        var tileNePixels = this.fromLatLngToPixels(map, tileNeLatLng);
-        return {
-            x: evt.pixel.x - tileSwPixels.x,
-            y: evt.pixel.y - tileNePixels.y
-        }
-    },
+        getTileBounds: function (tile) {
+            tile = this.normalizeTile(tile);
+            const t = 1 << tile.z;
+            const s = WORLD_SIZE / t;
+            const x1 = tile.x * s;
+            const y1 = tile.y * s;
 
-    // todo: sometimes it does not work properly
-    isPointInPolygon: function (point, polygon) {
-        if (polygon && polygon.length) {
-            for (var c = false, i = -1, l = polygon.length, j = l - 1; ++i < l; j = i) {
-                ((polygon[i].y <= point.y && point.y < polygon[j].y) || (polygon[j].y <= point.y && point.y < polygon[i].y))
-                    && (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x)
-                    && (c = !c);
+            return {
+                sw: this.fromPointToLatLng({ x: x1, y: y1 + s }),
+                ne: this.fromPointToLatLng({ x: x1 + s, y: y1 })
+            };
+        },
+
+        normalizeTile: function (tile) {
+            const t = 1 << tile.z;
+            tile.x = ((tile.x % t) + t) % t;
+            tile.y = ((tile.y % t) + t) % t;
+            return tile;
+        },
+
+        fromLatLngToPixels: function (map, latLng) {
+            const bounds = map.getBounds();
+            const projection = map.getProjection();
+            const scale = 1 << map.getZoom(); // Bit shift for power of 2
+
+            const topRight = projection.fromLatLngToPoint(bounds.getNorthEast());
+            const bottomLeft = projection.fromLatLngToPoint(bounds.getSouthWest());
+            const worldPoint = projection.fromLatLngToPoint(latLng);
+
+            return {
+                x: (worldPoint.x - bottomLeft.x) * scale,
+                y: (worldPoint.y - topRight.y) * scale
+            };
+        },
+
+        fromLatLngToTilePoint: function (map, evt) {
+            const zoom = map.getZoom();
+            const tile = this.getTileAtLatLng(evt.latLng, zoom);
+            const tileBounds = this.getTileBounds(tile);
+            const tileSwLatLng = new google.maps.LatLng(tileBounds.sw);
+            const tileNeLatLng = new google.maps.LatLng(tileBounds.ne);
+            const tileSwPixels = this.fromLatLngToPixels(map, tileSwLatLng);
+            const tileNePixels = this.fromLatLngToPixels(map, tileNeLatLng);
+
+            return {
+                x: evt.pixel.x - tileSwPixels.x,
+                y: evt.pixel.y - tileNePixels.y
+            };
+        },
+
+        isPointInPolygon: function (point, polygon) {
+            if (!polygon || !polygon.length) return false;
+
+            let inside = false;
+            const px = point.x;
+            const py = point.y;
+
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].x, yi = polygon[i].y;
+                const xj = polygon[j].x, yj = polygon[j].y;
+
+                const intersect = ((yi > py) !== (yj > py)) &&
+                    (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
             }
-            return c;
-        }
-    },
+            return inside;
+        },
 
-    in_circle: function (center_x, center_y, radius, x, y) {
-        var square_dist = Math.pow((center_x - x), 2) + Math.pow((center_y - y), 2);
-        return square_dist <= Math.pow(radius, 2);
-    },
+        in_circle: function (center_x, center_y, radius, x, y) {
+            const dx = center_x - x;
+            const dy = center_y - y;
+            return (dx * dx + dy * dy) <= radius * radius;
+        },
 
-    getDistanceFromLine: function (point, line) {
-        var minDistance = Number.POSITIVE_INFINITY;
-        if (line && line.length > 1) {
-            for (var i = 0, l = line.length - 1; i < l; i++) {
-                var distance = this.projectPointOnLineSegment(point, line[i], line[i + 1]);
-                if (distance <= minDistance) {
+        getDistanceFromLine: function (point, line) {
+            if (!line || line.length < 2) return Number.POSITIVE_INFINITY;
+
+            let minDistance = Number.POSITIVE_INFINITY;
+            const px = point.x;
+            const py = point.y;
+
+            for (let i = 0, l = line.length - 1; i < l; i++) {
+                const distance = this.projectPointOnLineSegment(px, py, line[i], line[i + 1]);
+                if (distance < minDistance) {
                     minDistance = distance;
                 }
             }
+            return minDistance;
+        },
+
+        projectPointOnLineSegment: function (px, py, r0, r1) {
+            const x1 = r0.x;
+            const y1 = r0.y;
+            const x2 = r1.x;
+            const y2 = r1.y;
+
+            const A = px - x1;
+            const B = py - y1;
+            const C = x2 - x1;
+            const D = y2 - y1;
+
+            const dot = A * C + B * D;
+            const len_sq = C * C + D * D;
+
+            let xx, yy;
+
+            if (len_sq === 0) { // Zero length line
+                xx = x1;
+                yy = y1;
+            } else {
+                const param = dot / len_sq;
+
+                if (param < 0) {
+                    xx = x1;
+                    yy = y1;
+                } else if (param > 1) {
+                    xx = x2;
+                    yy = y2;
+                } else {
+                    xx = x1 + param * C;
+                    yy = y1 + param * D;
+                }
+            }
+
+            const dx = px - xx;
+            const dy = py - yy;
+            return Math.sqrt(dx * dx + dy * dy);
         }
-        return minDistance;
-    },
-
-    projectPointOnLineSegment: function (point, r0, r1) {
-        var x = point.x;
-        var y = point.y;
-        var x1 = r0.x;
-        var y1 = r0.y;
-        var x2 = r1.x;
-        var y2 = r1.y;
-
-        var A = x - x1;
-        var B = y - y1;
-        var C = x2 - x1;
-        var D = y2 - y1;
-
-        var dot = A * C + B * D;
-        var len_sq = C * C + D * D;
-        var param = -1;
-        if (len_sq != 0) //in case of 0 length line
-            param = dot / len_sq;
-
-        var xx, yy;
-
-        if (param < 0) {
-            xx = x1;
-            yy = y1;
-        }
-        else if (param > 1) {
-            xx = x2;
-            yy = y2;
-        }
-        else {
-            xx = x1 + param * C;
-            yy = y1 + param * D;
-        }
-
-        var dx = x - xx;
-        var dy = y - yy;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-}
+    };
+})();
 /*
  *  Created by Jes�s Barrio on 04/2021
  */
+
+const TWO_PI = Math.PI * 2;
 
 class MVTFeature {
     constructor(options) {
         this.mVTSource = options.mVTSource;
         this.selected = options.selected;
         this.featureId = options.featureId;
-        this.tiles = [];
+        this.tiles = Object.create(null); // Use object without prototype overhead
         this.style = options.style;
         this.type = options.vectorTileFeature.type;
         this.properties = options.vectorTileFeature.properties;
         this.addTileFeature(options.vectorTileFeature, options.tileContext);
-        this._draw = options.customDraw || this.defaultDraw;        
+        this._draw = options.customDraw || this.defaultDraw;
 
         if (this.selected) {
             this.select();
@@ -577,12 +661,17 @@ class MVTFeature {
     }
 
     redrawTiles() {
-        var zoom = this.mVTSource.map.getZoom();
-        for (var id in this.tiles) {
-            this.mVTSource.deleteTileDrawn(id);
-            var idObject = this.mVTSource.getTileObject(id);
-            if (idObject.zoom == zoom) {
-                this.mVTSource.redrawTile(id);
+        const zoom = this.mVTSource.map.getZoom();
+        const mVTSource = this.mVTSource;
+        const tiles = this.tiles;
+        const tileKeys = Object.keys(tiles);
+
+        for (let i = 0, len = tileKeys.length; i < len; i++) {
+            const id = tileKeys[i];
+            mVTSource.deleteTileDrawn(id);
+            const idObject = mVTSource.getTileObject(id);
+            if (idObject.zoom === zoom) { // Removed parseInt, assume zoom is already a number
+                mVTSource.redrawTile(id);
             }
         }
     }
@@ -612,38 +701,30 @@ class MVTFeature {
     }
 
     draw(tileContext) {
-        var tile = this.tiles[tileContext.id];
-        var style = this.style;
-        if (this.selected && this.style.selected) {
-            style = this.style.selected;
-        }
-
+        const tile = this.tiles[tileContext.id];
+        const style = (this.selected && this.style.selected) ? this.style.selected : this.style;
         this._draw(tileContext, tile, style, this);
     }
 
     defaultDraw(tileContext, tile, style) {
-        switch (this.type) {
-            case 1: //Point
-                this.drawPoint(tileContext, tile, style);
-                break;
+        const type = this.type;
 
-            case 2: //LineString
-                this.drawLineString(tileContext, tile, style);
-                break;
-
-            case 3: //Polygon
-                this.drawPolygon(tileContext, tile, style);
-                break;
+        if (type === 1) { // Point
+            this.drawPoint(tileContext, tile, style);
+        } else if (type === 2) { // LineString
+            this.drawLineString(tileContext, tile, style);
+        } else if (type === 3) { // Polygon
+            this.drawPolygon(tileContext, tile, style);
         }
     }
 
     drawPoint(tileContext, tile, style) {
-        var coordinates = tile.vectorTileFeature.coordinates[0][0];
-        var point = this.getPoint(coordinates, tileContext, tile.divisor);
-        var radius = style.radius || 3;
-        var context2d = this.getContext2d(tileContext.canvas, style);
+        const coordinates = tile.vectorTileFeature.coordinates[0][0];
+        const point = this.getPoint(coordinates, tileContext, tile.divisor);
+        const radius = style.radius || 3;
+        const context2d = this.getContext2d(tileContext.canvas, style);
         context2d.beginPath();
-        context2d.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        context2d.arc(point.x, point.y, radius, 0, TWO_PI);
         context2d.closePath();
         context2d.fill();
         context2d.stroke();
@@ -656,105 +737,135 @@ class MVTFeature {
     }
 
     drawPolygon(tileContext, tile, style) {
-        tile.context2d = this.getContext2d(tileContext.canvas, style);
+        const context2d = this.getContext2d(tileContext.canvas, style);
+        tile.context2d = context2d;
         this.drawCoordinates(tileContext, tile);
-        tile.paths2d.closePath();
 
-        if (style.fillStyle) {
-            tile.context2d.fill(tile.paths2d);
-        }
-        if (style.strokeStyle) {
-            tile.context2d.stroke(tile.paths2d);
+        const paths2d = tile.paths2d;
+        paths2d.closePath();
+
+        const hasFill = style.fillStyle;
+        const hasStroke = style.strokeStyle;
+
+        // Fixed logic bug: was checking hasStroke three times
+        if (hasFill && hasStroke) {
+            context2d.fill(paths2d);
+            context2d.stroke(paths2d);
+        } else if (hasFill) {
+            context2d.fill(paths2d);
+        } else if (hasStroke) {
+            context2d.stroke(paths2d);
         }
     }
 
     drawCoordinates(tileContext, tile) {
-        var coordinates = tile.vectorTileFeature.coordinates;
-        tile.paths2d = new Path2D();        
-        for (var i = 0, length1 = coordinates.length; i < length1; i++) {
-            var coordinate = coordinates[i];
-            let path2 = new Path2D();
-            for (var j = 0, length2 = coordinate.length; j < length2; j++) {
-                var point = this.getPoint(coordinate[j], tileContext, tile.divisor);
-                if (j == 0) {
-                    path2.moveTo(point.x, point.y);
-                }
-                else {
+        const coordinates = tile.vectorTileFeature.coordinates;
+        const divisor = tile.divisor;
+        const paths2d = new Path2D();
+        const coordsLength = coordinates.length;
+
+        for (let i = 0; i < coordsLength; i++) {
+            const coordinate = coordinates[i];
+            const coordLength = coordinate.length;
+
+            if (coordLength > 0) {
+                const path2 = new Path2D();
+                const firstPoint = this.getPoint(coordinate[0], tileContext, divisor);
+                path2.moveTo(firstPoint.x, firstPoint.y);
+
+                for (let j = 1; j < coordLength; j++) {
+                    const point = this.getPoint(coordinate[j], tileContext, divisor);
                     path2.lineTo(point.x, point.y);
-                }                
+                }
+                paths2d.addPath(path2);
             }
-            tile.paths2d.addPath(path2);
-        }        
+        }
+
+        tile.paths2d = paths2d;
     }
 
     getPaths(tileContext) {
-        var paths = [];
-        var tile = this.tiles[tileContext.id];
-        var coordinates = tile.vectorTileFeature.coordinates;
-        for (var i = 0, length1 = coordinates.length; i < length1; i++) {
-            var path = [];
-            var coordinate = coordinates[i];
-            for (var j = 0, length2 = coordinate.length; j < length2; j++) {
-                var point = this.getPoint(coordinate[j], tileContext, tile.divisor);
-                path.push(point);
+        const tile = this.tiles[tileContext.id];
+        const coordinates = tile.vectorTileFeature.coordinates;
+        const divisor = tile.divisor;
+        const coordsLength = coordinates.length;
+        const paths = new Array(coordsLength);
+        let pathCount = 0;
+
+        for (let i = 0; i < coordsLength; i++) {
+            const coordinate = coordinates[i];
+            const coordLength = coordinate.length;
+            const path = new Array(coordLength);
+
+            for (let j = 0; j < coordLength; j++) {
+                path[j] = this.getPoint(coordinate[j], tileContext, divisor);
             }
-            if (path.length > 0) {
-                paths.push(path);
+
+            if (coordLength > 0) {
+                paths[pathCount++] = path;
             }
         }
+
+        paths.length = pathCount; // Trim array to actual size
         return paths;
     }
 
     getContext2d(canvas, style) {
-        var context2d = canvas.getContext('2d');
-        for (var key in style) {
-            if (key === 'selected') {
-                continue;
+        const context2d = canvas.getContext('2d');
+        const keys = Object.keys(style);
+
+        for (let i = 0, len = keys.length; i < len; i++) {
+            const key = keys[i];
+            if (key !== 'selected') {
+                context2d[key] = style[key];
             }
-            context2d[key] = style[key];
         }
         return context2d;
     }
 
     getPoint(coords, tileContext, divisor) {
-        var point = {
-            x: coords.x / divisor,
-            y: coords.y / divisor
-        };
+        let x = coords.x / divisor;
+        let y = coords.y / divisor;
 
-        if (tileContext.parentId) {
-            point = this._getOverzoomedPoint(point, tileContext);
+        const parentId = tileContext.parentId;
+        if (parentId) {
+            const mVTSource = this.mVTSource;
+            const parentTile = mVTSource.getTileObject(parentId);
+            const currentTile = mVTSource.getTileObject(tileContext.id);
+            const zoomDistance = currentTile.zoom - parentTile.zoom;
+            const scale = Math.pow(2, zoomDistance);
+            const tileSize = tileContext.tileSize;
+
+            x = x * scale - ((currentTile.x % scale) * tileSize);
+            y = y * scale - ((currentTile.y % scale) * tileSize);
         }
-        return point;
+
+        return { x, y };
     }
 
     _getOverzoomedPoint(point, tileContext) {
-        var parentTile = this.mVTSource.getTileObject(tileContext.parentId);
-        var currentTile = this.mVTSource.getTileObject(tileContext.id);
-        var zoomDistance = currentTile.zoom - parentTile.zoom;
-
+        const mVTSource = this.mVTSource;
+        const parentTile = mVTSource.getTileObject(tileContext.parentId);
+        const currentTile = mVTSource.getTileObject(tileContext.id);
+        const zoomDistance = currentTile.zoom - parentTile.zoom;
         const scale = Math.pow(2, zoomDistance);
+        const tileSize = tileContext.tileSize;
 
-        let xScale = point.x * scale;
-        let yScale = point.y * scale;
-
-        let xtileOffset = currentTile.x % scale;
-        let ytileOffset = currentTile.y % scale;
-
-        point.x = xScale - (xtileOffset * tileContext.tileSize);
-        point.y = yScale - (ytileOffset * tileContext.tileSize);
+        point.x = point.x * scale - ((currentTile.x % scale) * tileSize);
+        point.y = point.y * scale - ((currentTile.y % scale) * tileSize);
 
         return point;
     }
 
     isPointInPath(point, tileContext) {
-        var tile = this.getTile(tileContext);
-        var context2d = tile.context2d;
-        var paths2d = tile.paths2d;
+        const tile = this.getTile(tileContext);
+        const context2d = tile.context2d;
+        const paths2d = tile.paths2d;
+
         if (!context2d || !paths2d) {
             return false;
         }
-        return context2d.isPointInPath(paths2d, point.x, point.y)       
+        return context2d.isPointInPath(paths2d, point.x, point.y);
     }
 }
 /*
@@ -769,90 +880,95 @@ class MVTLayer {
         this.name = options.name;
         this._filter = options.filter || false;
         this._customDraw = options.customDraw || false;
-        this._canvasAndMVTFeatures = [];
-        this._mVTFeatures = [];
+        this._canvasAndMVTFeatures = Object.create(null);
+        this._mVTFeatures = Object.create(null);
     }
 
     parseVectorTileFeatures(mVTSource, vectorTileFeatures, tileContext) {
-        this._canvasAndMVTFeatures[tileContext.id] = {
+        const tileId = tileContext.id;
+        const features = [];
+        this._canvasAndMVTFeatures[tileId] = {
             canvas: tileContext.canvas,
-            features: []
-        }
-        for (var i = 0, length = vectorTileFeatures.length; i < length; i++) {
-            var vectorTileFeature = vectorTileFeatures[i];
-            this._parseVectorTileFeature(mVTSource, vectorTileFeature, tileContext, i);
+            features: features
+        };
+
+        for (let i = 0, length = vectorTileFeatures.length; i < length; i++) {
+            const feature = this._parseVectorTileFeature(mVTSource, vectorTileFeatures[i], tileContext, i);
+            if (feature) features.push(feature);
         }
         this.drawTile(tileContext);
     }
 
     _parseVectorTileFeature(mVTSource, vectorTileFeature, tileContext, i) {
-        if (this._filter && typeof this._filter === 'function') {
-            if (this._filter(vectorTileFeature, tileContext) === false) {
-                return;
-            }
+        if (this._filter && this._filter(vectorTileFeature, tileContext) === false) {
+            return null;
         }
 
-        var style = this.getStyle(vectorTileFeature);
-        var featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
-        var mVTFeature = this._mVTFeatures[featureId];
+        const style = this.getStyle(vectorTileFeature);
+        const featureId = this._getIDForLayerFeature(vectorTileFeature) || i;
+        let mVTFeature = this._mVTFeatures[featureId];
+
         if (!mVTFeature) {
-            var selected = mVTSource.isFeatureSelected(featureId);
-            var options = {
+            mVTFeature = new MVTFeature({
                 mVTSource: mVTSource,
                 vectorTileFeature: vectorTileFeature,
                 tileContext: tileContext,
                 style: style,
-                selected: selected,
+                selected: mVTSource.isFeatureSelected(featureId),
                 featureId: featureId,
                 customDraw: this._customDraw
-            }
-            mVTFeature = new MVTFeature(options);
+            });
             this._mVTFeatures[featureId] = mVTFeature;
         } else {
             mVTFeature.setStyle(style);
             mVTFeature.addTileFeature(vectorTileFeature, tileContext);
         }
-        this._canvasAndMVTFeatures[tileContext.id].features.push(mVTFeature);
+
+        return mVTFeature;
     }
 
     drawTile(tileContext) {
-        var mVTFeatures = this._canvasAndMVTFeatures[tileContext.id].features;
-        if (!mVTFeatures) return;
-        var selectedFeatures = [];
-        for (var i = 0, length = mVTFeatures.length; i < length; i++) {
-            var mVTFeature = mVTFeatures[i];
+        const canvasAndFeatures = this._canvasAndMVTFeatures[tileContext.id];
+        if (!canvasAndFeatures) return;
+
+        const mVTFeatures = canvasAndFeatures.features;
+        const selectedFeatures = [];
+
+        for (let i = 0, length = mVTFeatures.length; i < length; i++) {
+            const mVTFeature = mVTFeatures[i];
             if (mVTFeature.selected) {
                 selectedFeatures.push(mVTFeature);
             } else {
                 mVTFeature.draw(tileContext);
             }
         }
-        for (var i = 0, length = selectedFeatures.length; i < length; i++) {
+
+        for (let i = 0, length = selectedFeatures.length; i < length; i++) {
             selectedFeatures[i].draw(tileContext);
         }
     }
 
     getCanvas(id) {
-        return this._canvasAndMVTFeatures[id].canvas;
+        const canvasAndFeatures = this._canvasAndMVTFeatures[id];
+        return canvasAndFeatures ? canvasAndFeatures.canvas : null;
     }
 
     getStyle(feature) {
-        if (typeof this.style === 'function') {
-            return this.style(feature);
-        }
-        return this.style;
+        return typeof this.style === 'function' ? this.style(feature) : this.style;
     }
 
     setStyle(style) {
         this.style = style;
-        for (var featureId in this._mVTFeatures) {
-            this._mVTFeatures[featureId].setStyle(style);
+        const features = this._mVTFeatures;
+        for (const featureId in features) {
+            features[featureId].setStyle(style);
         }
     }
 
     setSelected(featureId) {
-        if (this._mVTFeatures[featureId] !== undefined) {
-            this._mVTFeatures[featureId].select();
+        const feature = this._mVTFeatures[featureId];
+        if (feature !== undefined) {
+            feature.select();
         }
     }
 
@@ -861,94 +977,82 @@ class MVTLayer {
     }
 
     handleClickEvent(event, mVTSource) {
-        var canvasAndFeatures = this._canvasAndMVTFeatures[event.tileContext.id];
+        const canvasAndFeatures = this._canvasAndMVTFeatures[event.tileContext.id];
         if (!canvasAndFeatures) return event;
-        var canvas = canvasAndFeatures.canvas;
-        var mVTFeatures = canvasAndFeatures.features;
 
-        if (!canvas || !mVTFeatures) {
-            return event;
-        }
+        const mVTFeatures = canvasAndFeatures.features;
+        if (!mVTFeatures) return event;
+
         event.feature = this._handleClickEvent(event, mVTFeatures, mVTSource);
         return event;
     }
 
     _handleClickEvent(event, mVTFeatures, mVTSource) {
-        this.selectedFeature = null;
+        const tileContextId = event.tileContext.id;
+        const currentSelectedFeaturesInTile = mVTSource.getSelectedFeaturesInTile(tileContextId);
 
-        var tileContextId = event.tileContext.id;
-        var currentSelectedFeaturesInTile = mVTSource.getSelectedFeaturesInTile(tileContextId);
-        this._handleClickFeatures(event, currentSelectedFeaturesInTile);
+        // Check selected features first
+        let result = this._handleClickFeatures(event, currentSelectedFeaturesInTile);
+        if (result) return result;
 
-        if (this.selectedFeature != null) {
-            return this.selectedFeature;
-        }
-
-        this._handleClickFeatures(event, mVTFeatures);
-        if (this.selectedFeature != null) {
-            return this.selectedFeature;
-        }
-
-        return this.selectedFeature;
+        // Check all features
+        return this._handleClickFeatures(event, mVTFeatures);
     }
 
     _handleClickFeatures(event, mVTFeatures) {
-        this.minDistance = Number.POSITIVE_INFINITY;
+        let selectedFeature = null;
+        let minDistance = Number.POSITIVE_INFINITY;
 
-        for (var i = mVTFeatures.length - 1; i >= 0; i--) {
-            var mVTFeature = mVTFeatures[i];
-            this._handleClickFeature(event, mVTFeature);
-            if (this.selectedFeature != null) {
-                return this.selectedFeature;
+        for (let i = mVTFeatures.length - 1; i >= 0; i--) {
+            const result = this._handleClickFeature(event, mVTFeatures[i], minDistance);
+            if (result && result.distance < minDistance) {
+                selectedFeature = result.feature;
+                minDistance = result.distance;
+                if (minDistance === 0) return selectedFeature;
             }
         }
+
+        return selectedFeature;
     }
 
-    _handleClickFeature(event, mVTFeature) {
-        switch (mVTFeature.type) {
-            case 3:// polygon
-                this._handleClickFeaturePolygon(event, mVTFeature);
-                break;
-            default: {
-                this._handleClickFeatureDefault(event, mVTFeature);
-                break;
+    _handleClickFeature(event, mVTFeature, currentMinDistance) {
+        // Polygon type
+        if (mVTFeature.type === 3) {
+            if (mVTFeature.isPointInPath(event.tilePoint, event.tileContext)) {
+                return { feature: mVTFeature, distance: 0 };
             }
-        }        
-    }
-
-    _handleClickFeaturePolygon(event, mVTFeature) {
-        if (mVTFeature.isPointInPath(event.tilePoint, event.tileContext)) {
-            this.selectedFeature = mVTFeature;
-            this.minDistance = 0;
+            return null;
         }
-    }
 
-    _handleClickFeatureDefault(event, mVTFeature) {
-        var paths = mVTFeature.getPaths(event.tileContext);
-        for (var j = paths.length - 1; j >= 0; j--) {
-            var path = paths[j];
-            switch (mVTFeature.type) {
-                case 1: // Point
-                    if (MERCATOR.in_circle(path[0].x, path[0].y, mVTFeature.style.radius, event.tilePoint.x, event.tilePoint.y)) {
-                        this.selectedFeature = mVTFeature;
-                        this.minDistance = 0;
-                    }
-                    break;
-                case 2: // LineString
-                    var distance = MERCATOR.getDistanceFromLine(event.tilePoint, path);
-                    var thickness = (mVTFeature.selected && mVTFeature.style.selected ? mVTFeature.style.selected.lineWidth : mVTFeature.style.lineWidth);
-                    if (distance < thickness / 2 + this._lineClickTolerance && distance < this.minDistance) {
-                        this.selectedFeature = mVTFeature;
-                        this.minDistance = distance;
-                    }
-                    break;
-            }
-            if (this.minDistance == 0) {
-                return this.selectedFeature;
+        // Point and LineString types
+        const paths = mVTFeature.getPaths(event.tileContext);
+        const tilePoint = event.tilePoint;
+        const featureType = mVTFeature.type;
+        let minDistance = currentMinDistance;
+        let found = false;
+
+        for (let j = paths.length - 1; j >= 0; j--) {
+            const path = paths[j];
+
+            if (featureType === 1) { // Point
+                if (MERCATOR.in_circle(path[0].x, path[0].y, mVTFeature.style.radius, tilePoint.x, tilePoint.y)) {
+                    return { feature: mVTFeature, distance: 0 };
+                }
+            } else if (featureType === 2) { // LineString
+                const distance = MERCATOR.getDistanceFromLine(tilePoint, path);
+                const style = mVTFeature.style;
+                const thickness = (mVTFeature.selected && style.selected) ? style.selected.lineWidth : style.lineWidth;
+
+                if (distance < thickness / 2 + this._lineClickTolerance && distance < minDistance) {
+                    minDistance = distance;
+                    found = true;
+                }
             }
         }
+
+        return found ? { feature: mVTFeature, distance: minDistance } : null;
     }
-};
+}
 /*
  *  Created by Jes�s Barrio on 04/2021
  */
@@ -1106,7 +1210,7 @@ class MVTSource {
     getTileObject(id) {
         var values = id.split(":");
         return {
-            zoom: values[0],
+            zoom: parseInt(values[0]),
             x: values[1],
             y: values[2]
         }

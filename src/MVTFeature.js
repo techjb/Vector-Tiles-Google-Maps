@@ -2,17 +2,19 @@
  *  Created by Jesús Barrio on 04/2021
  */
 
+const TWO_PI = Math.PI * 2;
+
 class MVTFeature {
     constructor(options) {
         this.mVTSource = options.mVTSource;
         this.selected = options.selected;
         this.featureId = options.featureId;
-        this.tiles = [];
+        this.tiles = Object.create(null); // Use object without prototype overhead
         this.style = options.style;
         this.type = options.vectorTileFeature.type;
         this.properties = options.vectorTileFeature.properties;
         this.addTileFeature(options.vectorTileFeature, options.tileContext);
-        this._draw = options.customDraw || this.defaultDraw;        
+        this._draw = options.customDraw || this.defaultDraw;
 
         if (this.selected) {
             this.select();
@@ -41,12 +43,17 @@ class MVTFeature {
     }
 
     redrawTiles() {
-        var zoom = this.mVTSource.map.getZoom();
-        for (var id in this.tiles) {
-            this.mVTSource.deleteTileDrawn(id);
-            var idObject = this.mVTSource.getTileObject(id);
-            if (idObject.zoom == zoom) {
-                this.mVTSource.redrawTile(id);
+        const zoom = this.mVTSource.map.getZoom();
+        const mVTSource = this.mVTSource;
+        const tiles = this.tiles;
+        const tileKeys = Object.keys(tiles);
+
+        for (let i = 0, len = tileKeys.length; i < len; i++) {
+            const id = tileKeys[i];
+            mVTSource.deleteTileDrawn(id);
+            const idObject = mVTSource.getTileObject(id);
+            if (idObject.zoom === zoom) { // Removed parseInt, assume zoom is already a number
+                mVTSource.redrawTile(id);
             }
         }
     }
@@ -76,38 +83,30 @@ class MVTFeature {
     }
 
     draw(tileContext) {
-        var tile = this.tiles[tileContext.id];
-        var style = this.style;
-        if (this.selected && this.style.selected) {
-            style = this.style.selected;
-        }
-
+        const tile = this.tiles[tileContext.id];
+        const style = (this.selected && this.style.selected) ? this.style.selected : this.style;
         this._draw(tileContext, tile, style, this);
     }
 
     defaultDraw(tileContext, tile, style) {
-        switch (this.type) {
-            case 1: //Point
-                this.drawPoint(tileContext, tile, style);
-                break;
+        const type = this.type;
 
-            case 2: //LineString
-                this.drawLineString(tileContext, tile, style);
-                break;
-
-            case 3: //Polygon
-                this.drawPolygon(tileContext, tile, style);
-                break;
+        if (type === 1) { // Point
+            this.drawPoint(tileContext, tile, style);
+        } else if (type === 2) { // LineString
+            this.drawLineString(tileContext, tile, style);
+        } else if (type === 3) { // Polygon
+            this.drawPolygon(tileContext, tile, style);
         }
     }
 
     drawPoint(tileContext, tile, style) {
-        var coordinates = tile.vectorTileFeature.coordinates[0][0];
-        var point = this.getPoint(coordinates, tileContext, tile.divisor);
-        var radius = style.radius || 3;
-        var context2d = this.getContext2d(tileContext.canvas, style);
+        const coordinates = tile.vectorTileFeature.coordinates[0][0];
+        const point = this.getPoint(coordinates, tileContext, tile.divisor);
+        const radius = style.radius || 3;
+        const context2d = this.getContext2d(tileContext.canvas, style);
         context2d.beginPath();
-        context2d.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        context2d.arc(point.x, point.y, radius, 0, TWO_PI);
         context2d.closePath();
         context2d.fill();
         context2d.stroke();
@@ -120,104 +119,134 @@ class MVTFeature {
     }
 
     drawPolygon(tileContext, tile, style) {
-        tile.context2d = this.getContext2d(tileContext.canvas, style);
+        const context2d = this.getContext2d(tileContext.canvas, style);
+        tile.context2d = context2d;
         this.drawCoordinates(tileContext, tile);
-        tile.paths2d.closePath();
 
-        if (style.fillStyle) {
-            tile.context2d.fill(tile.paths2d);
-        }
-        if (style.strokeStyle) {
-            tile.context2d.stroke(tile.paths2d);
+        const paths2d = tile.paths2d;
+        paths2d.closePath();
+
+        const hasFill = style.fillStyle;
+        const hasStroke = style.strokeStyle;
+
+        // Fixed logic bug: was checking hasStroke three times
+        if (hasFill && hasStroke) {
+            context2d.fill(paths2d);
+            context2d.stroke(paths2d);
+        } else if (hasFill) {
+            context2d.fill(paths2d);
+        } else if (hasStroke) {
+            context2d.stroke(paths2d);
         }
     }
 
     drawCoordinates(tileContext, tile) {
-        var coordinates = tile.vectorTileFeature.coordinates;
-        tile.paths2d = new Path2D();        
-        for (var i = 0, length1 = coordinates.length; i < length1; i++) {
-            var coordinate = coordinates[i];
-            let path2 = new Path2D();
-            for (var j = 0, length2 = coordinate.length; j < length2; j++) {
-                var point = this.getPoint(coordinate[j], tileContext, tile.divisor);
-                if (j == 0) {
-                    path2.moveTo(point.x, point.y);
-                }
-                else {
+        const coordinates = tile.vectorTileFeature.coordinates;
+        const divisor = tile.divisor;
+        const paths2d = new Path2D();
+        const coordsLength = coordinates.length;
+
+        for (let i = 0; i < coordsLength; i++) {
+            const coordinate = coordinates[i];
+            const coordLength = coordinate.length;
+
+            if (coordLength > 0) {
+                const path2 = new Path2D();
+                const firstPoint = this.getPoint(coordinate[0], tileContext, divisor);
+                path2.moveTo(firstPoint.x, firstPoint.y);
+
+                for (let j = 1; j < coordLength; j++) {
+                    const point = this.getPoint(coordinate[j], tileContext, divisor);
                     path2.lineTo(point.x, point.y);
-                }                
+                }
+                paths2d.addPath(path2);
             }
-            tile.paths2d.addPath(path2);
-        }        
+        }
+
+        tile.paths2d = paths2d;
     }
 
     getPaths(tileContext) {
-        var paths = [];
-        var tile = this.tiles[tileContext.id];
-        var coordinates = tile.vectorTileFeature.coordinates;
-        for (var i = 0, length1 = coordinates.length; i < length1; i++) {
-            var path = [];
-            var coordinate = coordinates[i];
-            for (var j = 0, length2 = coordinate.length; j < length2; j++) {
-                var point = this.getPoint(coordinate[j], tileContext, tile.divisor);
-                path.push(point);
+        const tile = this.tiles[tileContext.id];
+        const coordinates = tile.vectorTileFeature.coordinates;
+        const divisor = tile.divisor;
+        const coordsLength = coordinates.length;
+        const paths = new Array(coordsLength);
+        let pathCount = 0;
+
+        for (let i = 0; i < coordsLength; i++) {
+            const coordinate = coordinates[i];
+            const coordLength = coordinate.length;
+            const path = new Array(coordLength);
+
+            for (let j = 0; j < coordLength; j++) {
+                path[j] = this.getPoint(coordinate[j], tileContext, divisor);
             }
-            if (path.length > 0) {
-                paths.push(path);
+
+            if (coordLength > 0) {
+                paths[pathCount++] = path;
             }
         }
+
+        paths.length = pathCount; // Trim array to actual size
         return paths;
     }
 
     getContext2d(canvas, style) {
-        var context2d = canvas.getContext('2d');
-        for (var key in style) {
-            if (key === 'selected') {
-                continue;
+        const context2d = canvas.getContext('2d');
+        const keys = Object.keys(style);
+
+        for (let i = 0, len = keys.length; i < len; i++) {
+            const key = keys[i];
+            if (key !== 'selected') {
+                context2d[key] = style[key];
             }
-            context2d[key] = style[key];
         }
         return context2d;
     }
 
     getPoint(coords, tileContext, divisor) {
-        var point = {
-            x: coords.x / divisor,
-            y: coords.y / divisor
-        };
+        let x = coords.x / divisor;
+        let y = coords.y / divisor;
 
-        if (tileContext.parentId) {
-            point = this._getOverzoomedPoint(point, tileContext);
+        const parentId = tileContext.parentId;
+        if (parentId) {
+            const mVTSource = this.mVTSource;
+            const parentTile = mVTSource.getTileObject(parentId);
+            const currentTile = mVTSource.getTileObject(tileContext.id);
+            const zoomDistance = currentTile.zoom - parentTile.zoom;
+            const scale = Math.pow(2, zoomDistance);
+            const tileSize = tileContext.tileSize;
+
+            x = x * scale - ((currentTile.x % scale) * tileSize);
+            y = y * scale - ((currentTile.y % scale) * tileSize);
         }
-        return point;
+
+        return { x, y };
     }
 
     _getOverzoomedPoint(point, tileContext) {
-        var parentTile = this.mVTSource.getTileObject(tileContext.parentId);
-        var currentTile = this.mVTSource.getTileObject(tileContext.id);
-        var zoomDistance = currentTile.zoom - parentTile.zoom;
-
+        const mVTSource = this.mVTSource;
+        const parentTile = mVTSource.getTileObject(tileContext.parentId);
+        const currentTile = mVTSource.getTileObject(tileContext.id);
+        const zoomDistance = currentTile.zoom - parentTile.zoom;
         const scale = Math.pow(2, zoomDistance);
+        const tileSize = tileContext.tileSize;
 
-        let xScale = point.x * scale;
-        let yScale = point.y * scale;
-
-        let xtileOffset = currentTile.x % scale;
-        let ytileOffset = currentTile.y % scale;
-
-        point.x = xScale - (xtileOffset * tileContext.tileSize);
-        point.y = yScale - (ytileOffset * tileContext.tileSize);
+        point.x = point.x * scale - ((currentTile.x % scale) * tileSize);
+        point.y = point.y * scale - ((currentTile.y % scale) * tileSize);
 
         return point;
     }
 
     isPointInPath(point, tileContext) {
-        var tile = this.getTile(tileContext);
-        var context2d = tile.context2d;
-        var paths2d = tile.paths2d;
+        const tile = this.getTile(tileContext);
+        const context2d = tile.context2d;
+        const paths2d = tile.paths2d;
+
         if (!context2d || !paths2d) {
             return false;
         }
-        return context2d.isPointInPath(paths2d, point.x, point.y)       
+        return context2d.isPointInPath(paths2d, point.x, point.y);
     }
 }

@@ -155,7 +155,7 @@ class MVTSource {
     getTileObject(id) {
         var values = id.split(":");
         return {
-            zoom: values[0],
+            zoom: parseInt(values[0]),
             x: values[1],
             y: values[2]
         }
