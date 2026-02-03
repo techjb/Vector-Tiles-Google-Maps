@@ -1,5 +1,5 @@
 /*
- *  Created by Jesús Barrio on 04/2021
+ *  Created by JesÃºs Barrio on 04/2021
  */
 
 const TWO_PI = Math.PI * 2;
@@ -25,8 +25,9 @@ class MVTFeature {
         this.tiles[tileContext.id] = {
             vectorTileFeature: vectorTileFeature,
             divisor: vectorTileFeature.extent / tileContext.tileSize,
-            context2d: false,
-            paths2d: false
+            context2d: null,
+            paths2d: null,
+            paths: null
         };
     }
 
@@ -141,6 +142,9 @@ class MVTFeature {
     }
 
     drawCoordinates(tileContext, tile) {
+        if (tile.paths2d) {
+            return;
+        }
         const coordinates = tile.vectorTileFeature.coordinates;
         const divisor = tile.divisor;
         const paths2d = new Path2D();
@@ -168,6 +172,9 @@ class MVTFeature {
 
     getPaths(tileContext) {
         const tile = this.tiles[tileContext.id];
+        if (tile.paths) {
+            return tile.paths;
+        }
         const coordinates = tile.vectorTileFeature.coordinates;
         const divisor = tile.divisor;
         const coordsLength = coordinates.length;
@@ -189,7 +196,8 @@ class MVTFeature {
         }
 
         paths.length = pathCount; // Trim array to actual size
-        return paths;
+        tile.paths = paths;
+        return tile.paths;
     }
 
     getContext2d(canvas, style) {
