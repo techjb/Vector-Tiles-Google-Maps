@@ -54,9 +54,9 @@ class MVTSource {
         this._customDraw = options.customDraw || false;
 
         this.mVTLayers = [];  //Keep a list of the layers contained in the PBFs        
-        this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
-        this._visibleTiles = []; // tiles currently in the viewport        
-        this._selectedFeatures = []; // list of selected features
+        this._tilesDrawn = Object.create(null); //  List of tiles drawn  (when cache enabled)
+        this._visibleTiles = Object.create(null); // tiles currently in the viewport        
+        this._selectedFeatures = Object.create(null); // list of selected features
         this.loadedTilesLen = 0; // total number of loaded tiles
 
         if (options.selectedFeatures) {
@@ -94,7 +94,7 @@ class MVTSource {
     }
 
     _resetVisibleTiles() {
-        this._visibleTiles = [];
+        this._visibleTiles = Object.create(null);
     }
 
     _setVisibleTile(tileContext) {
@@ -232,7 +232,7 @@ class MVTSource {
     }
 
     _resetTileDrawn() {
-        this._tilesDrawn = [];
+        this._tilesDrawn = Object.create(null);
     }
 
     _drawVectorTile(vectorTile, tileContext) {
@@ -403,7 +403,7 @@ class MVTSource {
             }
         }        
         this.redrawTiles(tilesToRedraw);
-        this._selectedFeatures = [];
+        this._selectedFeatures = Object.create(null);
     }
 
     featureSelected(mVTFeature) {
