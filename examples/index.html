@@ -1,0 +1,86 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Vector Tiles Google Maps - Examples</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #333;
+        }
+        
+        .selector-container {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        select {
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 250px;
+        }
+        
+        iframe {
+            width: 100%;
+            height: calc(100vh - 150px);
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vector Tiles Google Maps - Examples</h1>
+        
+        <div class="selector-container">            
+            <select id="exampleSelect">
+                <option value="">-- Select an example --</option>
+                <option value="basic.html">Basic</option>
+                <option value="cache.html">Cache</option>
+                <option value="click.html">Click</option>
+                <option value="custom-draw.html">Custom draw</option>
+                <option value="filter.html">Filter</option>
+                <option value="hover.html">Hover</option>
+                <option value="layers.html">Layers</option>
+                <option value="point-linestring-polygon.html">Point, LineString and Polygon</option>
+                <option value="preselected-features.html">Preselected features</option>
+                <option value="style-filter-layer.html">Style filter layer</option>
+                <option value="styles-feature.html">Styles feature</option>
+                <option value="styles.html">Styles</option>
+            </select>
+        </div>
+        
+        <iframe id="exampleFrame" src="" title="Ejemplo"></iframe>
+    </div>
+
+    <script>
+        const selectElement = document.getElementById('exampleSelect');
+        const iframeElement = document.getElementById('exampleFrame');
+        
+        selectElement.addEventListener('change', function() {
+            const selectedExample = this.value;
+            if (selectedExample) {
+                iframeElement.src = selectedExample;
+            } else {
+                iframeElement.src = '';
+            }
+        });
+    </script>
+</body>
+</html>

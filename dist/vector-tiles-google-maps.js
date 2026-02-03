@@ -617,7 +617,7 @@ MERCATOR = (function () {
     };
 })();
 /*
- *  Created by Jes�s Barrio on 04/2021
+ *  Created by Jesús Barrio on 04/2021
  */
 
 const TWO_PI = Math.PI * 2;
@@ -643,8 +643,9 @@ class MVTFeature {
         this.tiles[tileContext.id] = {
             vectorTileFeature: vectorTileFeature,
             divisor: vectorTileFeature.extent / tileContext.tileSize,
-            context2d: false,
-            paths2d: false
+            context2d: null,
+            paths2d: null,
+            paths: null
         };
     }
 
@@ -759,6 +760,9 @@ class MVTFeature {
     }
 
     drawCoordinates(tileContext, tile) {
+        if (tile.paths2d) {
+            return;
+        }
         const coordinates = tile.vectorTileFeature.coordinates;
         const divisor = tile.divisor;
         const paths2d = new Path2D();
@@ -786,6 +790,9 @@ class MVTFeature {
 
     getPaths(tileContext) {
         const tile = this.tiles[tileContext.id];
+        if (tile.paths) {
+            return tile.paths;
+        }
         const coordinates = tile.vectorTileFeature.coordinates;
         const divisor = tile.divisor;
         const coordsLength = coordinates.length;
@@ -807,7 +814,8 @@ class MVTFeature {
         }
 
         paths.length = pathCount; // Trim array to actual size
-        return paths;
+        tile.paths = paths;
+        return tile.paths;
     }
 
     getContext2d(canvas, style) {
@@ -1054,7 +1062,7 @@ class MVTLayer {
     }
 }
 /*
- *  Created by Jes�s Barrio on 04/2021
+ *  Created by Jesús Barrio on 04/2021
  */
 
 class MVTSource {
@@ -1109,9 +1117,11 @@ class MVTSource {
         this._customDraw = options.customDraw || false;
 
         this.mVTLayers = [];  //Keep a list of the layers contained in the PBFs        
-        this._tilesDrawn = []; //  List of tiles drawn  (when cache enabled)
-        this._visibleTiles = []; // tiles currently in the viewport        
-        this._selectedFeatures = []; // list of selected features
+        this._tilesDrawn = Object.create(null); //  List of tiles drawn  (when cache enabled)
+        this._visibleTiles = Object.create(null); // tiles currently in the viewport        
+        this._selectedFeatures = Object.create(null); // list of selected features
+        this.loadedTilesLen = 0; // total number of loaded tiles
+
         if (options.selectedFeatures) {
             this.setSelectedFeatures(options.selectedFeatures);
         }
@@ -1147,7 +1157,7 @@ class MVTSource {
     }
 
     _resetVisibleTiles() {
-        this._visibleTiles = [];
+        this._visibleTiles = Object.create(null);
     }
 
     _setVisibleTile(tileContext) {
@@ -1162,6 +1172,7 @@ class MVTSource {
         }
 
         tileContext = this._createTileContext(coord, zoom, ownerDocument);
+        this.loadedTilesLen = 0;
         this._xhrRequest(tileContext);
         return tileContext;
     }
@@ -1210,9 +1221,9 @@ class MVTSource {
     getTileObject(id) {
         var values = id.split(":");
         return {
-            zoom: parseInt(values[0]),
-            x: values[1],
-            y: values[2]
+            zoom: parseInt(values[0], 10),
+            x: parseInt(values[1], 10),
+            y: parseInt(values[2], 10)
         }
     }
 
@@ -1251,6 +1262,28 @@ class MVTSource {
         var vectorTile = new VectorTile(pbf);
         this._drawVectorTile(vectorTile, tileContext);
     }
+    
+    tileLoaded() {
+        const lenVisibleTiles = Object.keys(this._visibleTiles).length;
+        let self = this;
+
+        return new Promise(function (resolve, reject) {
+          let timer;
+
+          if (lenVisibleTiles && lenVisibleTiles == self.loadedTilesLen) {
+            clearTimeout(timer);
+            resolve(true);
+          } else {
+            timer = setTimeout(() => {
+              resolve(
+                self.tileLoaded().then((a) => {
+                  return a;
+                })
+              );
+            }, 100);
+          }
+        });
+      }
 
     _setTileDrawn(tileContext) {
         if (!this._cache) return;
@@ -1262,7 +1295,7 @@ class MVTSource {
     }
 
     _resetTileDrawn() {
-        this._tilesDrawn = [];
+        this._tilesDrawn = Object.create(null);
     }
 
     _drawVectorTile(vectorTile, tileContext) {
@@ -1329,7 +1362,7 @@ class MVTSource {
     }
 
     onMouseHover(event, callbackFunction, options) {
-        this._multipleSelection = false;
+        this._multipleSelection = (options && options.multipleSelection) || false;
         options = this._getMouseOptions(options, true);
         this._mouseEvent(event, callbackFunction, options);
     }
@@ -1433,7 +1466,7 @@ class MVTSource {
             }
         }        
         this.redrawTiles(tilesToRedraw);
-        this._selectedFeatures = [];
+        this._selectedFeatures = Object.create(null);
     }
 
     featureSelected(mVTFeature) {
