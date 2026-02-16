@@ -875,6 +875,38 @@ class MVTFeature {
         }
         return context2d.isPointInPath(paths2d, point.x, point.y);
     }
+
+    getBounds() {
+        const tileKeys = Object.keys(this.tiles);
+        if (tileKeys.length === 0) {
+            return null;
+        }
+
+        const bounds = new google.maps.LatLngBounds();
+
+        for (let t = 0; t < tileKeys.length; t++) {
+            const tileId = tileKeys[t];
+            const tile = this.tiles[tileId];
+            const tileObject = this.mVTSource.getTileObject(tileId);
+            const coordinates = tile.vectorTileFeature.coordinates;
+            const extent = tile.vectorTileFeature.extent;
+            const numTiles = 1 << tileObject.zoom;
+            const tileWorldSize = 256 / numTiles;
+
+            for (let i = 0; i < coordinates.length; i++) {
+                const ring = coordinates[i];
+                for (let j = 0; j < ring.length; j++) {
+                    const coord = ring[j];
+                    const worldX = (tileObject.x + coord.x / extent) * tileWorldSize;
+                    const worldY = (tileObject.y + coord.y / extent) * tileWorldSize;
+                    const latLng = MERCATOR.fromPointToLatLng({ x: worldX, y: worldY });
+                    bounds.extend(new google.maps.LatLng(latLng.lat, latLng.lng));
+                }
+            }
+        }
+
+        return bounds;
+    }
 }
 /*
  *  Created by Jes�s Barrio on 04/2021
