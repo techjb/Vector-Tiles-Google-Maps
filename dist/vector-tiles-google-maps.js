@@ -877,36 +877,44 @@ class MVTFeature {
     }
 
     getBounds() {
-        const tileKeys = Object.keys(this.tiles);
-        if (tileKeys.length === 0) {
-            return null;
-        }
-
         const bounds = new google.maps.LatLngBounds();
+        const tileKeys = Object.keys(this.tiles);
+        const worldSize = 256;
+        const tileSize = this.mVTSource._tileSize;
 
-        for (let t = 0; t < tileKeys.length; t++) {
-            const tileId = tileKeys[t];
-            const tile = this.tiles[tileId];
+        for (let i = 0, tilesLength = tileKeys.length; i < tilesLength; i++) {
+            const tileId = tileKeys[i];
             const tileObject = this.mVTSource.getTileObject(tileId);
+            const tile = this.tiles[tileId];
             const coordinates = tile.vectorTileFeature.coordinates;
-            const extent = tile.vectorTileFeature.extent;
-            const numTiles = 1 << tileObject.zoom;
-            const tileWorldSize = 256 / numTiles;
+            const divisor = tile.divisor;
+            const scale = Math.pow(2, tileObject.zoom);
+            const tileContext = {
+                id: tileId,
+                tileSize,
+                parentId: this.mVTSource._getParentId(tileId)
+            };
 
-            for (let i = 0; i < coordinates.length; i++) {
-                const ring = coordinates[i];
-                for (let j = 0; j < ring.length; j++) {
-                    const coord = ring[j];
-                    const worldX = (tileObject.x + coord.x / extent) * tileWorldSize;
-                    const worldY = (tileObject.y + coord.y / extent) * tileWorldSize;
-                    const latLng = MERCATOR.fromPointToLatLng({ x: worldX, y: worldY });
-                    bounds.extend(new google.maps.LatLng(latLng.lat, latLng.lng));
+            for (let j = 0, coordinatesLength = coordinates.length; j < coordinatesLength; j++) {
+                const geometry = coordinates[j];
+
+                for (let k = 0, geometryLength = geometry.length; k < geometryLength; k++) {
+                    const point = this.getPoint(geometry[k], tileContext, divisor);
+                    const globalPixelX = tileObject.x * tileSize + point.x;
+                    const globalPixelY = tileObject.y * tileSize + point.y;
+                    const worldPoint = {
+                        x: globalPixelX * (worldSize / (tileSize * scale)),
+                        y: globalPixelY * (worldSize / (tileSize * scale))
+                    };
+                    const latLng = MERCATOR.fromPointToLatLng(worldPoint);
+                    bounds.extend(latLng);
                 }
             }
         }
 
         return bounds;
     }
+
 }
 /*
  *  Created by Jes�s Barrio on 04/2021
