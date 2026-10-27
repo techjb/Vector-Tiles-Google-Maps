@@ -226,7 +226,7 @@ class MVTFeature {
             const scale = Math.pow(2, zoomDistance);
             const tileSize = tileContext.tileSize;
 
-            x = x * scale - ((currentTile.x % scale) * tileSize);
+            x = x * scale - ((((currentTile.x % scale) + scale) % scale) * tileSize);
             y = y * scale - ((currentTile.y % scale) * tileSize);
         }
 
@@ -241,7 +241,7 @@ class MVTFeature {
         const scale = Math.pow(2, zoomDistance);
         const tileSize = tileContext.tileSize;
 
-        point.x = point.x * scale - ((currentTile.x % scale) * tileSize);
+        point.x = point.x * scale - ((((currentTile.x % scale) + scale) % scale) * tileSize);
         point.y = point.y * scale - ((currentTile.y % scale) * tileSize);
 
         return point;

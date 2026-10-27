@@ -7,7 +7,10 @@ class MVTSource {
         var self = this;
         this.map = map;
         this._url = options.url || ""; //Url TO Vector Tile Source,
-        this._sourceMaxZoom = options.sourceMaxZoom || false; // Source maxzoom to enable overzoom
+        this._configuredMaxZoom = options.sourceMaxZoom === undefined ? false : options.sourceMaxZoom;
+        this._sourceMaxZoom = this._configuredMaxZoom; // Source maxzoom to enable overzoom
+        this._configuredSourceType = options.sourceType || 'auto';
+        this._onTileError = options.onTileError || function (error) { console.error(error); };
         this._debug = options.debug || false; // Draw tiles lines and ids
         this.getIDForLayerFeature = options.getIDForLayerFeature || function (feature) {
             return feature.properties.id || feature.properties.Id || feature.properties.ID;
@@ -58,6 +61,8 @@ class MVTSource {
         this._visibleTiles = Object.create(null); // tiles currently in the viewport        
         this._selectedFeatures = Object.create(null); // list of selected features
         this.loadedTilesLen = 0; // total number of loaded tiles
+        this._sourceGeneration = 0;
+        this._initializeSource();
 
         if (options.selectedFeatures) {
             this.setSelectedFeatures(options.selectedFeatures);
@@ -75,7 +80,12 @@ class MVTSource {
     }
 
     releaseTile(canvas) {
-        //this._deleteVisibleTile(canvas.id);
+        var tileContext = this._visibleTiles[canvas.id];
+        if (tileContext && tileContext.canvas === canvas) {
+            tileContext.released = true;
+            this._deleteVisibleTile(canvas.id);
+            this._updateLoadedTiles();
+        }
     }
 
     _zoomChanged() {
@@ -95,10 +105,13 @@ class MVTSource {
 
     _resetVisibleTiles() {
         this._visibleTiles = Object.create(null);
+        this.loadedTilesLen = 0;
     }
 
     _setVisibleTile(tileContext) {
+        tileContext.released = false;
         this._visibleTiles[tileContext.id] = tileContext;
+        this._updateLoadedTiles();
     }
 
     drawTile(coord, zoom, ownerDocument) {
@@ -109,8 +122,7 @@ class MVTSource {
         }
 
         tileContext = this._createTileContext(coord, zoom, ownerDocument);
-        this.loadedTilesLen = 0;
-        this._xhrRequest(tileContext);
+        this._loadTile(tileContext);
         return tileContext;
     }
 
@@ -130,13 +142,13 @@ class MVTSource {
 
     _getParentId(id) {
         var parentId = false;
-        if (this._sourceMaxZoom) {
+        if (this._sourceMaxZoom !== false) {
             var tile = this.getTileObject(id);
             if (tile.zoom > this._sourceMaxZoom) {
                 var zoomDistance = tile.zoom - this._sourceMaxZoom;
                 var zoom = tile.zoom - zoomDistance;
-                var x = tile.x >> zoomDistance;
-                var y = tile.y >> zoomDistance;
+                var x = Math.floor(tile.x / Math.pow(2, zoomDistance));
+                var y = Math.floor(tile.y / Math.pow(2, zoomDistance));
                 parentId = this.getTileId(zoom, x, y);
             }
         }
@@ -164,8 +176,110 @@ class MVTSource {
         }
     }
 
+    _initializeSource() {
+        var generation = ++this._sourceGeneration;
+        this._sourceType = this._configuredSourceType === 'auto'
+            ? (/\.pmtiles(?:[?#]|$)/i.test(this._url) ? 'pmtiles' : 'pbf')
+            : this._configuredSourceType;
+        if (this._sourceType !== 'pbf' && this._sourceType !== 'pmtiles') {
+            throw new Error('sourceType must be "auto", "pbf" or "pmtiles".');
+        }
+        this._sourceMaxZoom = this._configuredMaxZoom;
+        this._pendingTiles = new Map();
+        this._pmtiles = null;
+        this._sourceReady = Promise.resolve();
+        if (this._sourceType === 'pmtiles') {
+            if (typeof pmtiles === 'undefined') {
+                throw new Error('PMTiles reader is missing. Use the bundled distribution or load lib/pmtiles/pmtiles.js first.');
+            }
+            this._pmtiles = new pmtiles.PMTiles(new pmtiles.FetchSource(this._url, new Headers(this._xhrHeaders)));
+            this._sourceReady = this._pmtiles.getHeader().then(header => {
+                if (header.tileType !== pmtiles.TileType.Mvt) {
+                    throw new Error('The PMTiles archive must contain MVT vector tiles.');
+                }
+                if (generation === this._sourceGeneration) {
+                    this._sourceMaxZoom = this._configuredMaxZoom === false
+                        ? header.maxZoom : Math.min(this._configuredMaxZoom, header.maxZoom);
+                }
+                return header;
+            });
+            // Requests report initialization failures through onTileError.
+            this._sourceReady.catch(function () { });
+        }
+    }
+
+    _loadTile(tileContext) {
+        tileContext.loaded = false;
+        tileContext.loading = true;
+        tileContext.released = false;
+        tileContext.generation = this._sourceGeneration;
+        tileContext.requestId = (tileContext.requestId || 0) + 1;
+        this._updateLoadedTiles();
+        if (this._sourceType === 'pmtiles') {
+            this._pmtilesRequest(tileContext);
+        } else {
+            this._xhrRequest(tileContext);
+        }
+    }
+
+    _isCurrentTile(tileContext, requestId) {
+        return tileContext.generation === this._sourceGeneration &&
+            tileContext.requestId === requestId && !tileContext.released &&
+            this.map.getZoom() === tileContext.zoom;
+    }
+
+    async _pmtilesRequest(tileContext) {
+        var requestId = tileContext.requestId;
+        var archive = this._pmtiles;
+        var pending = this._pendingTiles;
+        try {
+            var header = await this._sourceReady;
+            if (!this._isCurrentTile(tileContext, requestId)) return;
+            // The header is asynchronous: calculate overzoom after it is available.
+            tileContext.parentId = this._getParentId(tileContext.id);
+            var tile = this.getTileObject(tileContext.parentId || tileContext.id);
+            var width = Math.pow(2, tile.zoom);
+            if (tile.y < 0 || tile.y >= width || tile.zoom < header.minZoom) {
+                this._finishTile(tileContext);
+                return;
+            }
+            var x = ((tile.x % width) + width) % width;
+            var key = this.getTileId(tile.zoom, x, tile.y);
+            var request = pending.get(key);
+            if (!request) {
+                request = archive.getZxy(tile.zoom, x, tile.y);
+                pending.set(key, request);
+                request.then(() => pending.delete(key), () => pending.delete(key));
+            }
+            var result = await request;
+            if (!this._isCurrentTile(tileContext, requestId)) return;
+            if (result) {
+                this._xhrResponseOk(tileContext, result.data);
+            }
+            this._finishTile(tileContext);
+        } catch (error) {
+            if (this._isCurrentTile(tileContext, requestId)) {
+                this._finishTile(tileContext, error);
+            }
+        }
+    }
+
+    _updateLoadedTiles() {
+        this.loadedTilesLen = Object.keys(this._visibleTiles).filter(id => this._visibleTiles[id].loaded).length;
+    }
+
+    _finishTile(tileContext, error) {
+        tileContext.loaded = true;
+        tileContext.loading = false;
+        this._drawDebugInfo(tileContext);
+        if (!error) this._setTileDrawn(tileContext);
+        this._updateLoadedTiles();
+        if (error) this._onTileError(error, tileContext);
+    }
+
     _xhrRequest(tileContext) {
         var self = this;
+        var requestId = tileContext.requestId;
 
         var id = tileContext.parentId || tileContext.id;
         var tile = this.getTileObject(id);
@@ -177,10 +291,22 @@ class MVTSource {
 
         var xmlHttpRequest = new XMLHttpRequest();
         xmlHttpRequest.onload = function () {
-            if (xmlHttpRequest.status == "200" && xmlHttpRequest.response) {
-                return self._xhrResponseOk(tileContext, xmlHttpRequest.response)
+            if (!self._isCurrentTile(tileContext, requestId)) return;
+            try {
+                if (xmlHttpRequest.status === 200 && xmlHttpRequest.response) {
+                    self._xhrResponseOk(tileContext, xmlHttpRequest.response);
+                } else if (xmlHttpRequest.status !== 204 && xmlHttpRequest.status !== 404) {
+                    throw new Error('Tile request failed: HTTP ' + xmlHttpRequest.status);
+                }
+                self._finishTile(tileContext);
+            } catch (error) {
+                self._finishTile(tileContext, error);
             }
-            self._drawDebugInfo(tileContext);
+        };
+        xmlHttpRequest.onerror = function () {
+            if (self._isCurrentTile(tileContext, requestId)) {
+                self._finishTile(tileContext, new Error('Tile request failed: ' + src));
+            }
         };
         xmlHttpRequest.open('GET', src, true);
         for (var header in this._xhrHeaders) {
@@ -201,26 +327,18 @@ class MVTSource {
     }
     
     tileLoaded() {
-        const lenVisibleTiles = Object.keys(this._visibleTiles).length;
-        let self = this;
-
-        return new Promise(function (resolve, reject) {
-          let timer;
-
-          if (lenVisibleTiles && lenVisibleTiles == self.loadedTilesLen) {
-            clearTimeout(timer);
-            resolve(true);
-          } else {
-            timer = setTimeout(() => {
-              resolve(
-                self.tileLoaded().then((a) => {
-                  return a;
-                })
-              );
-            }, 100);
-          }
+        return new Promise(resolve => {
+            const check = () => {
+                this._updateLoadedTiles();
+                if (Object.keys(this._visibleTiles).every(id => this._visibleTiles[id].loaded)) {
+                    resolve(true);
+                } else {
+                    setTimeout(check, 100);
+                }
+            };
+            check();
         });
-      }
+    }
 
     _setTileDrawn(tileContext) {
         if (!this._cache) return;
@@ -447,6 +565,7 @@ class MVTSource {
         var selectedFeatures = [];
         for (var featureId in this._selectedFeatures) {
             var selectedFeature = this._selectedFeatures[featureId];
+            if (!selectedFeature) continue;
             for (var tile in selectedFeature.tiles) {
                 if (tile == tileContextId) {
                     selectedFeatures.push(selectedFeature);
@@ -509,7 +628,11 @@ class MVTSource {
     redrawTile(id) {
         this.deleteTileDrawn(id);        
         var tileContext = this._visibleTiles[id];
-        if (!tileContext || !tileContext.vectorTile) return;
+        if (!tileContext) return;
+        if (!tileContext.vectorTile) {
+            if (!tileContext.loading) this._loadTile(tileContext);
+            return;
+        }
         this.clearTile(tileContext.canvas);
         this._drawVectorTile(tileContext.vectorTile, tileContext);
     }
@@ -522,9 +645,17 @@ class MVTSource {
     setUrl(url, redrawTiles) {
         redrawTiles = (redrawTiles === undefined || redrawTiles);
         this._url = url;
+        this._initializeSource();
         this._resetMVTLayers();
-        if (redrawTiles) {
-            this.redrawAllTiles();
-        }        
+        this._resetTileDrawn();
+        for (var id in this._visibleTiles) {
+            var tileContext = this._visibleTiles[id];
+            tileContext.vectorTile = null;
+            tileContext.loaded = false;
+            tileContext.loading = false;
+            this.clearTile(tileContext.canvas);
+            if (redrawTiles) this._loadTile(tileContext);
+        }
+        this._updateLoadedTiles();
     }
 }

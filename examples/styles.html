@@ -52,7 +52,6 @@
         </div>
     </div>
 
-    <script src="mapbox-token.js"></script>
     <script src="../dist/vector-tiles-google-maps.js"></script>
     <script type="text/javascript">
         var map;
@@ -84,8 +83,8 @@
 
         function InitVectorTiles() {
             var options = {
-                url: "https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf?sku=101D1qzcYDQhj&access_token=" + encodeURIComponent(getMapboxToken()),
-                sourceMaxZoom: 14,
+                sourceType: "pmtiles",
+                url: "https://vector-tiles-google-maps.s3.eu-west-3.amazonaws.com/Spanish-Census.pmtiles",
                 visibleLayers: ["provinces"],
                 style: GetStyle()
             };

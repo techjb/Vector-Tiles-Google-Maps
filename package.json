@@ -1,0 +1,13 @@
+{
+  "name": "vector-tiles-google-maps",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "test": "node --test tests/source.test.cjs",
+    "test:integration": "node tests/pmtiles-integration.cjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "pmtiles": "4.5.0"
+  }
+}

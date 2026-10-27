@@ -36,6 +36,8 @@
 
 Vector Tiles Google Maps is a JavaScript library to render vector tiles in Google Maps.
 
+It supports individual MVT/PBF tiles and single-file PMTiles archives containing MVT tiles. PMTiles are read on demand with HTTP byte ranges; the whole archive is not downloaded.
+
 The library provides funcionality to enable cache, filter features, apply styles, onclick event, mouse hover, and show/hide layers.
 
 Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox-gl-js/style-spec/) in Google Maps.
@@ -45,13 +47,14 @@ Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox
 * [Google Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/overview?)
 * [Mapbox vector tiles](https://github.com/mapbox/vector-tile-js)
 * [Protocol Buffers](https://github.com/protocolbuffers/protobuf)
+* [PMTiles](https://docs.protomaps.com/pmtiles/) (reader included in the distribution)
 * JavaScript
 
 
 <!-- DEMO EXAMPLES -->
 ## Examples
 
-The Mapbox examples share a public browser token (`pk.`) configured in `examples/mapbox-token.js`, so the GitHub Pages demos run without visitor configuration. Public tokens are visible in browser requests. Configure the demo token in Mapbox with the minimum required read permissions and URL restrictions for `https://techjb.github.io`. When hosting your own copy, replace it with your own public token that can access the example tileset. Never put a secret Mapbox token in browser code.
+The census examples use [Spanish-Census.pmtiles](https://vector-tiles-google-maps.s3.eu-west-3.amazonaws.com/Spanish-Census.pmtiles) hosted on S3. No Mapbox token is required. Its CORS policy allows `https://techjb.github.io` and `https://localhost:44390`. Add your own origin to the bucket's CORS policy when hosting these examples elsewhere. The point/line/polygon and custom-draw examples retain their separate PBF dataset because they demonstrate different geometries.
 
 * [Basic](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/basic.html) - Basic loading vector tiles with debug enabled.
 * [Cache](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/cache.html) - Cache enabled.
@@ -74,9 +77,10 @@ The Mapbox examples share a public browser token (`pk.`) configured in `examples
    ```sh
    git clone https://github.com/techjb/Vector-Tiles-Google-Maps.git
    ```
-2. Install NPM packages
+2. The `dist` files are ready to use and include the PMTiles reader. To rebuild them after editing sources:
    ```sh
    npm install
+   npm run build
    ```
 3. Get your own API Key for the [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/get-api-key) and replace it in all the provided examples
    ```html
@@ -99,6 +103,21 @@ var options = {
 var mvtSource = new MVTSource(map, options);
 map.overlayMapTypes.insertAt(0, mvtSource);
 ```
+
+For a PMTiles archive, use the same API:
+
+```js
+var mvtSource = new MVTSource(map, {
+    sourceType: "pmtiles",
+    url: "https://vector-tiles-google-maps.s3.eu-west-3.amazonaws.com/Spanish-Census.pmtiles",
+    cache: true
+});
+map.overlayMapTypes.insertAt(0, mvtSource);
+```
+
+Load `dist/vector-tiles-google-maps.js` or its `.min.js` variant before this code. URLs ending in `.pmtiles` (including query strings) are also detected automatically. For extensionless endpoints, set `sourceType: "pmtiles"` explicitly. The archive must contain MVT tiles; the bundled reader supports uncompressed and gzip data. PMTiles maximum zoom is read automatically from the header and used for overzoom. The server must support HTTP range requests and CORS if hosted on a different origin, exposing `ETag` to the browser. `xhrHeaders` also applies to PMTiles range requests.
+
+To verify changes, run `npm test`. `npm run test:integration` checks both distributions against the public S3 archive, including decoding, drawing calls, selection, styling, CORS and overzoom using partial downloads. The integration test uses a simulated Google Maps/canvas environment; open the HTML examples for visual verification.
 
 ### Recommendations
 

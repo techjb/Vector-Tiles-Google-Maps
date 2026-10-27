@@ -73,7 +73,9 @@
     </Content>
     <Content Include="examples\custom-draw.html" />
     <Content Include="examples\index.html" />
-    <Content Include="examples\mapbox-token.js" />
+    <Content Include="lib\pmtiles\pmtiles.js" />
+    <Content Include="lib\pmtiles\LICENSE.txt" />
+    <Content Include="lib\pmtiles\fflate-LICENSE.txt" />
     <Content Include="examples\preselected-features.html" />
     <Content Include="examples\hover.html" />
     <Content Include="examples\style-filter-layer.html" />

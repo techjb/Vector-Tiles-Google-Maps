@@ -6,11 +6,17 @@ This document shows information about the constructor options and methods provid
 
 The following are properties that define a config object for the `MVTSource` object:
 
-* `url` - **{string}** The URL Endpoint that we fetch MVT Protocol Buffer tiles from. **Required**.
+* `url` - **{string}** A template URL for individual MVT/PBF tiles, or a URL to a PMTiles archive containing MVT tiles. **Required**.
 
 ```js
-url: "https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf?",
+url: "https://vector-tiles-google-maps.s3.eu-west-3.amazonaws.com/Spanish-Census.pmtiles",
 ```
+
+* `sourceType` - **{string}** `"auto"` (default), `"pbf"`, or `"pmtiles"`. Automatic detection recognizes `.pmtiles` before an optional query string or fragment. Set `"pmtiles"` for URLs without that extension. The PMTiles reader is included in both `dist` files; when loading source files individually, load `lib/pmtiles/pmtiles.js` before `MVTSource.js`. Archives must contain MVT tiles with no compression or gzip compression.
+
+* `xhrHeaders` - **{object}** Custom request headers for both PBF and PMTiles sources. **Default: `{}`**. For cross-origin archives the server must allow these headers as well as range requests, and expose `ETag`.
+
+* `onTileError` - **{function}** Called as `onTileError(error, tileContext)` on a network, archive or decoding failure. By default errors are logged to the console. Failed and absent tiles finish loading, so `tileLoaded()` does not wait forever; missing tiles leave a blank canvas and do not trigger this callback. `tileLoaded()` indicates completion, not that every request succeeded.
 
 * `debug` - **{boolean}** Flagging debug as true provides a grid that shows the edge of the tiles and the z,x,y coordinate address of the tiles. **Default: `false`**.
 
@@ -24,7 +30,7 @@ debug: true,
 cache: true,
 ```
 
-* `sourceMaxZoom` - **{int}** Setting this option, will enable overzoom. As an example, if the tileset contains tiles until zoom level 14 and the map request a tile in the zoom level 15, then it will take the tile in the zoom level 14 to create the tile in the zoom level 15. **Default: `false`**.
+* `sourceMaxZoom` - **{int}** Setting this option enables overzoom. For example, if the tileset contains tiles until zoom level 14 and the map requests a tile at zoom 15, it uses the parent tile at zoom 14. For PBF sources the default is `false` (disabled). For PMTiles, the default is the archive's `maxZoom`, read asynchronously before fetching tiles. An explicit value can lower this limit but cannot exceed the archive's maximum. Zoom 0 is supported. Below the archive's `minZoom`, canvases remain empty.
 
 ```js
 sourceMaxZoom: 14,
@@ -259,12 +265,12 @@ mVTSource.setSelectedFeatures(featureIds);
 ```
 
 
-* `setUrl(url, redrawTiles)` - Set new url form the MVTSource and redraw tiles.
+* `setUrl(url, redrawTiles)` - Change the source URL, discard the previous source's cached tiles, and reload visible canvases. Responses still pending from the old source are ignored. With `sourceType: "auto"`, the source type is detected again; an explicitly configured source type remains in effect.
   * *@param url* *{string}* - New url
-  * *@param redrawTiles* *{boolean}* - Trigger the redrawTiles event. **Default: `true`**.
+  * *@param redrawTiles* *{boolean}* - Reload visible tiles immediately. If `false`, visible canvases are cleared and can be loaded later with `redrawAllTiles()`. **Default: `true`**.
 
 ```js
-var url = 'https://api.mapbox.com/v4/techjb.bwtby589/{z}/{x}/{y}.vector.pbf';
+var url = 'https://vector-tiles-google-maps.s3.eu-west-3.amazonaws.com/Spanish-Census.pmtiles';
 
 mVTSource.setUrl(url);
 ```

@@ -2,6 +2,7 @@
   {
     "outputFileName": "dist/vector-tiles-google-maps.js",
     "inputFiles": [
+      "lib/pmtiles/pmtiles.js",
       "lib/protobuf/Protobuf.js",
       "lib/vectortiles/VectorTile.js",
       "lib/vectortiles/VectorTileFeature.js",
