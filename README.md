@@ -51,6 +51,8 @@ Further work would be to load [Mapxbox GL Styles](https://docs.mapbox.com/mapbox
 <!-- DEMO EXAMPLES -->
 ## Examples
 
+The Mapbox examples share a public browser token (`pk.`) configured in `examples/mapbox-token.js`, so the GitHub Pages demos run without visitor configuration. Public tokens are visible in browser requests. Configure the demo token in Mapbox with the minimum required read permissions and URL restrictions for `https://techjb.github.io`. When hosting your own copy, replace it with your own public token that can access the example tileset. Never put a secret Mapbox token in browser code.
+
 * [Basic](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/basic.html) - Basic loading vector tiles with debug enabled.
 * [Cache](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/cache.html) - Cache enabled.
 * [Click](https://techjb.github.io/Vector-Tiles-Google-Maps/examples/click.html) - Click to select one or multiple features.
