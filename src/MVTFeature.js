@@ -15,10 +15,6 @@ class MVTFeature {
         this.properties = options.vectorTileFeature.properties;
         this.addTileFeature(options.vectorTileFeature, options.tileContext);
         this._draw = options.customDraw || this.defaultDraw;
-
-        if (this.selected) {
-            this.select();
-        }
     }
 
     addTileFeature(vectorTileFeature, tileContext) {

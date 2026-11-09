@@ -49,6 +49,9 @@ class MVTLayer {
                 customDraw: this._customDraw
             });
             this._mVTFeatures[featureId] = mVTFeature;
+            if (mVTFeature.selected) {
+                mVTSource._restoreSelectedFeature(mVTFeature);
+            }
         } else {
             mVTFeature.setStyle(style);
             mVTFeature.addTileFeature(vectorTileFeature, tileContext);

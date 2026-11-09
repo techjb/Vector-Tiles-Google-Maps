@@ -507,8 +507,10 @@ class MVTSource {
     deselectAllFeatures() {        
         var zoom = this.map.getZoom();
         var tilesToRedraw = [];        
-        for (var featureId in this._selectedFeatures) {
-            var mVTFeature = this._selectedFeatures[featureId];
+        const previousSelection = this._selectedFeatures;
+        this._selectedFeatures = Object.create(null);
+        for (var featureId in previousSelection) {
+            var mVTFeature = previousSelection[featureId];
             if (!mVTFeature) continue;
             mVTFeature.setSelected(false);
             var tiles = mVTFeature.getTiles();
@@ -521,10 +523,15 @@ class MVTSource {
             }
         }        
         this.redrawTiles(tilesToRedraw);
-        this._selectedFeatures = Object.create(null);
+    }
+
+    _restoreSelectedFeature(mVTFeature) {
+        // Parsing a tile restores selection state without triggering another redraw.
+        this._selectedFeatures[mVTFeature.featureId] = mVTFeature;
     }
 
     featureSelected(mVTFeature) {
+        if (this._selectedFeatures[mVTFeature.featureId] === mVTFeature) return;
         if (!this._multipleSelection) {
             this.deselectAllFeatures();
         }

@@ -158,6 +158,32 @@ test('style changes during a pending load do not restart the request', async () 
     assert.ok(env.source._visibleTiles['5:1:1'].vectorTile);
 });
 
+test('redrawing a selected feature after a layer reset does not re-enter tile drawing', () => {
+    const { source, document } = setup({ options: { customDraw() {} } });
+    const tileContext = { id: '5:1:1', tileSize: 256, canvas: document.createElement('canvas') };
+    const tile = { layers: { parcels: { parsedFeatures: [{ extent: 4096, type: 3, properties: { id: 'parcel' } }] } } };
+    source._setVisibleTile(tileContext);
+    source.setSelectedFeatures(['parcel']);
+    source._drawVectorTile(tile, tileContext);
+    const original = source.getSelectedFeatures()[0];
+    assert.equal(original.selected, true);
+
+    source._resetMVTLayers();
+    source.redrawTile(tileContext.id);
+    const restored = source.getSelectedFeatures()[0];
+    assert.notEqual(restored, original);
+    assert.equal(restored.selected, true);
+    assert.equal(source.getSelectedFeaturesInTile(tileContext.id)[0], restored);
+
+    restored.select();
+    assert.equal(restored.selected, true);
+
+    source._resetMVTLayers();
+    source.deselectAllFeatures();
+    assert.equal(source.getSelectedFeatures().length, 0);
+    assert.equal(source.mVTLayers.parcels._mVTFeatures.parcel.selected, false);
+});
+
 test('all example scripts parse and census demos use S3 without Mapbox dependencies', () => {
     const fs = require('node:fs');
     const path = require('node:path');
